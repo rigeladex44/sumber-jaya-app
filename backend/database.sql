@@ -1,7 +1,3 @@
--- Database: sumber_jaya_db
-CREATE DATABASE IF NOT EXISTS sumber_jaya_db;
-USE sumber_jaya_db;
-
 -- Tabel: users
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,

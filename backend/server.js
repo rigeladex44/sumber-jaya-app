@@ -13,13 +13,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Database Connection
-const db = mysql.createConnection({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'sumber_jaya_db'
-});
+// Database Connection - Support Railway
+const dbConfig = process.env.MYSQLHOST 
+  ? {
+      host: process.env.MYSQLHOST,
+      port: process.env.MYSQLPORT || 3306,
+      user: process.env.MYSQLUSER,
+      password: process.env.MYSQLPASSWORD,
+      database: process.env.MYSQLDATABASE || 'railway'
+    }
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'sumber_jaya_db'
+    };
+
+const db = mysql.createConnection(dbConfig);
 
 db.connect((err) => {
   if (err) {
