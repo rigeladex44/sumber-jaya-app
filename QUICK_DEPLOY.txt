@@ -1,0 +1,51 @@
+═══════════════════════════════════════════════════════════
+  🚀 SUMBER JAYA APP - QUICK DEPLOY COMMANDS
+═══════════════════════════════════════════════════════════
+
+📍 BACKEND (Railway) - SUDAH DEPLOY ✅
+   URL: https://sumber-jaya-app-production.up.railway.app/api
+
+📍 FRONTEND (Vercel) - SIAP DEPLOY
+
+═══════════════════════════════════════════════════════════
+
+⚡ DEPLOY COMMANDS (Copy & Paste di Terminal):
+
+1. Login Vercel:
+   vercel login
+
+2. Deploy:
+   cd /Users/macbookairi52019/Desktop/sumber-jaya-app
+   vercel --prod --yes
+
+3. Set Environment Variable di Vercel Dashboard:
+   Name:  REACT_APP_API_URL
+   Value: https://sumber-jaya-app-production.up.railway.app/api
+
+4. Redeploy:
+   vercel --prod
+
+═══════════════════════════════════════════════════════════
+
+🔑 LOGIN CREDENTIALS:
+   Username: hengky
+   Password: hengky123
+
+═══════════════════════════════════════════════════════════
+
+🧪 TEST COMMANDS:
+
+Backend Health Check:
+curl https://sumber-jaya-app-production.up.railway.app/api/health
+
+Expected: {"status":"OK","message":"Sumber Jaya API is running"}
+
+═══════════════════════════════════════════════════════════
+
+📚 Full Documentation:
+   - DEPLOY_NOW.md (step-by-step)
+   - DEPLOY_FRONTEND.md (troubleshooting)
+   - backend/DEPLOYMENT.md (backend guide)
+
+═══════════════════════════════════════════════════════════
+

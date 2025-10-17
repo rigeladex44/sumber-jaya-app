@@ -9,6 +9,39 @@ Aplikasi web untuk mengelola kas kecil, penjualan gas LPG 3kg, dan laporan keuan
 
 ---
 
+## 🚀 Quick Deploy to Vercel
+
+### ⚡ Fast Track (1 Command)
+```bash
+./deploy.sh
+```
+
+### 📋 Manual Steps
+```bash
+# 1. Login to Vercel
+vercel login
+
+# 2. Deploy to production
+vercel --prod --yes
+```
+
+### ⚠️ Important: Set Backend URL
+After deploy, configure environment variable:
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Select your project → Settings → Environment Variables
+3. Add: `REACT_APP_API_URL` = `https://your-backend-url.vercel.app/api`
+4. Redeploy: `vercel --prod`
+
+### 🔑 Default Login
+```
+Username: hengky
+Password: hengky123
+```
+
+📚 **Full deployment guide:** See `DEPLOY_INSTRUCTIONS.md`
+
+---
+
 ## 🌟 Fitur Utama
 
 ### ✅ Manajemen Kas Kecil

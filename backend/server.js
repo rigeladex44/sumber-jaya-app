@@ -412,6 +412,256 @@ app.get('/api/dashboard/stats', verifyToken, (req, res) => {
   });
 });
 
+// ==================== USER MANAGEMENT ROUTES ====================
+
+// Get All Users (Admin only)
+app.get('/api/users', verifyToken, (req, res) => {
+  const query = 'SELECT id, username, name, role, status FROM users ORDER BY id';
+  db.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+    
+    // Get PT access for each user
+    const usersWithAccess = results.map(user => {
+      return new Promise((resolve, reject) => {
+        const accessQuery = 'SELECT pt_code FROM pt_access WHERE user_id = ?';
+        db.query(accessQuery, [user.id], (err, accessResults) => {
+          if (err) reject(err);
+          const accessPT = accessResults.map(row => row.pt_code);
+          resolve({ ...user, accessPT });
+        });
+      });
+    });
+    
+    Promise.all(usersWithAccess)
+      .then(users => res.json(users))
+      .catch(err => res.status(500).json({ message: 'Server error', error: err }));
+  });
+});
+
+// Create User
+app.post('/api/users', verifyToken, async (req, res) => {
+  const { username, password, name, role, aksesPT, status } = req.body;
+  
+  // Validate required fields
+  if (!username || !password || !name || !role) {
+    return res.status(400).json({ message: 'Semua field wajib diisi' });
+  }
+  
+  try {
+    // Check if username exists
+    const checkQuery = 'SELECT id FROM users WHERE username = ?';
+    db.query(checkQuery, [username], async (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      
+      if (results.length > 0) {
+        return res.status(400).json({ message: 'Username sudah digunakan' });
+      }
+      
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Insert user
+      const insertQuery = 'INSERT INTO users (username, password, name, role, status) VALUES (?, ?, ?, ?, ?)';
+      db.query(insertQuery, [username, hashedPassword, name, role, status || 'aktif'], (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+        
+        const userId = result.insertId;
+        
+        // Insert PT access
+        if (aksesPT && aksesPT.length > 0) {
+          const accessValues = aksesPT.map(pt => [userId, pt]);
+          const accessQuery = 'INSERT INTO pt_access (user_id, pt_code) VALUES ?';
+          db.query(accessQuery, [accessValues], (err) => {
+            if (err) {
+              console.error('Error inserting PT access:', err);
+            }
+          });
+        }
+        
+        res.status(201).json({ 
+          message: 'User berhasil ditambahkan',
+          userId 
+        });
+      });
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update User
+app.put('/api/users/:id', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { username, name, role, aksesPT, status, password } = req.body;
+  
+  try {
+    // Check if user exists
+    const checkQuery = 'SELECT id FROM users WHERE id = ?';
+    db.query(checkQuery, [id], async (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      
+      if (results.length === 0) {
+        return res.status(404).json({ message: 'User tidak ditemukan' });
+      }
+      
+      // Build update query
+      let updateQuery = 'UPDATE users SET username = ?, name = ?, role = ?, status = ?';
+      let updateParams = [username, name, role, status];
+      
+      // If password provided, hash and add to update
+      if (password) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        updateQuery += ', password = ?';
+        updateParams.push(hashedPassword);
+      }
+      
+      updateQuery += ' WHERE id = ?';
+      updateParams.push(id);
+      
+      // Update user
+      db.query(updateQuery, updateParams, (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+        
+        // Update PT access
+        const deleteAccessQuery = 'DELETE FROM pt_access WHERE user_id = ?';
+        db.query(deleteAccessQuery, [id], (err) => {
+          if (err) {
+            console.error('Error deleting PT access:', err);
+          }
+          
+          if (aksesPT && aksesPT.length > 0) {
+            const accessValues = aksesPT.map(pt => [id, pt]);
+            const accessQuery = 'INSERT INTO pt_access (user_id, pt_code) VALUES ?';
+            db.query(accessQuery, [accessValues], (err) => {
+              if (err) {
+                console.error('Error inserting PT access:', err);
+              }
+            });
+          }
+          
+          res.json({ message: 'User berhasil diupdate' });
+        });
+      });
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete User
+app.delete('/api/users/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+  
+  // Delete PT access first
+  const deleteAccessQuery = 'DELETE FROM pt_access WHERE user_id = ?';
+  db.query(deleteAccessQuery, [id], (err) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+    
+    // Delete user
+    const deleteUserQuery = 'DELETE FROM users WHERE id = ?';
+    db.query(deleteUserQuery, [id], (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'User tidak ditemukan' });
+      }
+      
+      res.json({ message: 'User berhasil dihapus' });
+    });
+  });
+});
+
+// ==================== PROFILE MANAGEMENT ROUTES ====================
+
+// Update Profile (Self)
+app.put('/api/auth/profile', verifyToken, (req, res) => {
+  const { name, role } = req.body;
+  
+  if (!name) {
+    return res.status(400).json({ message: 'Nama wajib diisi' });
+  }
+  
+  const updateQuery = 'UPDATE users SET name = ?, role = ? WHERE id = ?';
+  db.query(updateQuery, [name, role, req.userId], (err, result) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User tidak ditemukan' });
+    }
+    
+    res.json({ 
+      message: 'Profile berhasil diupdate',
+      user: { name, role }
+    });
+  });
+});
+
+// Change Password (Self)
+app.put('/api/auth/password', verifyToken, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ message: 'Password lama dan baru wajib diisi' });
+  }
+  
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: 'Password baru minimal 6 karakter' });
+  }
+  
+  try {
+    // Get current user
+    const query = 'SELECT password FROM users WHERE id = ?';
+    db.query(query, [req.userId], async (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      
+      if (results.length === 0) {
+        return res.status(404).json({ message: 'User tidak ditemukan' });
+      }
+      
+      const user = results[0];
+      
+      // Verify old password
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Password lama salah' });
+      }
+      
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      
+      // Update password
+      const updateQuery = 'UPDATE users SET password = ? WHERE id = ?';
+      db.query(updateQuery, [hashedPassword, req.userId], (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+        
+        res.json({ message: 'Password berhasil diubah' });
+      });
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sumber Jaya API is running' });

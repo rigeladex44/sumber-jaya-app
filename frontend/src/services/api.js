@@ -14,7 +14,7 @@ const api = axios.create({
 // Request interceptor - tambahkan token ke setiap request
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -31,8 +31,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expired atau invalid
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('isLoggedIn');
+      sessionStorage.removeItem('currentUserData');
       window.location.href = '/';
     }
     return Promise.reject(error);
@@ -45,15 +47,19 @@ export const authService = {
   login: async (username, password) => {
     const response = await api.post('/auth/login', { username, password });
     if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      sessionStorage.setItem('token', response.data.token);
+      sessionStorage.setItem('user', JSON.stringify(response.data.user));
+      sessionStorage.setItem('isLoggedIn', 'true');
+      sessionStorage.setItem('currentUserData', JSON.stringify(response.data.user));
     }
     return response.data;
   },
 
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('isLoggedIn');
+    sessionStorage.removeItem('currentUserData');
   },
 
   getProfile: async () => {
@@ -62,12 +68,12 @@ export const authService = {
   },
 
   getCurrentUser: () => {
-    const userStr = localStorage.getItem('user');
+    const userStr = sessionStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   },
 
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    return !!sessionStorage.getItem('token');
   },
 };
 
@@ -134,6 +140,44 @@ export const dashboardService = {
     const response = await api.get('/dashboard/stats', {
       params: pt ? { pt } : {}
     });
+    return response.data;
+  },
+};
+
+// ==================== USER MANAGEMENT SERVICES ====================
+
+export const userService = {
+  getAll: async () => {
+    const response = await api.get('/users');
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/users', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/users/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
+  },
+};
+
+// ==================== PROFILE SERVICES ====================
+
+export const profileService = {
+  updateProfile: async (data) => {
+    const response = await api.put('/auth/profile', data);
+    return response.data;
+  },
+
+  changePassword: async (data) => {
+    const response = await api.put('/auth/password', data);
     return response.data;
   },
 };
