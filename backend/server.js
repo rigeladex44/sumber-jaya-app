@@ -1146,9 +1146,15 @@ app.get('/api/setup-database', async (req, res) => {
   }
 });
 
-// Start Server - Force IPv4 only
-app.listen(PORT, '127.0.0.1', () => {
+// Start Server
+// Production: Listen on all interfaces (0.0.0.0)
+// Development: Listen on localhost only (127.0.0.1) to avoid macOS EPERM
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+
+app.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 API: http://127.0.0.1:${PORT}/api`);
-  console.log(`📊 Also accessible at: http://localhost:${PORT}/api`);
+  console.log(`📊 API: http://${HOST}:${PORT}/api`);
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`🌐 Public URL configured for Railway`);
+  }
 });
