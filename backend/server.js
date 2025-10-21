@@ -66,6 +66,45 @@ db.connect((err) => {
     return;
   }
   console.log('✅ Connected to MySQL Database');
+  
+  // Auto-create feature_access table if not exists
+  const createTableSQL = `
+    CREATE TABLE IF NOT EXISTS feature_access (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      feature_id VARCHAR(50) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_user_feature (user_id, feature_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `;
+  
+  db.query(createTableSQL, (err) => {
+    if (err) {
+      console.error('⚠️ Error creating feature_access table:', err.message);
+    } else {
+      console.log('✅ feature_access table ready');
+      
+      // Insert default feature access for Master User (ID=1)
+      const insertSQL = `
+        INSERT IGNORE INTO feature_access (user_id, feature_id) VALUES
+        (1, 'dashboard'),
+        (1, 'kas-kecil'),
+        (1, 'detail-kas'),
+        (1, 'penjualan'),
+        (1, 'laporan'),
+        (1, 'master-admin');
+      `;
+      
+      db.query(insertSQL, (err) => {
+        if (err) {
+          console.error('⚠️ Error inserting default feature access:', err.message);
+        } else {
+          console.log('✅ Master User feature access configured');
+        }
+      });
+    }
+  });
 });
 
 // JWT Secret
