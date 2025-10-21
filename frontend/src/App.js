@@ -1074,7 +1074,7 @@ const SumberJayaApp = () => {
             ${signatureSection}
             
             <div class="report-footer">
-              <p><strong>© 2025 Sumber Jaya Grup Official App by:Rigeel</strong> - Sistem Sumber Jaya Grup Official</p>
+              <p><strong>© 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click</strong></p>
               <p>Dicetak pada: ${tanggal} oleh ${currentUserData?.name || 'User'} (${currentUserData?.role || 'Role'})</p>
               <p>Dokumen ini adalah salinan resmi dan sah untuk keperluan administrasi</p>
             </div>
@@ -1181,7 +1181,7 @@ const SumberJayaApp = () => {
 
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
               <p className="text-[10px] text-gray-600 text-right">
-                © Sumber Jaya Grup Official by:Rigeel
+                © 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click
               </p>
             </div>
           </div>
