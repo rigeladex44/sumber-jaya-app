@@ -6,27 +6,56 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// Middleware - CORS Configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  // Add your production frontend URL here after deployment
+  // Example: 'https://sumber-jaya-app.vercel.app'
+];
+
+// If FRONTEND_URL environment variable is set, add it to allowed origins
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Database Connection - Support Railway
-const dbConfig = process.env.MYSQLHOST 
+const dbConfig = process.env.MYSQLHOST
   ? {
       host: process.env.MYSQLHOST,
       port: process.env.MYSQLPORT || 3306,
       user: process.env.MYSQLUSER,
       password: process.env.MYSQLPASSWORD,
-      database: process.env.MYSQLDATABASE || 'railway'
+      database: process.env.MYSQLDATABASE || 'railway',
+      timezone: '+07:00' // WIB (Western Indonesian Time)
     }
   : {
-      host: process.env.DB_HOST || 'localhost',
+      host: process.env.DB_HOST || '127.0.0.1',
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'sumber_jaya_db'
+      database: process.env.DB_NAME || 'sumber_jaya_db',
+      timezone: '+07:00' // WIB (Western Indonesian Time)
     };
 
 const db = mysql.createConnection(dbConfig);
@@ -92,18 +121,29 @@ app.post('/api/auth/login', (req, res) => {
       
       const accessPT = accessResults.map(row => row.pt_code);
       
-      // Create token
-      const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '24h' });
-      
-      res.json({
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          name: user.name,
-          role: user.role,
-          accessPT
+      // Get Feature Access
+      const featureQuery = 'SELECT feature_id FROM feature_access WHERE user_id = ?';
+      db.query(featureQuery, [user.id], (err, featureResults) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
         }
+        
+        const fiturAkses = featureResults.map(row => row.feature_id);
+        
+        // Create token
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '24h' });
+        
+        res.json({
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            role: user.role,
+            accessPT,
+            fiturAkses
+          }
+        });
       });
     });
   });
@@ -159,7 +199,7 @@ app.get('/api/pt', verifyToken, (req, res) => {
 app.get('/api/kas-kecil', verifyToken, (req, res) => {
   const { pt, tanggal_dari, tanggal_sampai, status } = req.query;
   
-  let query = 'SELECT * FROM kas_kecil WHERE 1=1';
+  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, status, created_by, approved_by, created_at, updated_at FROM kas_kecil WHERE 1=1';
   let params = [];
   
   if (pt) {
@@ -188,7 +228,14 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
-    res.json(results);
+    
+    // Convert jumlah string to number for correct calculations
+    const formattedResults = results.map(item => ({
+      ...item,
+      jumlah: parseFloat(item.jumlah)
+    }));
+    
+    res.json(formattedResults);
   });
 });
 
@@ -196,9 +243,17 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
 app.post('/api/kas-kecil', verifyToken, (req, res) => {
   const { tanggal, pt, jenis, jumlah, keterangan } = req.body;
   
-  // Auto approve jika <= 300000
-  const status = parseFloat(jumlah) <= 300000 ? 'approved' : 'pending';
-  const approved_by = status === 'approved' ? req.userId : null;
+  // Logic approve/reject:
+  // - Semua PEMASUKAN (masuk): Langsung approved
+  // - PENGELUARAN (keluar) < 300k: Auto approved  
+  // - PENGELUARAN (keluar) >= 300k: Butuh approval (pending)
+  let status = 'approved';
+  let approved_by = req.userId;
+  
+  if (jenis === 'keluar' && parseFloat(jumlah) >= 300000) {
+    status = 'pending';
+    approved_by = null;
+  }
   
   const query = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
   
@@ -215,23 +270,296 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
   });
 });
 
+// Auto Transfer Saldo Kemarin
+app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  // Step 1: Check apakah hari ini sudah ada transfer saldo
+  const checkQuery = `
+    SELECT COUNT(*) as count 
+    FROM kas_kecil 
+    WHERE tanggal = ? 
+    AND keterangan LIKE 'Sisa Saldo tanggal%'
+  `;
+  
+  db.query(checkQuery, [today], (err, checkResults) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+    
+    if (checkResults[0].count > 0) {
+      return res.json({ 
+        message: 'Saldo hari ini sudah ditransfer',
+        transferred: false 
+      });
+    }
+    
+    // Step 2: Hitung saldo akhir kemarin per PT
+    const saldoQuery = `
+      SELECT pt_code,
+        SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) - 
+        SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
+      FROM kas_kecil
+      WHERE tanggal <= ?
+      GROUP BY pt_code
+      HAVING saldo_akhir > 0
+    `;
+    
+    db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      
+      if (saldoResults.length === 0) {
+        return res.json({ 
+          message: 'Tidak ada saldo untuk ditransfer',
+          transferred: false 
+        });
+      }
+      
+      // Step 3: Create transaksi transfer saldo untuk setiap PT
+      const insertPromises = saldoResults.map(pt => {
+        return new Promise((resolve, reject) => {
+          const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
+          const insertQuery = `
+            INSERT INTO kas_kecil 
+            (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by) 
+            VALUES (?, ?, 'masuk', ?, ?, 'approved', ?, ?)
+          `;
+          
+          db.query(
+            insertQuery, 
+            [today, pt.pt_code, pt.saldo_akhir, keterangan, req.userId, req.userId],
+            (err, result) => {
+              if (err) reject(err);
+              else resolve({ pt: pt.pt_code, saldo: pt.saldo_akhir });
+            }
+          );
+        });
+      });
+      
+      Promise.all(insertPromises)
+        .then(results => {
+          res.json({
+            message: 'Saldo berhasil ditransfer',
+            transferred: true,
+            count: results.length,
+            details: results
+          });
+        })
+        .catch(err => {
+          res.status(500).json({ message: 'Error saat transfer saldo', error: err });
+        });
+    });
+  });
+});
+
 // Approve/Reject Kas Kecil
 app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
   const { id } = req.params;
   const { status } = req.body; // 'approved' or 'rejected'
   
-  const query = 'UPDATE kas_kecil SET status = ?, approved_by = ? WHERE id = ?';
+  // Step 1: Get kas data to check PT
+  const getKasQuery = 'SELECT pt_code AS pt FROM kas_kecil WHERE id = ?';
   
-  db.query(query, [status, req.userId, id], (err, result) => {
+  db.query(getKasQuery, [id], (err, kasResults) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
     
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Data tidak ditemukan' });
+    if (kasResults.length === 0) {
+      return res.status(404).json({ message: 'Data kas tidak ditemukan' });
     }
     
-    res.json({ message: 'Status berhasil diupdate' });
+    const kasPT = kasResults[0].pt;
+    
+    // Step 2: Get user data and check access
+    const getUserQuery = `
+      SELECT u.role,
+        GROUP_CONCAT(DISTINCT fa.feature_id) as fitur_akses,
+        GROUP_CONCAT(DISTINCT pa.pt_code) as access_pts
+      FROM users u
+      LEFT JOIN feature_access fa ON u.id = fa.user_id
+      LEFT JOIN pt_access pa ON u.id = pa.user_id
+      WHERE u.id = ?
+      GROUP BY u.id
+    `;
+    
+    db.query(getUserQuery, [req.userId], (err, userResults) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      
+      if (userResults.length === 0) {
+        return res.status(404).json({ message: 'User tidak ditemukan' });
+      }
+      
+      const user = userResults[0];
+      const userRole = user.role;
+      const userAccessPT = user.access_pts ? user.access_pts.split(',') : [];
+      const userFiturAkses = user.fitur_akses ? user.fitur_akses.split(',') : [];
+      
+      // Step 3: Validation
+      // Check if user has 'detail-kas' feature access (unless Master User)
+      if (userRole !== 'Master User' && !userFiturAkses.includes('detail-kas')) {
+        return res.status(403).json({ message: 'Anda tidak memiliki akses fitur Detail Kas Kecil' });
+      }
+      
+      // Check if user has access to this PT (unless Master User)
+      if (userRole !== 'Master User' && !userAccessPT.includes(kasPT)) {
+        return res.status(403).json({ message: `Anda tidak memiliki akses ke PT ${kasPT}` });
+      }
+      
+      // Step 4: Update status if all validations pass
+      const updateQuery = 'UPDATE kas_kecil SET status = ?, approved_by = ? WHERE id = ?';
+      
+      db.query(updateQuery, [status, req.userId, id], (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+        
+        res.json({ 
+          message: 'Status berhasil diupdate',
+          status: status,
+          pt: kasPT
+        });
+      });
+    });
+  });
+});
+
+// Update Kas Kecil (hanya untuk transaksi hari ini)
+app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+  const { tanggal, pt, jenis, jumlah, keterangan } = req.body;
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Step 1: Get existing kas data
+  const getKasQuery = 'SELECT tanggal, created_by FROM kas_kecil WHERE id = ?';
+  
+  db.query(getKasQuery, [id], (err, kasResults) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+    
+    if (kasResults.length === 0) {
+      return res.status(404).json({ message: 'Data kas tidak ditemukan' });
+    }
+    
+    const kasData = kasResults[0];
+    const kasTanggal = new Date(kasData.tanggal).toISOString().split('T')[0];
+    
+    // Step 2: Validasi - hanya bisa edit transaksi hari ini
+    if (kasTanggal !== today) {
+      return res.status(403).json({ 
+        message: 'Hanya bisa mengedit transaksi hari ini',
+        kasDate: kasTanggal,
+        today: today
+      });
+    }
+    
+    // Step 3: Validasi - hanya creator yang bisa edit
+    if (kasData.created_by !== req.userId) {
+      return res.status(403).json({ message: 'Anda tidak memiliki akses untuk mengedit transaksi ini' });
+    }
+    
+    // Step 4: Update transaksi
+    // Re-calculate status based on new jenis and jumlah
+    let status = 'approved';
+    let approved_by = req.userId;
+    
+    if (jenis === 'keluar' && parseFloat(jumlah) >= 300000) {
+      status = 'pending';
+      approved_by = null;
+    }
+    
+    const updateQuery = `
+      UPDATE kas_kecil 
+      SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, status = ?, approved_by = ?
+      WHERE id = ?
+    `;
+    
+    db.query(updateQuery, [tanggal, pt, jenis, jumlah, keterangan, status, approved_by, id], (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      
+      res.json({ 
+        message: 'Data kas berhasil diupdate',
+        status: status
+      });
+    });
+  });
+});
+
+// Delete Kas Kecil (hanya untuk transaksi hari ini)
+app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Step 1: Get existing kas data
+  const getKasQuery = 'SELECT tanggal, created_by, created_at FROM kas_kecil WHERE id = ?';
+  
+  db.query(getKasQuery, [id], (err, kasResults) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+    
+    if (kasResults.length === 0) {
+      return res.status(404).json({ message: 'Data kas tidak ditemukan' });
+    }
+    
+    const kasData = kasResults[0];
+    
+    // Step 2: Validasi - hanya bisa hapus transaksi yang dibuat hari ini
+    const createdDate = new Date(kasData.created_at);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    
+    if (createdDate < todayStart) {
+      return res.status(403).json({ 
+        message: 'Hanya bisa menghapus transaksi yang dibuat hari ini',
+        createdAt: kasData.created_at
+      });
+    }
+    
+    // Step 3: Validasi - hanya creator atau Master User yang bisa delete
+    if (kasData.created_by !== req.userId) {
+      // Check if user is Master User
+      const checkUserQuery = 'SELECT role FROM users WHERE id = ?';
+      db.query(checkUserQuery, [req.userId], (err, userResults) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+        
+        if (userResults.length === 0 || userResults[0].role !== 'Master User') {
+          return res.status(403).json({ message: 'Anda tidak memiliki akses untuk menghapus transaksi ini' });
+        }
+        
+        // Master User can delete
+        deleteTransaction();
+      });
+    } else {
+      // Creator can delete
+      deleteTransaction();
+    }
+    
+    function deleteTransaction() {
+      const deleteQuery = 'DELETE FROM kas_kecil WHERE id = ?';
+      
+      db.query(deleteQuery, [id], (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+        
+        res.json({ 
+          message: 'Data kas berhasil dihapus'
+        });
+      });
+    }
   });
 });
 
@@ -363,48 +691,72 @@ app.get('/api/dashboard/stats', verifyToken, (req, res) => {
   const { pt } = req.query;
   const today = new Date().toISOString().split('T')[0];
   
+  // Hitung tanggal 7 hari yang lalu
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+  
   // Query untuk stats
   const queries = {
+    // Kas Kecil: Saldo akumulasi dari SEMUA transaksi approved (bukan hanya hari ini)
     kasHarian: `SELECT 
       SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) - 
       SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo
-      FROM kas_kecil WHERE tanggal = ? ${pt ? 'AND pt_code = ?' : ''}`,
+      FROM kas_kecil ${pt ? 'WHERE pt_code = ?' : ''}`,
     
     penjualanHariIni: `SELECT SUM(qty) as total_qty, SUM(total) as total_nilai
       FROM penjualan WHERE tanggal = ? ${pt ? 'AND pt_code = ?' : ''}`,
     
     pendingApproval: `SELECT COUNT(*) as total
-      FROM kas_kecil WHERE status = 'pending' ${pt ? 'AND pt_code = ?' : ''}`
+      FROM kas_kecil WHERE status = 'pending' ${pt ? 'AND pt_code = ?' : ''}`,
+    
+    pengeluaran7Hari: `SELECT SUM(jumlah) as total_pengeluaran
+      FROM kas_kecil 
+      WHERE jenis = 'keluar' 
+        AND status = 'approved' 
+        AND tanggal >= ? 
+        AND tanggal <= ? 
+        ${pt ? 'AND pt_code = ?' : ''}`
   };
   
-  const params = pt ? [today, pt] : [today];
+  const paramsKas = pt ? [pt] : [];
+  const paramsPenjualan = pt ? [today, pt] : [today];
+  const paramsPending = pt ? [pt] : [];
+  const params7Days = pt ? [sevenDaysAgoStr, today, pt] : [sevenDaysAgoStr, today];
   
   Promise.all([
     new Promise((resolve, reject) => {
-      db.query(queries.kasHarian, params, (err, results) => {
+      db.query(queries.kasHarian, paramsKas, (err, results) => {
         if (err) reject(err);
         else resolve(results[0]);
       });
     }),
     new Promise((resolve, reject) => {
-      db.query(queries.penjualanHariIni, params, (err, results) => {
+      db.query(queries.penjualanHariIni, paramsPenjualan, (err, results) => {
         if (err) reject(err);
         else resolve(results[0]);
       });
     }),
     new Promise((resolve, reject) => {
-      db.query(queries.pendingApproval, pt ? [pt] : [], (err, results) => {
+      db.query(queries.pendingApproval, paramsPending, (err, results) => {
+        if (err) reject(err);
+        else resolve(results[0]);
+      });
+    }),
+    new Promise((resolve, reject) => {
+      db.query(queries.pengeluaran7Hari, params7Days, (err, results) => {
         if (err) reject(err);
         else resolve(results[0]);
       });
     })
   ])
-  .then(([kas, penjualan, pending]) => {
+  .then(([kas, penjualan, pending, pengeluaran7]) => {
     res.json({
       kasHarian: parseFloat(kas.saldo) || 0,
       penjualanQty: parseInt(penjualan.total_qty) || 0,
       penjualanNilai: parseFloat(penjualan.total_nilai) || 0,
-      pendingApproval: parseInt(pending.total) || 0
+      pendingApproval: parseInt(pending.total) || 0,
+      pengeluaran7Hari: parseFloat(pengeluaran7.total_pengeluaran) || 0
     });
   })
   .catch(err => {
@@ -442,7 +794,7 @@ app.get('/api/users', verifyToken, (req, res) => {
 
 // Create User
 app.post('/api/users', verifyToken, async (req, res) => {
-  const { username, password, name, role, aksesPT, status } = req.body;
+  const { username, password, name, role, aksesPT, fiturAkses, status } = req.body;
   
   // Validate required fields
   if (!username || !password || !name || !role) {
@@ -484,6 +836,17 @@ app.post('/api/users', verifyToken, async (req, res) => {
           });
         }
         
+        // Insert Feature access
+        if (fiturAkses && fiturAkses.length > 0) {
+          const featureValues = fiturAkses.map(feature => [userId, feature]);
+          const featureQuery = 'INSERT INTO feature_access (user_id, feature_id) VALUES ?';
+          db.query(featureQuery, [featureValues], (err) => {
+            if (err) {
+              console.error('Error inserting feature access:', err);
+            }
+          });
+        }
+        
         res.status(201).json({ 
           message: 'User berhasil ditambahkan',
           userId 
@@ -498,7 +861,7 @@ app.post('/api/users', verifyToken, async (req, res) => {
 // Update User
 app.put('/api/users/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
-  const { username, name, role, aksesPT, status, password } = req.body;
+  const { username, name, role, aksesPT, fiturAkses, status, password } = req.body;
   
   try {
     // Check if user exists
@@ -549,7 +912,25 @@ app.put('/api/users/:id', verifyToken, async (req, res) => {
             });
           }
           
-          res.json({ message: 'User berhasil diupdate' });
+          // Update Feature access
+          const deleteFeatureQuery = 'DELETE FROM feature_access WHERE user_id = ?';
+          db.query(deleteFeatureQuery, [id], (err) => {
+            if (err) {
+              console.error('Error deleting feature access:', err);
+            }
+            
+            if (fiturAkses && fiturAkses.length > 0) {
+              const featureValues = fiturAkses.map(feature => [id, feature]);
+              const featureQuery = 'INSERT INTO feature_access (user_id, feature_id) VALUES ?';
+              db.query(featureQuery, [featureValues], (err) => {
+                if (err) {
+                  console.error('Error inserting feature access:', err);
+                }
+              });
+            }
+            
+            res.json({ message: 'User berhasil diupdate' });
+          });
         });
       });
     });
@@ -667,8 +1048,68 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sumber Jaya API is running' });
 });
 
-// Start Server
-app.listen(PORT, () => {
+// TEMPORARY: Seed Database Endpoint (REMOVE AFTER FIRST RUN!)
+app.get('/api/setup-database', async (req, res) => {
+  try {
+    // Insert PT List
+    await db.promise().query(`
+      INSERT INTO pt_list (code, name) VALUES
+      ('KSS', 'PT KHALISA SALMA SEJAHTERA'),
+      ('SJE', 'PT SUMBER JAYA ELPIJI'),
+      ('FAB', 'PT FADILLAH AMANAH BERSAMA'),
+      ('KBS', 'PT KHABITSA INDOGAS'),
+      ('SJS', 'PT SUMBER JAYA SEJAHTERA')
+      ON DUPLICATE KEY UPDATE code=code
+    `);
+    
+    // Insert Master User (password: hengky123)
+    const hashedPassword = await bcrypt.hash('hengky123', 10);
+    await db.promise().query(`
+      INSERT INTO users (username, password, name, role, status) 
+      VALUES ('hengky', ?, 'Hengky Master User', 'Master User', 'aktif')
+      ON DUPLICATE KEY UPDATE username=username
+    `, [hashedPassword]);
+    
+    // Insert PT Access
+    await db.promise().query(`
+      INSERT INTO pt_access (user_id, pt_code) 
+      SELECT 1, code FROM pt_list
+      ON DUPLICATE KEY UPDATE user_id=user_id
+    `);
+    
+    // Insert Pangkalan
+    await db.promise().query(`
+      INSERT INTO pangkalan (pt, nama) VALUES
+      ('KSS', 'Pangkalan A'), ('KSS', 'Pangkalan B'),
+      ('SJE', 'Pangkalan C'), ('FAB', 'Pangkalan D'),
+      ('KBS', 'Pangkalan E'), ('SJS', 'Pangkalan F')
+      ON DUPLICATE KEY UPDATE pt=pt
+    `);
+    
+    // Verify
+    const [users] = await db.promise().query('SELECT id, username, name, role FROM users WHERE username = "hengky"');
+    
+    res.json({ 
+      status: 'SUCCESS',
+      message: 'Database seeded successfully!',
+      credentials: {
+        username: 'hengky',
+        password: 'hengky123'
+      },
+      user: users[0]
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'ERROR',
+      message: 'Failed to seed database',
+      error: error.message 
+    });
+  }
+});
+
+// Start Server - Force IPv4 only
+app.listen(PORT, '127.0.0.1', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 API: http://localhost:${PORT}/api`);
+  console.log(`📊 API: http://127.0.0.1:${PORT}/api`);
+  console.log(`📊 Also accessible at: http://localhost:${PORT}/api`);
 });

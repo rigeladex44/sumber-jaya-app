@@ -9,28 +9,76 @@ Aplikasi web untuk mengelola kas kecil, penjualan gas LPG 3kg, dan laporan keuan
 
 ---
 
-## 🚀 Quick Deploy to Vercel
+## 🚀 Quick Deploy (Production)
 
-### ⚡ Fast Track (1 Command)
+### ⚡ Deployment Stack
+- **Frontend**: Vercel (Free)
+- **Backend**: Railway (Free tier: $5 credit)
+- **Database**: Railway MySQL (Included)
+
+### 📝 Step-by-Step Guide
+
+#### 1️⃣ Push to GitHub
 ```bash
-./deploy.sh
+cd /Users/macbookairi52019/Desktop/sumber-jaya-app
+git init
+git add .
+git commit -m "Initial commit - Ready for deployment"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/sumber-jaya-app.git
+git push -u origin main
 ```
 
-### 📋 Manual Steps
-```bash
-# 1. Login to Vercel
-vercel login
+#### 2️⃣ Deploy Backend + Database ke Railway
 
-# 2. Deploy to production
-vercel --prod --yes
+1. **Login** ke [Railway.app](https://railway.app)
+2. **New Project** → **Deploy from GitHub repo**
+3. **Add MySQL**:
+   - Click "New" → "Database" → "Add MySQL"
+   - Railway auto-generates credentials
+4. **Add Backend**:
+   - Click "New" → "GitHub Repo" → Select `sumber-jaya-app`
+   - **Root Directory**: `/backend`
+   - **Build Command**: `npm install`
+   - **Start Command**: `node server.js`
+5. **Environment Variables** (Backend service):
+   ```
+   NODE_ENV=production
+   JWT_SECRET=ganti_dengan_random_string_panjang
+   PORT=5555
+   ```
+   *Note: MySQL credentials auto-injected*
+6. **Import Database**:
+   - Click MySQL service → Connect
+   - Execute `backend/database.sql`
+7. **Generate Domain**:
+   - Backend → Settings → Generate Domain
+   - Copy URL: `https://xxx.railway.app`
+
+#### 3️⃣ Deploy Frontend ke Vercel
+
+1. **Login** ke [Vercel.com](https://vercel.com)
+2. **Import Project** → Select `sumber-jaya-app`
+3. **Configure**:
+   - **Root Directory**: `frontend`
+   - **Framework**: Create React App
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `build`
+4. **Environment Variables**:
+   ```
+   REACT_APP_API_URL=https://your-railway-backend.railway.app/api
+   ```
+5. **Deploy!**
+6. **Copy Frontend URL**: `https://xxx.vercel.app`
+
+#### 4️⃣ Update CORS (Railway Backend)
+
+Update Railway backend environment variable:
+```
+FRONTEND_URL=https://your-vercel-app.vercel.app
 ```
 
-### ⚠️ Important: Set Backend URL
-After deploy, configure environment variable:
-1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
-2. Select your project → Settings → Environment Variables
-3. Add: `REACT_APP_API_URL` = `https://your-backend-url.vercel.app/api`
-4. Redeploy: `vercel --prod`
+Railway will auto-redeploy!
 
 ### 🔑 Default Login
 ```
@@ -38,7 +86,10 @@ Username: hengky
 Password: hengky123
 ```
 
-📚 **Full deployment guide:** See `DEPLOY_INSTRUCTIONS.md`
+### ✅ Done!
+Visit your Vercel URL and login!
+
+📚 **Detailed guide**: See `DEPLOYMENT.md`
 
 ---
 

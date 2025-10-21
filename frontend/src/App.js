@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut, 
-  Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff
+  Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown
 } from 'lucide-react';
 import { 
   authService, 
@@ -42,7 +42,8 @@ const SumberJayaApp = () => {
     kasHarian: 0,
     penjualanQty: 0,
     penjualanNilai: 0,
-    pendingApproval: 0
+    pendingApproval: 0,
+    pengeluaran7Hari: 0
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -118,7 +119,8 @@ const SumberJayaApp = () => {
           kasHarian: data.kasHarian || 0,
           penjualanQty: data.penjualanQty || 0,
           penjualanNilai: data.penjualanNilai || 0,
-          pendingApproval: data.pendingApproval || 0
+          pendingApproval: data.pendingApproval || 0,
+          pengeluaran7Hari: data.pengeluaran7Hari || 0
         });
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -160,6 +162,17 @@ const SumberJayaApp = () => {
     if (!isLoggedIn) return;
     
     try {
+      // Auto-transfer saldo kemarin jika belum
+      try {
+        const transferResult = await kasKecilService.transferSaldo();
+        if (transferResult.transferred) {
+          console.log(`✅ Saldo ditransfer: ${transferResult.count} PT`);
+        }
+      } catch (error) {
+        console.log('Transfer saldo skip:', error.response?.data?.message || error.message);
+      }
+      
+      // Load data kas kecil
       const data = await kasKecilService.getAll(filters);
       setKasKecilData(data);
     } catch (error) {
@@ -195,7 +208,7 @@ const SumberJayaApp = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   };
-
+  
   // Form State
   const [formKas, setFormKas] = useState({
     tanggal: getTodayDate(),
@@ -204,6 +217,9 @@ const SumberJayaApp = () => {
     jumlah: '',
     keterangan: ''
   });
+
+  const [showEditKasModal, setShowEditKasModal] = useState(false);
+  const [editingKas, setEditingKas] = useState(null);
 
   const [formUser, setFormUser] = useState({
     nama: '',
@@ -254,7 +270,7 @@ const SumberJayaApp = () => {
         tanggal: formKas.tanggal,
         pt: formKas.pt,
         jenis: formKas.jenis,
-        jumlah: parseFloat(formKas.jumlah),
+      jumlah: parseFloat(formKas.jumlah),
         keterangan: formKas.keterangan
       };
       
@@ -266,11 +282,13 @@ const SumberJayaApp = () => {
       // Reset form
       setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
       
-      const needsApproval = formKas.jenis === 'keluar' && parseFloat(formKas.jumlah) > 300000;
+      const needsApproval = formKas.jenis === 'keluar' && parseFloat(formKas.jumlah) >= 300000;
       if (needsApproval) {
-        alert('Data kas berhasil disimpan! Status: Menunggu approval karena nominal > Rp 300.000');
+        alert('Data kas berhasil disimpan! Status: Menunggu approval karena pengeluaran >= Rp 300.000');
+      } else if (formKas.jenis === 'masuk') {
+        alert('Data kas berhasil disimpan! Pemasukan langsung disetujui.');
       } else {
-        alert('Data kas berhasil disimpan!');
+        alert('Data kas berhasil disimpan! Pengeluaran langsung disetujui.');
       }
     } catch (error) {
       console.error('Error saving kas:', error);
@@ -281,7 +299,7 @@ const SumberJayaApp = () => {
   };
 
   const handleSaveUser = async () => {
-    if (!formUser.nama || !formUser.username || !formUser.password || !formUser.jabatan || formUser.aksesPT.length === 0) {
+    if (!formUser.nama || !formUser.username || !formUser.password || !formUser.jabatan || !formUser.aksesPT || formUser.aksesPT.length === 0) {
       alert('Mohon lengkapi semua field!');
       return;
     }
@@ -293,22 +311,23 @@ const SumberJayaApp = () => {
         name: formUser.nama,
         role: formUser.jabatan,
         aksesPT: formUser.aksesPT,
+        fiturAkses: formUser.fiturAkses,
         status: 'aktif'
       };
       
       await userService.create(userData);
       await loadUsers(); // Refresh user list
       
-      setFormUser({
-        nama: '',
-        username: '',
-        password: '',
-        jabatan: '',
-        fiturAkses: [],
-        aksesPT: []
-      });
-      setShowAddUserModal(false);
-      alert('User berhasil ditambahkan!');
+    setFormUser({
+      nama: '',
+      username: '',
+      password: '',
+      jabatan: '',
+      fiturAkses: [],
+      aksesPT: []
+    });
+    setShowAddUserModal(false);
+    alert('User berhasil ditambahkan!');
     } catch (error) {
       console.error('Error creating user:', error);
       alert('Gagal menambahkan user: ' + (error.response?.data?.message || error.message));
@@ -319,12 +338,12 @@ const SumberJayaApp = () => {
   const handleOpenEditUser = (user) => {
     setEditingUser(user);
     setFormUser({
-      nama: user.nama,
+      nama: user.name,
       username: user.username,
-      password: user.password,
-      jabatan: user.jabatan,
-      fiturAkses: user.fiturAkses,
-      aksesPT: user.aksesPT
+      password: '', // Don't prefill password for security
+      jabatan: user.role,
+      fiturAkses: user.fiturAkses || [],
+      aksesPT: user.accessPT || []
     });
     setShowEditUserModal(true);
   };
@@ -341,6 +360,7 @@ const SumberJayaApp = () => {
         name: formUser.nama,
         role: formUser.jabatan,
         aksesPT: formUser.aksesPT,
+        fiturAkses: formUser.fiturAkses,
         status: editingUser.status || 'aktif'
       };
       
@@ -428,6 +448,67 @@ const SumberJayaApp = () => {
     }
   };
 
+  const handleOpenEditKas = (kas) => {
+    setEditingKas(kas);
+    setFormKas({
+      tanggal: kas.tanggal.split('T')[0],
+      pt: kas.pt,
+      jenis: kas.jenis,
+      jumlah: kas.jumlah,
+      keterangan: kas.keterangan
+    });
+    setShowEditKasModal(true);
+  };
+
+  const handleUpdateKas = async () => {
+    if (!formKas.pt || !formKas.jumlah || !formKas.keterangan) {
+      alert('Mohon lengkapi semua field!');
+      return;
+    }
+    
+    setIsLoadingKas(true);
+    
+    try {
+      const kasData = {
+        tanggal: formKas.tanggal,
+        pt: formKas.pt,
+        jenis: formKas.jenis,
+        jumlah: parseFloat(formKas.jumlah),
+        keterangan: formKas.keterangan
+      };
+      
+      await kasKecilService.update(editingKas.id, kasData);
+      
+      // Refresh data
+      await loadKasKecilData();
+      
+      // Close modal & reset
+      setShowEditKasModal(false);
+      setEditingKas(null);
+      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
+      
+      alert('Data kas berhasil diupdate!');
+    } catch (error) {
+      console.error('Error updating kas:', error);
+      alert('Gagal update data kas: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoadingKas(false);
+    }
+  };
+
+  const handleDeleteKas = async (kasId, kasKeterangan) => {
+    if (window.confirm(`Hapus transaksi: "${kasKeterangan}"?\n\nData yang sudah dihapus tidak dapat dikembalikan!`)) {
+      try {
+        await kasKecilService.delete(kasId);
+        await loadKasKecilData(); // Refresh data
+        alert('Transaksi berhasil dihapus!');
+      } catch (error) {
+        console.error('Error deleting kas:', error);
+        alert('Gagal menghapus transaksi: ' + (error.response?.data?.message || error.message));
+      }
+    }
+  };
+
   const handleSavePenjualan = async () => {
     if (!formPenjualan.pt || !formPenjualan.pangkalan || !formPenjualan.qty) {
       alert('Mohon lengkapi semua field!');
@@ -441,24 +522,24 @@ const SumberJayaApp = () => {
         tanggal: formPenjualan.tanggal,
         pt: formPenjualan.pt,
         pangkalan: formPenjualan.pangkalan,
-        qty: parseFloat(formPenjualan.qty),
+      qty: parseFloat(formPenjualan.qty),
         ppnPercent: parseFloat(formPenjualan.ppnPercent),
         metodeBayar: formPenjualan.metodeBayar
-      };
-      
+    };
+    
       await penjualanService.create(penjualanData);
-      
+    
       // Refresh data
       await loadPenjualanData();
       
       // If cash payment, kas kecil will be auto-created by backend
-      if (formPenjualan.metodeBayar === 'cash') {
+    if (formPenjualan.metodeBayar === 'cash') {
         await loadKasKecilData();
       }
       
       // Reset form
       setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', ppnPercent: 11, metodeBayar: 'cash' });
-      alert('Data penjualan berhasil disimpan!');
+    alert('Data penjualan berhasil disimpan!');
     } catch (error) {
       console.error('Error saving penjualan:', error);
       alert('Gagal menyimpan data penjualan: ' + (error.response?.data?.message || error.message));
@@ -516,8 +597,8 @@ const SumberJayaApp = () => {
   // Handler Edit Profile
   const handleOpenEditProfile = () => {
     setFormEditProfile({
-      nama: currentUserData?.nama || '',
-      jabatan: currentUserData?.jabatan || ''
+      nama: currentUserData?.name || '',
+      jabatan: currentUserData?.role || ''
     });
     setShowEditProfileModal(true);
     setShowProfileMenu(false);
@@ -676,7 +757,7 @@ const SumberJayaApp = () => {
           <div class="signature-box">
             <div class="signature-title">Kasir</div>
             <div class="signature-space"></div>
-            <div class="signature-name">${currentUserData?.nama || 'User'}</div>
+            <div class="signature-name">${currentUserData?.name || 'User'}</div>
           </div>
           <div class="signature-box">
             <div class="signature-title">Manager Keuangan</div>
@@ -946,6 +1027,9 @@ const SumberJayaApp = () => {
                 .no-print { 
                   display: none !important; 
                 }
+                .no-print-row {
+                  display: none !important;
+                }
                 .labarugi-nett {
                   background: #e6f9e6 !important;
                   border: 2px solid #a8e6a8 !important;
@@ -975,7 +1059,7 @@ const SumberJayaApp = () => {
               <div class="info-right">
                 <div class="info-row">
                   <span class="info-label">Dicetak Oleh</span>
-                  <span class="info-value">: ${currentUserData?.nama || 'User'}</span>
+                  <span class="info-value">: ${currentUserData?.name || 'User'}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">PT</span>
@@ -990,8 +1074,8 @@ const SumberJayaApp = () => {
             ${signatureSection}
             
             <div class="report-footer">
-              <p><strong>© 2025 Sumber Jaya Grup Official by:Rigeel</strong> - Sistem Sumber Jaya Grup Official</p>
-              <p>Dicetak pada: ${tanggal} oleh ${currentUserData?.nama || 'User'} (${currentUserData?.jabatan || 'Role'})</p>
+              <p><strong>© 2025 Sumber Jaya Grup Official App by:Rigeel</strong> - Sistem Sumber Jaya Grup Official</p>
+              <p>Dicetak pada: ${tanggal} oleh ${currentUserData?.name || 'User'} (${currentUserData?.role || 'Role'})</p>
               <p>Dokumen ini adalah salinan resmi dan sah untuk keperluan administrasi</p>
             </div>
           </body>
@@ -1106,16 +1190,20 @@ const SumberJayaApp = () => {
     );
   }
 
-  const renderBeranda = () => (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-8 text-white shadow-lg">
-        <div className="flex items-center gap-4 mb-4">
+  const renderBeranda = () => {
+    // Filter menu berdasarkan akses user
+    const filteredMenuItems = mainMenuItems.filter(item => 
+      currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes(item.id)
+    );
 
+    return (
+    <div className="space-y-6">
+      <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-6 md:p-8 text-white shadow-lg">
           <div>
-            <h2 className="text-3xl font-bold mb-1">Selamat Datang, {currentUserData?.nama}!</h2>
-            <p className="text-gray-300 text-lg">{currentUserData?.jabatan} - SUMBER JAYA GRUP</p>
+          <h2 className="text-2xl md:text-3xl font-bold mb-1">Selamat Datang, {currentUserData?.name}!</h2>
+          <p className="text-gray-300 text-base md:text-lg">{currentUserData?.role} - SUMBER JAYA GRUP</p>
           </div>
-        </div>
+        
         <div className="mt-4 flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <Calendar size={16} />
@@ -1127,7 +1215,7 @@ const SumberJayaApp = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-gray-900">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Kas Harian</p>
+            <p className="text-sm text-gray-600">Kas Kecil</p>
             <DollarSign className="text-gray-900" size={28} />
           </div>
           {isLoadingStats ? (
@@ -1135,9 +1223,9 @@ const SumberJayaApp = () => {
           ) : (
             <>
               <p className="text-3xl font-bold text-gray-800">
-                Rp {(dashboardStats.kasHarian / 1000000).toFixed(1)} Jt
+                Rp {dashboardStats.kasHarian.toLocaleString('id-ID')}
               </p>
-              <p className="text-xs text-gray-500 mt-2">Saldo hari ini</p>
+              <p className="text-xs text-gray-500 mt-2">Saldo kas tunai</p>
             </>
           )}
         </div>
@@ -1178,31 +1266,54 @@ const SumberJayaApp = () => {
           )}
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-gray-600">
+        <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-red-500">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Laba Bulan Ini</p>
-            <BarChart3 className="text-gray-600" size={28} />
+            <p className="text-sm text-gray-600">Pengeluaran 7 Hari</p>
+            <TrendingDown className="text-red-500" size={28} />
           </div>
-          <p className="text-3xl font-bold text-gray-800">Rp 165 Jt</p>
-          <p className="text-xs text-gray-500 mt-2">Total 5 PT (Coming Soon)</p>
+          {isLoadingStats ? (
+            <p className="text-2xl font-bold text-gray-400">Loading...</p>
+          ) : (
+            <>
+              <p className="text-3xl font-bold text-gray-800">
+                Rp {dashboardStats.pengeluaran7Hari.toLocaleString('id-ID')}
+              </p>
+              <p className="text-xs text-red-600 mt-2 font-medium">Seminggu terakhir</p>
+            </>
+          )}
         </div>
       </div>
 
+      {/* Akses Cepat Mobile - Filtered & Modern UI */}
       <div className="md:hidden">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">Akses Cepat</h3>
+        <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">🚀 Akses Cepat</h3>
         <div className="grid grid-cols-2 gap-4">
-          {mainMenuItems.map(item => {
+          {filteredMenuItems.map(item => {
             const ItemIcon = item.icon;
+            const isActive = activeMenu === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveMenu(item.id)}
-                className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all group text-center"
+                className={`rounded-xl p-6 shadow-md hover:shadow-xl transition-all group text-center transform hover:scale-105 ${
+                  isActive 
+                    ? 'bg-gradient-to-br from-gray-900 to-gray-700 text-white ring-4 ring-gray-300' 
+                    : 'bg-white text-gray-800'
+                }`}
               >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-blue-100 text-blue-600 mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all mx-auto">
+                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-xl mb-4 transition-all mx-auto ${
+                  isActive 
+                    ? 'bg-white text-gray-900 shadow-lg' 
+                    : 'bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
+                }`}>
                   <ItemIcon size={32} />
                 </div>
-                <h4 className="font-bold text-gray-800 text-sm">{item.label}</h4>
+                <h4 className={`font-bold text-sm ${isActive ? 'text-white' : 'text-gray-800'}`}>
+                  {item.label}
+                </h4>
+                {isActive && (
+                  <div className="mt-2 text-xs text-gray-300">● Aktif</div>
+                )}
               </button>
             );
           })}
@@ -1212,7 +1323,7 @@ const SumberJayaApp = () => {
       <div className="bg-white rounded-xl p-6 shadow-md">
         <h3 className="text-lg font-bold text-gray-800 mb-4">PT Yang Dapat Diakses</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {currentUserData?.aksesPT?.map(code => {
+          {currentUserData?.accessPT?.map(code => {
             const pt = ptList.find(p => p.code === code);
             return (
               <div key={code} className="border-2 border-gray-300 bg-gray-50 rounded-lg p-4 hover:border-gray-900 hover:bg-gray-100 transition-all">
@@ -1225,6 +1336,7 @@ const SumberJayaApp = () => {
       </div>
     </div>
   );
+  };
 
   const renderArusKas = () => {
     const handlePTChange = (ptCode) => {
@@ -1253,7 +1365,7 @@ const SumberJayaApp = () => {
               <span className="text-xs">▼</span>
             </button>
             <div id="pt-dropdown" className="hidden absolute top-full mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[200px]">
-              {currentUserData?.aksesPT?.map(code => (
+              {currentUserData?.accessPT?.map(code => (
                 <label key={code} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
                   <input 
                     type="checkbox" 
@@ -1297,7 +1409,7 @@ const SumberJayaApp = () => {
               className="w-full px-4 py-2 border rounded-lg"
             >
               <option value="">Pilih PT</option>
-              {currentUserData?.aksesPT?.map(code => (
+              {currentUserData?.accessPT?.map(code => (
                 <option key={code} value={code}>{code}</option>
               ))}
             </select>
@@ -1371,12 +1483,28 @@ const SumberJayaApp = () => {
                 <th className="px-4 py-3 text-left">Keterangan</th>
                 <th className="px-4 py-3 text-right">Masuk</th>
                 <th className="px-4 py-3 text-right">Keluar</th>
-                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-center no-print">Status</th>
+                <th className="px-4 py-3 text-center no-print">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {getFilteredKasData(selectedPT).map(kas => (
-                <tr key={kas.id}>
+              {getFilteredKasData(selectedPT).map(kas => {
+                // Check if transaction was created today (based on created_at timestamp)
+                const now = new Date();
+                const createdDate = kas.created_at ? new Date(kas.created_at) : null;
+                
+                // Check if created today (within last 24 hours and same day in local timezone)
+                let isToday = false;
+                if (createdDate) {
+                  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  isToday = createdDate >= todayStart;
+                }
+                
+                // Hide non-approved transactions in print/export
+                const rowClass = kas.status !== 'approved' ? 'no-print-row' : '';
+                
+                return (
+                <tr key={kas.id} className={rowClass}>
                   <td className="px-4 py-3">{kas.tanggal}</td>
                   <td className="px-4 py-3">{kas.pt}</td>
                   <td className="px-4 py-3">{kas.keterangan}</td>
@@ -1386,7 +1514,7 @@ const SumberJayaApp = () => {
                   <td className="px-4 py-3 text-right text-red-600 font-semibold">
                     {kas.jenis === 'keluar' ? `Rp ${kas.jumlah.toLocaleString('id-ID')}` : '-'}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center no-print">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       kas.status === 'approved' ? 'bg-green-100 text-green-700' : 
                       kas.status === 'rejected' ? 'bg-red-100 text-red-700' :
@@ -1395,17 +1523,37 @@ const SumberJayaApp = () => {
                       {kas.status === 'approved' ? 'Approved' : kas.status === 'rejected' ? 'Rejected' : 'Pending'}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-center no-print">
+                    {isToday && (
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => handleOpenEditKas(kas)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteKas(kas.id, kas.keterangan)}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
               <tr className="grand-total-row bg-gray-100 font-bold border-t-2 border-gray-800">
                 <td colSpan="3" className="px-4 py-3 text-right">Total</td>
                 <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
                 <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
-                <td className="px-4 py-3"></td>
+                <td colSpan="2" className="px-4 py-3 no-print"></td>
               </tr>
               <tr className="grand-total-row bg-blue-50 font-bold">
                 <td colSpan="3" className="px-4 py-3 text-right">Saldo Akhir</td>
-                <td colSpan="3" className="px-4 py-3 text-right text-blue-600 text-lg">Rp {saldo.toLocaleString('id-ID')}</td>
+                <td colSpan="2" className="px-4 py-3 text-right text-blue-600 text-lg">Rp {saldo.toLocaleString('id-ID')}</td>
+                <td colSpan="2" className="no-print"></td>
               </tr>
             </tbody>
           </table>
@@ -1451,7 +1599,7 @@ const SumberJayaApp = () => {
               className="w-full px-4 py-2 border rounded-lg"
             >
               <option value="">Pilih PT</option>
-              {currentUserData?.aksesPT?.map(code => (
+              {currentUserData?.accessPT?.map(code => (
                 <option key={code} value={code}>{code}</option>
               ))}
             </select>
@@ -1608,6 +1756,53 @@ const SumberJayaApp = () => {
       setShowLaporanPreview(true);
     };
 
+    // Hitung Laba Rugi dari data real
+    const hitungLabaRugi = () => {
+      // Filter data berdasarkan PT dan bulan yang dipilih
+      const [year, month] = selectedMonth.split('-');
+      
+      // Penjualan Gas LPG (hanya yang approved)
+      const penjualanFiltered = penjualanData.filter(item => {
+        if (!selectedPT.includes(item.pt)) return false;
+        const itemDate = new Date(item.tanggal);
+        return itemDate.getFullYear() === parseInt(year) && 
+               (itemDate.getMonth() + 1) === parseInt(month);
+      });
+      const totalPenjualan = penjualanFiltered.reduce((sum, item) => 
+        sum + (item.jumlah_tabung * item.harga_per_tabung), 0
+      );
+
+      // Pendapatan Lain & Pengeluaran dari Kas Kecil (hanya yang approved)
+      const kasFiltered = kasKecilData.filter(item => {
+        if (!selectedPT.includes(item.pt)) return false;
+        if (item.status !== 'approved') return false;
+        const itemDate = new Date(item.tanggal);
+        return itemDate.getFullYear() === parseInt(year) && 
+               (itemDate.getMonth() + 1) === parseInt(month);
+      });
+
+      const pendapatanLain = kasFiltered
+        .filter(item => item.jenis === 'masuk')
+        .reduce((sum, item) => sum + item.jumlah, 0);
+
+      const totalPengeluaran = kasFiltered
+        .filter(item => item.jenis === 'keluar')
+        .reduce((sum, item) => sum + item.jumlah, 0);
+
+      const totalPendapatan = totalPenjualan + pendapatanLain;
+      const labaBersih = totalPendapatan - totalPengeluaran;
+
+      return {
+        penjualanGas: totalPenjualan,
+        pendapatanLain,
+        totalPendapatan,
+        totalPengeluaran,
+        labaBersih
+      };
+    };
+
+    const laporanData = hitungLabaRugi();
+
     return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1622,7 +1817,7 @@ const SumberJayaApp = () => {
               <span className="text-xs">▼</span>
             </button>
             <div id="pt-dropdown-laporan" className="hidden absolute top-full mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[200px]">
-              {currentUserData?.aksesPT?.map(code => (
+              {currentUserData?.accessPT?.map(code => (
                 <label key={code} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
                   <input 
                     type="checkbox" 
@@ -1691,18 +1886,18 @@ const SumberJayaApp = () => {
             <div className="mb-4">
               <div className="labarugi-item">
                 <span className="labarugi-item-label">Penjualan Gas LPG</span>
-                <span className="labarugi-item-value">Rp 200.000.000</span>
+                <span className="labarugi-item-value">Rp {laporanData.penjualanGas.toLocaleString('id-ID')}</span>
           </div>
           
               <div className="labarugi-item">
-                <span className="labarugi-item-label">Pendapatan Lain</span>
-                <span className="labarugi-item-value">Rp 8.000.000</span>
+                <span className="labarugi-item-label">Pendapatan Lain (Kas Masuk)</span>
+                <span className="labarugi-item-value">Rp {laporanData.pendapatanLain.toLocaleString('id-ID')}</span>
               </div>
           </div>
           
             <div className="labarugi-total">
               <span className="labarugi-total-label">Total Pendapatan</span>
-              <span className="labarugi-total-value" style={{color: '#059669'}}>Rp 208.000.000</span>
+              <span className="labarugi-total-value" style={{color: '#059669'}}>Rp {laporanData.totalPendapatan.toLocaleString('id-ID')}</span>
           </div>
         </div>
 
@@ -1713,25 +1908,22 @@ const SumberJayaApp = () => {
           
             <div className="mb-4">
               <div className="labarugi-item">
-                <span className="labarugi-item-label">Pembelian Stok</span>
-                <span className="labarugi-item-value">Rp 150.000.000</span>
-          </div>
-          
-              <div className="labarugi-item">
-                <span className="labarugi-item-label">Operasional</span>
-                <span className="labarugi-item-value">Rp 10.000.000</span>
+                <span className="labarugi-item-label">Total Pengeluaran (Kas Keluar)</span>
+                <span className="labarugi-item-value">Rp {laporanData.totalPengeluaran.toLocaleString('id-ID')}</span>
           </div>
         </div>
 
             <div className="labarugi-total">
               <span className="labarugi-total-label">Total Pengeluaran</span>
-              <span className="labarugi-total-value" style={{color: '#dc2626'}}>Rp 160.000.000</span>
+              <span className="labarugi-total-value" style={{color: '#dc2626'}}>Rp {laporanData.totalPengeluaran.toLocaleString('id-ID')}</span>
           </div>
         </div>
 
-          <div className="labarugi-nett bg-green-50 border-2 border-green-300 rounded-lg p-5">
-            <span className="labarugi-nett-label">Laba Bersih</span>
-            <span className="labarugi-nett-value">Rp 48.000.000</span>
+          <div className={`labarugi-nett border-2 rounded-lg p-5 ${laporanData.labaBersih >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+            <span className="labarugi-nett-label">{laporanData.labaBersih >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}</span>
+            <span className="labarugi-nett-value" style={{color: laporanData.labaBersih >= 0 ? '#059669' : '#dc2626'}}>
+              Rp {Math.abs(laporanData.labaBersih).toLocaleString('id-ID')}
+            </span>
       </div>
         </div>
       )}
@@ -1788,12 +1980,12 @@ const SumberJayaApp = () => {
             <tbody className="divide-y">
               {userList.map(user => (
                 <tr key={user.id}>
-                  <td className="px-4 py-3 font-semibold">{user.nama}</td>
+                  <td className="px-4 py-3 font-semibold">{user.name}</td>
                   <td className="px-4 py-3">{user.username}</td>
-                  <td className="px-4 py-3">{user.jabatan}</td>
+                  <td className="px-4 py-3">{user.role}</td>
                   <td className="px-4 py-3">
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                      {user.aksesPT.length === ptList.length ? 'Semua PT' : user.aksesPT.join(', ')}
+                      {user.accessPT && user.accessPT.length === ptList.length ? 'Semua PT' : user.accessPT?.join(', ') || '-'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -2063,7 +2255,7 @@ const SumberJayaApp = () => {
     };
 
     const { masuk, keluar, saldo } = hitungSaldoKas(selectedPT);
-    const hasApprovalAccess = currentUserData?.fiturAkses?.includes('detail-kas') || currentUserData?.jabatan === 'Master User';
+    const hasApprovalAccess = currentUserData?.fiturAkses?.includes('detail-kas') || currentUserData?.role === 'Master User';
 
     return (
     <div className="space-y-6">
@@ -2079,7 +2271,7 @@ const SumberJayaApp = () => {
               <span className="text-xs">▼</span>
             </button>
             <div id="pt-dropdown-detail" className="hidden absolute top-full mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[200px]">
-              {currentUserData?.aksesPT?.map(code => (
+              {currentUserData?.accessPT?.map(code => (
                 <label key={code} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
                   <input 
                     type="checkbox" 
@@ -2149,7 +2341,7 @@ const SumberJayaApp = () => {
                   </td>
                   {hasApprovalAccess && (
                     <td className="px-4 py-3 text-center">
-                      {kas.status === 'pending' && (
+                      {kas.status === 'pending' && currentUserData?.accessPT?.includes(kas.pt) && (
                         <div className="flex gap-2 justify-center">
                           <button
                             onClick={() => handleApproveKas(kas.id)}
@@ -2164,6 +2356,9 @@ const SumberJayaApp = () => {
                             Reject
                           </button>
                         </div>
+                      )}
+                      {kas.status === 'pending' && !currentUserData?.accessPT?.includes(kas.pt) && (
+                        <span className="text-xs text-gray-500 italic">No access</span>
                       )}
                     </td>
                   )}
@@ -2226,7 +2421,7 @@ const SumberJayaApp = () => {
 
               <div className="flex items-center gap-3 flex-1">
                 {mainMenuItems
-                  .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.jabatan === 'Master User')
+                  .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User')
                   .map(item => {
                     const ItemIcon = item.icon;
                     const isActive = activeMenu === item.id;
@@ -2252,21 +2447,21 @@ const SumberJayaApp = () => {
 
               <div className="flex items-center gap-4 ml-auto">
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-800">{currentUserData?.nama || 'User'}</p>
-                  <p className="text-xs text-gray-600">{currentUserData?.jabatan || 'Role'}</p>
+                  <p className="text-sm font-semibold text-gray-800">{currentUserData?.name || 'User'}</p>
+                  <p className="text-xs text-gray-600">{currentUserData?.role || 'Role'}</p>
                 </div>
                 <div className="relative">
                   <button
                     onClick={() => setShowProfileMenu(!showProfileMenu)}
                     className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center font-bold hover:shadow-lg transition-all"
                   >
-                    {currentUserData?.nama?.charAt(0) || 'U'}
+                    {currentUserData?.name?.charAt(0) || 'U'}
                   </button>
                   {showProfileMenu && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                       <div className="px-4 py-3 border-b border-gray-200">
-                        <p className="text-sm font-semibold text-gray-800">{currentUserData?.nama}</p>
-                        <p className="text-xs text-gray-600">{currentUserData?.jabatan}</p>
+                        <p className="text-sm font-semibold text-gray-800">{currentUserData?.name}</p>
+                        <p className="text-xs text-gray-600">{currentUserData?.role}</p>
                         <p className="text-xs text-gray-500 mt-1">@{currentUserData?.username}</p>
                       </div>
                       <button 
@@ -2302,8 +2497,17 @@ const SumberJayaApp = () => {
         <header className="md:hidden bg-white shadow-sm sticky top-0 z-30">
           <div className="px-4 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              <div className="flex items-center gap-3">
+                <img 
+                  src="/images/logo.png" 
+                  alt="Logo" 
+                  className="w-12 h-12 object-contain rounded-lg bg-white p-1"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div className="w-12 h-12 bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden">
                   SJ
                 </div>
                 <div>
@@ -2316,13 +2520,13 @@ const SumberJayaApp = () => {
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center font-bold hover:shadow-lg transition-all"
                 >
-                  {currentUserData?.nama?.charAt(0) || 'U'}
+                  {currentUserData?.name?.charAt(0) || 'U'}
                 </button>
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                     <div className="px-4 py-3 border-b border-gray-200">
-                      <p className="text-sm font-semibold text-gray-800">{currentUserData?.nama}</p>
-                      <p className="text-xs text-gray-600">{currentUserData?.jabatan}</p>
+                      <p className="text-sm font-semibold text-gray-800">{currentUserData?.name}</p>
+                      <p className="text-xs text-gray-600">{currentUserData?.role}</p>
                       <p className="text-xs text-gray-500 mt-1">@{currentUserData?.username}</p>
                     </div>
                     <button 
@@ -2363,7 +2567,7 @@ const SumberJayaApp = () => {
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
           <div className="flex justify-around items-center">
             {mainMenuItems
-              .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.jabatan === 'Master User')
+              .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User')
               .map(item => {
                 const ItemIcon = item.icon;
                 const isActive = activeMenu === item.id;
@@ -2541,6 +2745,111 @@ const SumberJayaApp = () => {
                 </button>
                 <button
                   onClick={() => setShowChangePasswordModal(false)}
+                  className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Edit Kas */}
+        {showEditKasModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-gray-800">Edit Transaksi Kas</h3>
+                <button 
+                  onClick={() => {
+                    setShowEditKasModal(false);
+                    setEditingKas(null);
+                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <span className="text-2xl">&times;</span>
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                  <p className="text-sm text-blue-800">
+                    <strong>Info:</strong> Hanya transaksi hari ini yang bisa diedit.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tanggal</label>
+                    <input 
+                      type="date" 
+                      value={formKas.tanggal}
+                      onChange={(e) => setFormKas({...formKas, tanggal: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">PT *</label>
+                    <select 
+                      value={formKas.pt}
+                      onChange={(e) => setFormKas({...formKas, pt: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="">Pilih PT</option>
+                      {currentUserData?.accessPT?.map(code => (
+                        <option key={code} value={code}>{code}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jenis Transaksi *</label>
+                    <select 
+                      value={formKas.jenis}
+                      onChange={(e) => setFormKas({...formKas, jenis: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="keluar">Pengeluaran</option>
+                      <option value="masuk">Pemasukan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
+                    <input 
+                      type="number" 
+                      value={formKas.jumlah}
+                      onChange={(e) => setFormKas({...formKas, jumlah: e.target.value})}
+                      placeholder="0" 
+                      className="w-full px-4 py-2 border rounded-lg" 
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-2">Keterangan *</label>
+                    <textarea 
+                      rows={3}
+                      value={formKas.keterangan}
+                      onChange={(e) => setFormKas({...formKas, keterangan: e.target.value})}
+                      placeholder="Masukkan keterangan transaksi" 
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 p-6 border-t bg-gray-50">
+                <button
+                  onClick={handleUpdateKas}
+                  disabled={isLoadingKas}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:bg-gray-400"
+                >
+                  {isLoadingKas ? 'Menyimpan...' : 'Update Transaksi'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditKasModal(false);
+                    setEditingKas(null);
+                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
+                  }}
                   className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
                 >
                   Batal

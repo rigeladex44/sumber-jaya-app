@@ -1,7 +1,7 @@
 // src/services/api.js
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5555/api';
 
 // Create axios instance
 const api = axios.create({
@@ -101,6 +101,21 @@ export const kasKecilService = {
 
   updateStatus: async (id, status) => {
     const response = await api.patch(`/kas-kecil/${id}/status`, { status });
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/kas-kecil/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/kas-kecil/${id}`);
+    return response.data;
+  },
+
+  transferSaldo: async () => {
+    const response = await api.post('/kas-kecil/transfer-saldo');
     return response.data;
   },
 
