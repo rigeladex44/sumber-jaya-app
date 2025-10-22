@@ -240,6 +240,7 @@ const SumberJayaApp = () => {
     pt: '',
     pangkalan: '',
     qty: '',
+    harga: 16000, // Harga per tabung
     ppnPercent: 11,
     ppnType: 'include', // 'include' atau 'exclude'
     metodeBayar: 'cash'
@@ -247,7 +248,7 @@ const SumberJayaApp = () => {
 
   // Hitung Total
   const hitungTotalPenjualan = () => {
-    const subtotal = (formPenjualan.qty || 0) * 16000;
+    const subtotal = (formPenjualan.qty || 0) * (formPenjualan.harga || 16000);
     const ppn = subtotal * (formPenjualan.ppnPercent / 100);
     
     if (formPenjualan.ppnType === 'include') {
@@ -584,6 +585,7 @@ const SumberJayaApp = () => {
         pt: formPenjualan.pt,
         pangkalan: formPenjualan.pangkalan,
         qty: parseFloat(formPenjualan.qty),
+        harga: parseFloat(formPenjualan.harga),
         ppnPercent: parseFloat(formPenjualan.ppnPercent),
         ppnType: formPenjualan.ppnType,
         metodeBayar: formPenjualan.metodeBayar
@@ -600,7 +602,7 @@ const SumberJayaApp = () => {
       }
       
       // Reset form
-      setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' });
+      setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', harga: 16000, ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' });
     alert('Data penjualan berhasil disimpan!');
     } catch (error) {
       console.error('Error saving penjualan:', error);
@@ -1794,6 +1796,18 @@ const SumberJayaApp = () => {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium mb-2">Harga per Tabung (Rp)</label>
+            <input 
+              type="number" 
+              value={formPenjualan.harga}
+              onChange={(e) => setFormPenjualan({...formPenjualan, harga: parseFloat(e.target.value) || 0})}
+              placeholder="16000" 
+              min="0"
+              step="100"
+              className="w-full px-4 py-2 border rounded-lg" 
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-2">PPN (%)</label>
             <input 
               type="number" 
@@ -1829,10 +1843,10 @@ const SumberJayaApp = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Total</label>
+            <label className="block text-sm font-medium mb-2">Subtotal (Qty × Harga)</label>
             <input 
               type="text" 
-              value={`Rp ${hitungTotalPenjualan().total.toLocaleString('id-ID')}`}
+              value={`${formPenjualan.qty || 0} × Rp ${(formPenjualan.harga || 16000).toLocaleString('id-ID')} = Rp ${hitungTotalPenjualan().subtotal.toLocaleString('id-ID')}`}
               readOnly 
               className="w-full px-4 py-2 border rounded-lg bg-gray-50 font-bold text-green-600" 
             />
@@ -1870,7 +1884,7 @@ const SumberJayaApp = () => {
             {isLoadingPenjualan ? 'Menyimpan...' : 'Simpan'}
           </button>
           <button 
-            onClick={() => setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' })}
+            onClick={() => setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', harga: 16000, ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' })}
             className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
           >
             Reset
