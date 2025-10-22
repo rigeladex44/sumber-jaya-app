@@ -833,7 +833,7 @@ app.get('/api/users', verifyToken, (req, res) => {
 
 // Create User
 app.post('/api/users', verifyToken, async (req, res) => {
-  const { username, password, name, role, aksesPT, fiturAkses, status } = req.body;
+  const { username, password, name, role, aksesPT, fiturAkses } = req.body;
   
   // Validate required fields
   if (!username || !password || !name || !role) {
@@ -856,8 +856,8 @@ app.post('/api/users', verifyToken, async (req, res) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       
       // Insert user
-      const insertQuery = 'INSERT INTO users (username, password, name, role, status) VALUES (?, ?, ?, ?, ?)';
-      db.query(insertQuery, [username, hashedPassword, name, role, status || 'aktif'], (err, result) => {
+      const insertQuery = 'INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)';
+      db.query(insertQuery, [username, hashedPassword, name, role], (err, result) => {
         if (err) {
           return res.status(500).json({ message: 'Server error', error: err });
         }
@@ -1104,8 +1104,8 @@ app.get('/api/setup-database', async (req, res) => {
     // Insert Master User (password: hengky123)
     const hashedPassword = await bcrypt.hash('hengky123', 10);
     await db.promise().query(`
-      INSERT INTO users (username, password, name, role, status) 
-      VALUES ('hengky', ?, 'Hengky Master User', 'Master User', 'aktif')
+      INSERT INTO users (username, password, name, role) 
+      VALUES ('hengky', ?, 'Hengky Master User', 'Master User')
       ON DUPLICATE KEY UPDATE username=username
     `, [hashedPassword]);
     
