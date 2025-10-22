@@ -700,7 +700,6 @@ const SumberJayaApp = () => {
 
   // Handler: Print Kas Kecil
   const handlePrintKasKecil = () => {
-    const content = document.getElementById('kas-kecil-content');
     const tanggal = new Date().toLocaleDateString('id-ID', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -721,9 +720,11 @@ const SumberJayaApp = () => {
     } else {
       ptInfo = 'Semua PT';
     }
+
+    // Get filtered data for PDF
+    const displayData = getFilteredKasKecilData();
     
-    if (content) {
-      const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank');
       
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -942,7 +943,6 @@ const SumberJayaApp = () => {
       
       printWindow.document.close();
       printWindow.print();
-    }
   };
 
   // Handler: Print Arus Kas
