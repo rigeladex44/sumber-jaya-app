@@ -3222,8 +3222,13 @@ const SumberJayaApp = () => {
       return { masuk, keluar, saldo: masuk - keluar };
     };
 
-    const { masuk, keluar, saldo } = hitungArusKas(selectedPT);
-    const filteredData = selectedPT.length > 0 ? arusKasData.filter(k => selectedPT.includes(k.pt)) : arusKasData;
+    // Use filtered data if filter is active
+    const displayData = filterArusKas.isFiltered ? filteredArusKasData : arusKasData;
+    
+    // Calculate totals based on display data
+    const masuk = displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const keluar = displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const saldo = masuk - keluar;
 
     return (
       <div className="space-y-6">
@@ -3319,27 +3324,86 @@ const SumberJayaApp = () => {
           </div>
         </div>
 
-        {/* PT Filter */}
-        <div className="bg-white rounded-lg shadow-sm border p-4">
-          <h3 className="text-lg font-semibold mb-3">Filter PT</h3>
-          <div className="flex flex-wrap gap-2">
-            {currentUserData?.accessPT?.map(ptCode => (
-              <button
-                key={ptCode}
-                onClick={() => handlePTChange(ptCode)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  selectedPT.includes(ptCode)
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+        {/* Filter & Export Section */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-semibold mb-4">Filter & Export Laporan</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            {/* PT Filter - Single Select */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Pilih PT * (1 PT per laporan)</label>
+              <select 
+                value={filterArusKas.pt}
+                onChange={(e) => setFilterArusKas({...filterArusKas, pt: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
               >
-                {ptCode}
-              </button>
-            ))}
+                <option value="">Pilih PT</option>
+                {currentUserData?.accessPT?.map(code => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Setiap PT dipisah per laporan
+              </p>
+            </div>
+
+            {/* Date From */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal Dari</label>
+              <input 
+                type="date" 
+                value={filterArusKas.tanggalDari}
+                onChange={(e) => setFilterArusKas({...filterArusKas, tanggalDari: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+
+            {/* Date To */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal Sampai</label>
+              <input 
+                type="date" 
+                value={filterArusKas.tanggalSampai}
+                onChange={(e) => setFilterArusKas({...filterArusKas, tanggalSampai: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-end">
+              {!filterArusKas.isFiltered ? (
+                <button
+                  onClick={handleFilterArusKas}
+                  className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Tampilkan
+                </button>
+              ) : (
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={handleExportArusKasPDF}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                  >
+                    <Download size={18} />
+                    Export PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFilterArusKas({pt: '', tanggalDari: '', tanggalSampai: '', isFiltered: false});
+                      setFilteredArusKasData([]);
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                    title="Reset"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            {selectedPT.length === 0 ? 'Semua PT ditampilkan' : `${selectedPT.length} PT dipilih`}
-          </p>
         </div>
 
         {/* Summary Cards */}
@@ -3404,7 +3468,7 @@ const SumberJayaApp = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredData.map((item, index) => (
+                {displayData.map((item, index) => (
                   <tr key={`${item.sumber}-${item.id}-${index}`} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
