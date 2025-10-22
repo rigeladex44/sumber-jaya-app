@@ -150,7 +150,7 @@ const SumberJayaApp = () => {
   // Kas Kecil State (untuk pembukuan kasir tunai)
   const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
   const [formKasKecil, setFormKasKecil] = useState({
-    tanggal: getTodayDate(),
+    tanggal: new Date().toISOString().split('T')[0],
     pt: '',
     jenis: 'keluar',
     jumlah: '',
@@ -246,7 +246,7 @@ const SumberJayaApp = () => {
   
   // Form State
   const [formKas, setFormKas] = useState({
-    tanggal: getTodayDate(),
+    tanggal: new Date().toISOString().split('T')[0],
     pt: '',
     jenis: 'keluar',
     jumlah: '',
@@ -271,7 +271,7 @@ const SumberJayaApp = () => {
   });
   
   const [formPenjualan, setFormPenjualan] = useState({
-    tanggal: getTodayDate(),
+    tanggal: new Date().toISOString().split('T')[0],
     pt: '',
     pangkalan: '',
     qty: '',
@@ -282,7 +282,7 @@ const SumberJayaApp = () => {
   });
 
   const [formArusKas, setFormArusKas] = useState({
-    tanggal: getTodayDate(),
+    tanggal: new Date().toISOString().split('T')[0],
     pt: '',
     jenis: 'keluar',
     jumlah: '',
