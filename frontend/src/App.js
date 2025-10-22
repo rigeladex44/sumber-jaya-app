@@ -913,7 +913,39 @@ const SumberJayaApp = () => {
               </div>
             </div>
             
-            ${content.innerHTML}
+            <table>
+              <thead>
+                <tr>
+                  <th class="text-center">Tanggal</th>
+                  <th class="text-center">PT</th>
+                  <th class="text-center">Kategori</th>
+                  <th class="text-center">Keterangan</th>
+                  <th class="text-right">Masuk</th>
+                  <th class="text-right">Keluar</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${displayData.map(item => `
+                  <tr>
+                    <td>${new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td>${item.pt}</td>
+                    <td>${item.kategori || '-'}</td>
+                    <td>${item.keterangan}</td>
+                    <td class="text-right">${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                    <td class="text-right">${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                  </tr>
+                `).join('')}
+                <tr class="grand-total-row">
+                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
+                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
+                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
+                </tr>
+                <tr class="grand-total-row">
+                  <td colspan="5" class="text-center"><strong>Saldo Akhir</strong></td>
+                  <td class="text-right"><strong>Rp ${(displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)).toLocaleString('id-ID')}</strong></td>
+                </tr>
+              </tbody>
+            </table>
             
             <div class="signature-section">
               <div class="signature-box">
@@ -947,7 +979,6 @@ const SumberJayaApp = () => {
 
   // Handler: Print Arus Kas
   const handlePrintArusKas = () => {
-    const content = document.getElementById('arus-kas-content');
     const tanggal = new Date().toLocaleDateString('id-ID', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -968,9 +999,11 @@ const SumberJayaApp = () => {
     } else {
       ptInfo = 'Semua PT';
     }
+
+    // Get filtered data for PDF
+    const displayData = getFilteredArusKasData();
     
-    if (content) {
-      const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank');
       
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -1159,7 +1192,39 @@ const SumberJayaApp = () => {
               </div>
             </div>
             
-            ${content.innerHTML}
+            <table>
+              <thead>
+                <tr>
+                  <th class="text-center">Tanggal</th>
+                  <th class="text-center">PT</th>
+                  <th class="text-center">Kategori</th>
+                  <th class="text-center">Keterangan</th>
+                  <th class="text-right">Masuk</th>
+                  <th class="text-right">Keluar</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${displayData.map(item => `
+                  <tr>
+                    <td>${new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td>${item.pt}</td>
+                    <td>${item.kategori || '-'}</td>
+                    <td>${item.keterangan}</td>
+                    <td class="text-right">${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                    <td class="text-right">${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                  </tr>
+                `).join('')}
+                <tr class="grand-total-row">
+                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
+                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
+                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
+                </tr>
+                <tr class="grand-total-row">
+                  <td colspan="5" class="text-center"><strong>Saldo Akhir</strong></td>
+                  <td class="text-right"><strong>Rp ${(displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)).toLocaleString('id-ID')}</strong></td>
+                </tr>
+              </tbody>
+            </table>
             
             <div class="signature-section">
               <div class="signature-box">
@@ -1189,7 +1254,6 @@ const SumberJayaApp = () => {
       
       printWindow.document.close();
       printWindow.print();
-    }
   };
 
   const handleSavePenjualan = async () => {
@@ -1974,7 +2038,39 @@ const SumberJayaApp = () => {
             </div>
             ` : ''}
             
-            ${content.innerHTML}
+            <table>
+              <thead>
+                <tr>
+                  <th class="text-center">Tanggal</th>
+                  <th class="text-center">PT</th>
+                  <th class="text-center">Kategori</th>
+                  <th class="text-center">Keterangan</th>
+                  <th class="text-right">Masuk</th>
+                  <th class="text-right">Keluar</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${displayData.map(item => `
+                  <tr>
+                    <td>${new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td>${item.pt}</td>
+                    <td>${item.kategori || '-'}</td>
+                    <td>${item.keterangan}</td>
+                    <td class="text-right">${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                    <td class="text-right">${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                  </tr>
+                `).join('')}
+                <tr class="grand-total-row">
+                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
+                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
+                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
+                </tr>
+                <tr class="grand-total-row">
+                  <td colspan="5" class="text-center"><strong>Saldo Akhir</strong></td>
+                  <td class="text-right"><strong>Rp ${(displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)).toLocaleString('id-ID')}</strong></td>
+                </tr>
+              </tbody>
+            </table>
             
             ${signatureSection}
             
