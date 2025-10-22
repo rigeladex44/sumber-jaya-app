@@ -261,7 +261,7 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
     params.push(status);
   }
   
-  query += ' ORDER BY tanggal DESC, id DESC';
+  query += ' ORDER BY tanggal ASC, id ASC';
   
   db.query(query, params, (err, results) => {
     if (err) {
@@ -658,7 +658,7 @@ app.get('/api/penjualan', verifyToken, (req, res) => {
     params.push(tanggal_sampai);
   }
   
-  query += ' ORDER BY tanggal DESC, id DESC';
+  query += ' ORDER BY tanggal ASC, id ASC';
   
   db.query(query, params, (err, results) => {
     if (err) {
