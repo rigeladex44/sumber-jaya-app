@@ -263,16 +263,14 @@ const SumberJayaApp = () => {
   // Filter State for Kas Kecil & Arus Kas
   const [filterKasKecil, setFilterKasKecil] = useState({
     pt: '',
-    tanggalDari: '',
-    tanggalSampai: '',
+    tanggal: '',
     isFiltered: false
   });
   const [filteredKasKecilData, setFilteredKasKecilData] = useState([]);
 
   const [filterArusKas, setFilterArusKas] = useState({
     pt: '',
-    tanggalDari: '',
-    tanggalSampai: '',
+    tanggal: '',
     isFiltered: false
   });
   const [filteredArusKasData, setFilteredArusKasData] = useState([]);
@@ -633,20 +631,15 @@ const SumberJayaApp = () => {
 
   // Handler: Filter Kas Kecil
   const handleFilterKasKecil = () => {
-    if (!filterKasKecil.pt) {
-      alert('Pilih PT terlebih dahulu!');
+    if (!filterKasKecil.pt || !filterKasKecil.tanggal) {
+      alert('Pilih PT dan Tanggal terlebih dahulu!');
       return;
     }
 
-    let filtered = kasKecilData.filter(item => item.pt === filterKasKecil.pt);
-
-    if (filterKasKecil.tanggalDari) {
-      filtered = filtered.filter(item => item.tanggal >= filterKasKecil.tanggalDari);
-    }
-
-    if (filterKasKecil.tanggalSampai) {
-      filtered = filtered.filter(item => item.tanggal <= filterKasKecil.tanggalSampai);
-    }
+    const filtered = kasKecilData.filter(item => 
+      item.pt === filterKasKecil.pt && 
+      item.tanggal.split('T')[0] === filterKasKecil.tanggal
+    );
 
     setFilteredKasKecilData(filtered);
     setFilterKasKecil({...filterKasKecil, isFiltered: true});
@@ -654,20 +647,15 @@ const SumberJayaApp = () => {
 
   // Handler: Filter Arus Kas
   const handleFilterArusKas = () => {
-    if (!filterArusKas.pt) {
-      alert('Pilih PT terlebih dahulu!');
+    if (!filterArusKas.pt || !filterArusKas.tanggal) {
+      alert('Pilih PT dan Tanggal terlebih dahulu!');
       return;
     }
 
-    let filtered = arusKasData.filter(item => item.pt === filterArusKas.pt);
-
-    if (filterArusKas.tanggalDari) {
-      filtered = filtered.filter(item => item.tanggal >= filterArusKas.tanggalDari);
-    }
-
-    if (filterArusKas.tanggalSampai) {
-      filtered = filtered.filter(item => item.tanggal <= filterArusKas.tanggalSampai);
-    }
+    const filtered = arusKasData.filter(item => 
+      item.pt === filterArusKas.pt && 
+      item.tanggal.split('T')[0] === filterArusKas.tanggal
+    );
 
     setFilteredArusKasData(filtered);
     setFilterArusKas({...filterArusKas, isFiltered: true});
@@ -2956,85 +2944,66 @@ const SumberJayaApp = () => {
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <h3 className="text-lg font-semibold mb-4">Filter & Export Laporan</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            {/* PT Filter - Multiple Select */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Filter PT (Bisa pilih lebih dari 1)</label>
-              <div className="flex flex-wrap gap-2">
-                {currentUserData?.accessPT?.map(ptCode => (
-                  <button
-                    key={ptCode}
-                    onClick={() => handlePTChange(ptCode)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      selectedPT.includes(ptCode)
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {ptCode}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {selectedPT.length === 0 ? 'Semua PT ditampilkan' : `${selectedPT.length} PT dipilih`}
-              </p>
-            </div>
-
-            {/* Date From */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* PT Filter - Dropdown */}
             <div>
-              <label className="block text-sm font-medium mb-2">Tanggal Dari</label>
-              <input 
-                type="date" 
-                value={filterKasKecil.tanggalDari}
-                onChange={(e) => setFilterKasKecil({...filterKasKecil, tanggalDari: e.target.value})}
+              <label className="block text-sm font-medium mb-2">Pilih PT *</label>
+              <select 
+                value={filterKasKecil.pt}
+                onChange={(e) => setFilterKasKecil({...filterKasKecil, pt: e.target.value})}
                 className="w-full px-4 py-2 border rounded-lg"
-              />
-            </div>
-
-            {/* Date To */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Tanggal Sampai</label>
-              <input 
-                type="date" 
-                value={filterKasKecil.tanggalSampai}
-                onChange={(e) => setFilterKasKecil({...filterKasKecil, tanggalSampai: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-            </div>
-          </div>
-
-          {/* Tampilkan / Export Button */}
-          <div className="flex gap-3">
-            {!filterKasKecil.isFiltered ? (
-              <button
-                onClick={handleFilterKasKecil}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Tampilkan
-              </button>
-            ) : (
-              <>
+                <option value="">Pilih PT</option>
+                {currentUserData?.accessPT?.map(code => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date Filter - Single Date */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal *</label>
+              <input 
+                type="date" 
+                value={filterKasKecil.tanggal}
+                onChange={(e) => setFilterKasKecil({...filterKasKecil, tanggal: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="md:col-span-2 flex items-end gap-2">
+              {!filterKasKecil.isFiltered ? (
                 <button
-                  onClick={handleExportKasKecilPDF}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                  onClick={handleFilterKasKecil}
+                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
                 >
-                  <Download size={20} />
-                  Export PDF
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Tampilkan
                 </button>
-                <button
-                  onClick={() => {
-                    setFilterKasKecil({pt: '', tanggalDari: '', tanggalSampai: '', isFiltered: false});
-                    setFilteredKasKecilData([]);
-                  }}
-                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                >
-                  Reset Filter
-                </button>
-              </>
-            )}
+              ) : (
+                <>
+                  <button
+                    onClick={handleExportKasKecilPDF}
+                    className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                  >
+                    <Download size={20} />
+                    Export PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFilterKasKecil({pt: '', tanggal: '', isFiltered: false});
+                      setFilteredKasKecilData([]);
+                    }}
+                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                  >
+                    Reset
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -3328,10 +3297,10 @@ const SumberJayaApp = () => {
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <h3 className="text-lg font-semibold mb-4">Filter & Export Laporan</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* PT Filter - Single Select */}
             <div>
-              <label className="block text-sm font-medium mb-2">Pilih PT * (1 PT per laporan)</label>
+              <label className="block text-sm font-medium mb-2">Pilih PT *</label>
               <select 
                 value={filterArusKas.pt}
                 onChange={(e) => setFilterArusKas({...filterArusKas, pt: e.target.value})}
@@ -3342,39 +3311,25 @@ const SumberJayaApp = () => {
                   <option key={code} value={code}>{code}</option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">
-                Setiap PT dipisah per laporan
-              </p>
             </div>
 
-            {/* Date From */}
+            {/* Date Filter - Single Date */}
             <div>
-              <label className="block text-sm font-medium mb-2">Tanggal Dari</label>
+              <label className="block text-sm font-medium mb-2">Tanggal *</label>
               <input 
                 type="date" 
-                value={filterArusKas.tanggalDari}
-                onChange={(e) => setFilterArusKas({...filterArusKas, tanggalDari: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-            </div>
-
-            {/* Date To */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Tanggal Sampai</label>
-              <input 
-                type="date" 
-                value={filterArusKas.tanggalSampai}
-                onChange={(e) => setFilterArusKas({...filterArusKas, tanggalSampai: e.target.value})}
+                value={filterArusKas.tanggal}
+                onChange={(e) => setFilterArusKas({...filterArusKas, tanggal: e.target.value})}
                 className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-end">
+            <div className="md:col-span-2 flex items-end gap-2">
               {!filterArusKas.isFiltered ? (
                 <button
                   onClick={handleFilterArusKas}
-                  className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -3382,25 +3337,24 @@ const SumberJayaApp = () => {
                   Tampilkan
                 </button>
               ) : (
-                <div className="flex gap-2 w-full">
+                <>
                   <button
                     onClick={handleExportArusKasPDF}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                    className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
                   >
-                    <Download size={18} />
+                    <Download size={20} />
                     Export PDF
                   </button>
                   <button
                     onClick={() => {
-                      setFilterArusKas({pt: '', tanggalDari: '', tanggalSampai: '', isFiltered: false});
+                      setFilterArusKas({pt: '', tanggal: '', isFiltered: false});
                       setFilteredArusKasData([]);
                     }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                    title="Reset"
+                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
                   >
                     Reset
                   </button>
-                </div>
+                </>
               )}
             </div>
           </div>
