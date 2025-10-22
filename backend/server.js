@@ -108,6 +108,47 @@ db.connect((err) => {
     }
   });
   
+  // Auto-migration: Add kategori column to kas_kecil if not exists
+  const checkKategoriColumn = `
+    SELECT COUNT(*) as count 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = '${dbConfig.database}' 
+    AND TABLE_NAME = 'kas_kecil' 
+    AND COLUMN_NAME = 'kategori'
+  `;
+  
+  db.query(checkKategoriColumn, (err, results) => {
+    if (err) {
+      console.error('❌ Error checking kategori column:', err);
+      return;
+    }
+    
+    if (results[0].count === 0) {
+      console.log('🔄 Adding kategori column to kas_kecil table...');
+      const addKategoriColumn = 'ALTER TABLE kas_kecil ADD COLUMN kategori VARCHAR(100) AFTER keterangan';
+      
+      db.query(addKategoriColumn, (err, result) => {
+        if (err) {
+          console.error('❌ Error adding kategori column:', err);
+        } else {
+          console.log('✅ Kategori column added to kas_kecil table');
+          
+          // Add index
+          const addIndex = 'CREATE INDEX idx_kas_kecil_kategori ON kas_kecil(kategori)';
+          db.query(addIndex, (err, result) => {
+            if (err) {
+              console.log('⚠️  Index might already exist or error adding index');
+            } else {
+              console.log('✅ Index added for kategori column');
+            }
+          });
+        }
+      });
+    } else {
+      console.log('✅ Kategori column already exists in kas_kecil table');
+    }
+  });
+  
   console.log('✅ Database tables initialized');
 });
 
@@ -242,7 +283,7 @@ app.get('/api/pt', verifyToken, (req, res) => {
 app.get('/api/kas-kecil', verifyToken, (req, res) => {
   const { pt, tanggal_dari, tanggal_sampai, status } = req.query;
   
-  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, status, created_by, approved_by, created_at, updated_at FROM kas_kecil WHERE 1=1';
+  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, kategori, status, created_by, approved_by, created_at, updated_at FROM kas_kecil WHERE 1=1';
   let params = [];
   
   if (pt) {
@@ -284,7 +325,7 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
 
 // Create Kas Kecil (Cash Only)
 app.post('/api/kas-kecil', verifyToken, (req, res) => {
-  const { tanggal, pt, jenis, jumlah, keterangan } = req.body;
+  const { tanggal, pt, jenis, jumlah, keterangan, kategori } = req.body;
   
   // Logic approve/reject:
   // - Semua PEMASUKAN (masuk): Langsung approved
@@ -298,9 +339,9 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
     approved_by = null;
   }
   
-  const query = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+  const query = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, kategori, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
   
-  db.query(query, [tanggal, pt, jenis, jumlah, keterangan, status, req.userId, approved_by], (err, result) => {
+  db.query(query, [tanggal, pt, jenis, jumlah, keterangan, kategori || null, status, req.userId, approved_by], (err, result) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
@@ -477,7 +518,7 @@ app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
 // Update Kas Kecil (hanya untuk transaksi hari ini, Cash Only)
 app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
   const { id } = req.params;
-  const { tanggal, pt, jenis, jumlah, keterangan } = req.body;
+  const { tanggal, pt, jenis, jumlah, keterangan, kategori } = req.body;
   const today = new Date().toISOString().split('T')[0];
   
   // Step 1: Get existing kas data
@@ -521,11 +562,11 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
     
     const updateQuery = `
       UPDATE kas_kecil 
-      SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, status = ?, approved_by = ?
+      SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, status = ?, approved_by = ?
       WHERE id = ?
     `;
     
-    db.query(updateQuery, [tanggal, pt, jenis, jumlah, keterangan, status, approved_by, id], (err, result) => {
+    db.query(updateQuery, [tanggal, pt, jenis, jumlah, keterangan, kategori || null, status, approved_by, id], (err, result) => {
       if (err) {
         return res.status(500).json({ message: 'Server error', error: err });
       }

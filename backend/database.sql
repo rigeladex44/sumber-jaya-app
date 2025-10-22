@@ -34,6 +34,7 @@ CREATE TABLE kas_kecil (
   jenis ENUM('masuk', 'keluar') NOT NULL,
   jumlah DECIMAL(15, 2) NOT NULL,
   keterangan TEXT,
+  kategori VARCHAR(100),
   status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
   created_by INT NOT NULL,
   approved_by INT NULL,
