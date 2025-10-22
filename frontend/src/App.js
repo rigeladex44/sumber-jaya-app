@@ -897,12 +897,12 @@ const SumberJayaApp = () => {
                 font-size: 9px;
               }
               th { 
-                background: #000;
-                color: white;
+                background: #f0f8f0;
+                color: #000;
                 padding: 8px 6px;
                 text-align: left;
                 font-weight: bold;
-                border: 1px solid #000;
+                border: 1px solid #ddd;
               }
               th.text-center { text-align: center; }
               th.text-right { text-align: right; }
@@ -918,9 +918,10 @@ const SumberJayaApp = () => {
               .text-center { text-align: center; }
               
               .grand-total-row {
-                background: #f0f0f0 !important;
+                background: #f0f8f0 !important;
                 font-weight: bold;
                 border-top: 2px solid #000 !important;
+                color: #000 !important;
               }
               
               .signature-section {
@@ -937,8 +938,8 @@ const SumberJayaApp = () => {
                 font-weight: bold;
                 margin-bottom: 5px;
                 padding: 5px;
-                background: #000;
-                color: white;
+                background: #f0f8f0;
+                color: #000;
               }
               .signature-space {
                 height: 60px;
