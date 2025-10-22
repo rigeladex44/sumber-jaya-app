@@ -2840,8 +2840,14 @@ const SumberJayaApp = () => {
       return { masuk, keluar, saldo: masuk - keluar };
     };
 
-    const { masuk, keluar, saldo } = hitungKasKecil(selectedPT);
-    const filteredData = selectedPT.length > 0 ? kasKecilData.filter(k => selectedPT.includes(k.pt)) : kasKecilData;
+    // Use filtered data if filter is active, otherwise use selectedPT filter
+    const displayData = filterKasKecil.isFiltered ? filteredKasKecilData : 
+                       (selectedPT.length > 0 ? kasKecilData.filter(k => selectedPT.includes(k.pt)) : kasKecilData);
+    
+    // Calculate totals based on display data
+    const masuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const keluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const saldo = masuk - keluar;
 
     // Check if transaction is from today for edit/delete
     const isToday = (createdAt) => {
@@ -2946,27 +2952,90 @@ const SumberJayaApp = () => {
           </div>
         </div>
 
-        {/* PT Filter */}
-        <div className="bg-white rounded-lg shadow-sm border p-4">
-          <h3 className="text-lg font-semibold mb-3">Filter PT</h3>
-          <div className="flex flex-wrap gap-2">
-            {currentUserData?.accessPT?.map(ptCode => (
-              <button
-                key={ptCode}
-                onClick={() => handlePTChange(ptCode)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  selectedPT.includes(ptCode)
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {ptCode}
-              </button>
-            ))}
+        {/* Filter & Export Section */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-semibold mb-4">Filter & Export Laporan</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            {/* PT Filter - Multiple Select */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Filter PT (Bisa pilih lebih dari 1)</label>
+              <div className="flex flex-wrap gap-2">
+                {currentUserData?.accessPT?.map(ptCode => (
+                  <button
+                    key={ptCode}
+                    onClick={() => handlePTChange(ptCode)}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      selectedPT.includes(ptCode)
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {ptCode}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {selectedPT.length === 0 ? 'Semua PT ditampilkan' : `${selectedPT.length} PT dipilih`}
+              </p>
+            </div>
+
+            {/* Date From */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal Dari</label>
+              <input 
+                type="date" 
+                value={filterKasKecil.tanggalDari}
+                onChange={(e) => setFilterKasKecil({...filterKasKecil, tanggalDari: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+
+            {/* Date To */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal Sampai</label>
+              <input 
+                type="date" 
+                value={filterKasKecil.tanggalSampai}
+                onChange={(e) => setFilterKasKecil({...filterKasKecil, tanggalSampai: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            {selectedPT.length === 0 ? 'Semua PT ditampilkan' : `${selectedPT.length} PT dipilih`}
-          </p>
+
+          {/* Tampilkan / Export Button */}
+          <div className="flex gap-3">
+            {!filterKasKecil.isFiltered ? (
+              <button
+                onClick={handleFilterKasKecil}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Tampilkan
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleExportKasKecilPDF}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                >
+                  <Download size={20} />
+                  Export PDF
+                </button>
+                <button
+                  onClick={() => {
+                    setFilterKasKecil({pt: '', tanggalDari: '', tanggalSampai: '', isFiltered: false});
+                    setFilteredKasKecilData([]);
+                  }}
+                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                >
+                  Reset Filter
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -3031,7 +3100,7 @@ const SumberJayaApp = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredData.map((item) => (
+                {displayData.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
