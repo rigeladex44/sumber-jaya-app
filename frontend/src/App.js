@@ -1394,7 +1394,7 @@ const SumberJayaApp = () => {
 
       {/* Search Section */}
       <div className="bg-blue-50 rounded-lg p-6 shadow-md border border-blue-200">
-        <h3 className="text-lg font-bold mb-4 text-blue-800">🔍 Cari Transaksi Tanggal Sebelumnya</h3>
+        <h3 className="text-lg font-bold mb-4 text-blue-800">Cari Transaksi Tanggal Sebelumnya</h3>
         <div className="flex gap-3 items-end">
           <div className="flex-1">
             <label className="block text-sm font-medium mb-2 text-blue-700">Pilih Tanggal</label>
@@ -1414,7 +1414,7 @@ const SumberJayaApp = () => {
           </button>
         </div>
         <p className="text-sm text-blue-600 mt-2">
-          💡 Gunakan fitur ini untuk melihat transaksi kas kecil pada tanggal tertentu
+          Gunakan fitur ini untuk melihat transaksi kas kecil pada tanggal tertentu
         </p>
       </div>
 
@@ -1612,7 +1612,7 @@ const SumberJayaApp = () => {
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between p-6 border-b">
             <h3 className="text-xl font-bold text-gray-800">
-              🔍 Hasil Pencarian - {searchDate}
+              Hasil Pencarian - {searchDate}
             </h3>
             <button 
               onClick={handleCloseSearchResults}
@@ -1625,7 +1625,7 @@ const SumberJayaApp = () => {
           <div className="p-6">
             <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                📊 Ditemukan <strong>{searchResults.length}</strong> transaksi pada tanggal <strong>{searchDate}</strong>
+                Ditemukan <strong>{searchResults.length}</strong> transaksi pada tanggal <strong>{searchDate}</strong>
               </p>
             </div>
 
