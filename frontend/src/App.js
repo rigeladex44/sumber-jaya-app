@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut, 
-  Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, Search
+  Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Search
 } from 'lucide-react';
 import { 
   authService, 
@@ -620,9 +620,24 @@ const SumberJayaApp = () => {
     { code: 'SJS', name: 'PT SRI JOYO SHAKTI' }
   ];
 
+  // Kategori untuk Arus Kas (cashless transactions)
+  const kategoriList = [
+    'PENDAPATAN PENJUALAN',
+    'KAS TUNAI',
+    'BIAYA OPERASIONAL',
+    'BIAYA LAIN-LAIN',
+    'BEBAN GAJI',
+    'BIAYA TRANSPORTASI',
+    'BIAYA KOMUNIKASI',
+    'BIAYA PERAWATAN',
+    'BIAYA ADMINISTRASI',
+    'BIAYA PEMASARAN'
+  ];
+
   const mainMenuItems = [
     { id: 'beranda', label: 'Beranda', icon: Home },
-    { id: 'arus-kas', label: 'Kas Kecil', icon: DollarSign },
+    { id: 'kas-kecil', label: 'Kas Kecil', icon: DollarSign },
+    { id: 'arus-kas', label: 'Arus Kas', icon: TrendingUp },
     { id: 'detail-kas', label: 'Detail Kas', icon: AlertCircle },
     { id: 'penjualan', label: 'Penjualan', icon: ShoppingCart },
     { id: 'laporan', label: 'Laporan', icon: BarChart3 },
