@@ -2776,60 +2776,30 @@ const SumberJayaApp = () => {
 
   // Render Kas Kecil Page (untuk pembukuan kasir tunai)
   const renderKasKecil = () => {
-    const handlePTChange = (ptCode) => {
-      setSelectedPT(prev => {
-        if (prev.includes(ptCode)) {
-          return prev.filter(p => p !== ptCode);
-        } else {
-          return [...prev, ptCode];
-        }
-      });
-    };
-
-    // Filter data berdasarkan PT yang dipilih
-    const getFilteredData = () => {
-      const pts = selectedPT.length > 0 ? selectedPT : currentUserData?.accessPT || [];
-      return pts.length > 0 ? kasKecilData.filter(k => pts.includes(k.pt)) : kasKecilData;
-    };
-
-    // Calculate totals from kas kecil data
-    const hitungKasKecil = (pts = []) => {
-      const filteredData = pts.length > 0 ? kasKecilData.filter(k => pts.includes(k.pt)) : kasKecilData;
-      
-      const masuk = filteredData
-        .filter(item => item.jenis === 'masuk')
-        .reduce((sum, item) => sum + (item.jumlah || 0), 0);
-      
-      const keluar = filteredData
-        .filter(item => item.jenis === 'keluar')
-        .reduce((sum, item) => sum + (item.jumlah || 0), 0);
-      
-      const saldo = masuk - keluar;
-      
-      return { masuk, keluar, saldo };
-    };
-
-    const { masuk, keluar, saldo } = hitungKasKecil(selectedPT);
-    const filteredData = getFilteredData();
-
     return (
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">Kas Kecil</h2>
-            <p className="text-gray-600">Pembukuan kasir tunai</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowEditKasKecilModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Plus size={20} />
-              Tambah Transaksi
-            </button>
+          <h2 className="text-2xl font-bold text-gray-800">Kas Kecil</h2>
+          <div className="text-sm text-gray-600">
+            <p>Kas fisik tunai di kasir</p>
           </div>
         </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-md">
+          <h3 className="text-lg font-bold mb-4">Kas Kecil - Test</h3>
+          <p className="text-gray-600">
+            Function renderKasKecil sedang dalam perbaikan. 
+            Data akan ditampilkan setelah fix selesai.
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Debug: activeMenu = {activeMenu}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // Render Arus Kas Page (Comprehensive Cash Flow - Cash + Cashless)
 
         {/* PT Filter */}
         <div className="bg-white rounded-lg shadow-sm border p-4">
