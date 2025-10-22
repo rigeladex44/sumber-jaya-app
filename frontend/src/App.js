@@ -241,14 +241,36 @@ const SumberJayaApp = () => {
     pangkalan: '',
     qty: '',
     ppnPercent: 11,
+    ppnType: 'include', // 'include' atau 'exclude'
     metodeBayar: 'cash'
   });
 
   // Hitung Total
   const hitungTotalPenjualan = () => {
-    const total = (formPenjualan.qty || 0) * 16000;
-    const ppn = total * (formPenjualan.ppnPercent / 100);
-    return { total, ppn };
+    const subtotal = (formPenjualan.qty || 0) * 16000;
+    const ppn = subtotal * (formPenjualan.ppnPercent / 100);
+    
+    if (formPenjualan.ppnType === 'include') {
+      // PPN sudah termasuk dalam harga
+      const total = subtotal;
+      const ppnAmount = total * (formPenjualan.ppnPercent / 100);
+      const baseAmount = total - ppnAmount;
+      return { 
+        subtotal: baseAmount, 
+        ppn: ppnAmount, 
+        total: total,
+        displayTotal: total
+      };
+    } else {
+      // PPN ditambahkan ke harga
+      const total = subtotal + ppn;
+      return { 
+        subtotal: subtotal, 
+        ppn: ppn, 
+        total: total,
+        displayTotal: total
+      };
+    }
   };
 
   const hitungSaldoKas = (pts = []) => {
@@ -561,10 +583,11 @@ const SumberJayaApp = () => {
         tanggal: formPenjualan.tanggal,
         pt: formPenjualan.pt,
         pangkalan: formPenjualan.pangkalan,
-      qty: parseFloat(formPenjualan.qty),
+        qty: parseFloat(formPenjualan.qty),
         ppnPercent: parseFloat(formPenjualan.ppnPercent),
+        ppnType: formPenjualan.ppnType,
         metodeBayar: formPenjualan.metodeBayar
-    };
+      };
     
       await penjualanService.create(penjualanData);
     
@@ -577,7 +600,7 @@ const SumberJayaApp = () => {
       }
       
       // Reset form
-      setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', ppnPercent: 11, metodeBayar: 'cash' });
+      setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' });
     alert('Data penjualan berhasil disimpan!');
     } catch (error) {
       console.error('Error saving penjualan:', error);
@@ -897,7 +920,7 @@ const SumberJayaApp = () => {
                 font-size: 11px;
               }
               th { 
-                background: #f0f8f0;
+                background: #86ff81;
                 color: #000;
                 padding: 8px 6px;
                 text-align: left;
@@ -918,7 +941,7 @@ const SumberJayaApp = () => {
               .text-center { text-align: center; }
               
               .grand-total-row {
-                background: #f0f8f0 !important;
+                background: #86ff81 !important;
                 font-weight: bold;
                 border-top: 2px solid #000 !important;
                 color: #000 !important;
@@ -938,7 +961,7 @@ const SumberJayaApp = () => {
                 font-weight: bold;
                 margin-bottom: 5px;
                 padding: 5px;
-                background: #f0f8f0;
+                background: #86ff81;
                 color: #000;
               }
               .signature-space {
@@ -1771,6 +1794,30 @@ const SumberJayaApp = () => {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium mb-2">PPN (%)</label>
+            <input 
+              type="number" 
+              value={formPenjualan.ppnPercent}
+              onChange={(e) => setFormPenjualan({...formPenjualan, ppnPercent: parseFloat(e.target.value) || 0})}
+              placeholder="11" 
+              min="0"
+              max="100"
+              step="0.1"
+              className="w-full px-4 py-2 border rounded-lg" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">PPN Type</label>
+            <select 
+              value={formPenjualan.ppnType}
+              onChange={(e) => setFormPenjualan({...formPenjualan, ppnType: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg"
+            >
+              <option value="include">Include PPN (Sudah termasuk)</option>
+              <option value="exclude">Exclude PPN (Ditambahkan)</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-2">Metode Pembayaran</label>
             <select 
               value={formPenjualan.metodeBayar}
@@ -1793,16 +1840,20 @@ const SumberJayaApp = () => {
         </div>
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-700">Subtotal:</span>
-            <span className="font-semibold">Rp {hitungTotalPenjualan().total.toLocaleString('id-ID')}</span>
+            <span className="text-gray-700">
+              {formPenjualan.ppnType === 'include' ? 'Harga Dasar:' : 'Subtotal:'}
+            </span>
+            <span className="font-semibold">Rp {hitungTotalPenjualan().subtotal.toLocaleString('id-ID')}</span>
           </div>
           <div className="flex justify-between text-sm mt-1">
-            <span className="text-gray-700">PPN ({formPenjualan.ppnPercent}%):</span>
+            <span className="text-gray-700">
+              PPN ({formPenjualan.ppnPercent}%) {formPenjualan.ppnType === 'include' ? '(Sudah termasuk)' : '(Ditambahkan)'}:
+            </span>
             <span className="font-semibold">Rp {hitungTotalPenjualan().ppn.toLocaleString('id-ID')}</span>
           </div>
           <div className="flex justify-between text-base mt-2 pt-2 border-t border-blue-300">
-            <span className="font-bold text-gray-800">Total + PPN:</span>
-            <span className="font-bold text-blue-600">Rp {(hitungTotalPenjualan().total + hitungTotalPenjualan().ppn).toLocaleString('id-ID')}</span>
+            <span className="font-bold text-gray-800">Total Pembayaran:</span>
+            <span className="font-bold text-blue-600">Rp {hitungTotalPenjualan().displayTotal.toLocaleString('id-ID')}</span>
           </div>
         </div>
         <div className="mt-4 flex gap-3">
@@ -1819,7 +1870,7 @@ const SumberJayaApp = () => {
             {isLoadingPenjualan ? 'Menyimpan...' : 'Simpan'}
           </button>
           <button 
-            onClick={() => setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', ppnPercent: 11, metodeBayar: 'cash' })}
+            onClick={() => setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' })}
             className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
           >
             Reset
