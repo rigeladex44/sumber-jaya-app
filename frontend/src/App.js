@@ -3191,7 +3191,7 @@ const SumberJayaApp = () => {
   const renderContent = () => {
     switch (activeMenu) {
       case 'beranda': return renderBeranda();
-      case 'kas-kecil': return renderKasKecilOld();
+      case 'kas-kecil': return renderKasKecil();
       case 'arus-kas': return renderArusKas();
       case 'detail-kas': return renderDetailKas();
       case 'penjualan': return renderPenjualan();
