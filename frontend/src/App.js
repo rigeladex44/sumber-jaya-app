@@ -263,12 +263,12 @@ const SumberJayaApp = () => {
   // Filter State for Kas Kecil & Arus Kas (Auto-filter, no manual trigger)
   const [filterKasKecil, setFilterKasKecil] = useState({
     pt: [], // Multi-select for Kas Kecil
-    tanggal: ''
+    tanggal: new Date().toISOString().split('T')[0] // Default to today
   });
 
   const [filterArusKas, setFilterArusKas] = useState({
     pt: '',
-    tanggal: ''
+    tanggal: new Date().toISOString().split('T')[0] // Default to today
   });
 
   const [formUser, setFormUser] = useState({
@@ -634,10 +634,16 @@ const SumberJayaApp = () => {
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    if (filterKasKecil.pt.length === 0 || !filterKasKecil.tanggal) {
-      return kasKecilData; // Show all if no filter
+    // If no PT selected, show all data for selected date
+    if (filterKasKecil.pt.length === 0) {
+      return kasKecilData.filter(item => {
+        const itemDate = item.tanggal.split('T')[0];
+        const filterDate = filterKasKecil.tanggal;
+        return itemDate === filterDate;
+      });
     }
 
+    // If PT selected, filter by PT and date
     const filtered = kasKecilData.filter(item => {
       const itemDate = item.tanggal.split('T')[0]; // Get YYYY-MM-DD from ISO string
       const filterDate = filterKasKecil.tanggal; // Already in YYYY-MM-DD format
@@ -667,10 +673,16 @@ const SumberJayaApp = () => {
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    if (!filterArusKas.pt || !filterArusKas.tanggal) {
-      return arusKasData; // Show all if no filter
+    // If no PT selected, show all data for selected date
+    if (!filterArusKas.pt) {
+      return arusKasData.filter(item => {
+        const itemDate = item.tanggal.split('T')[0];
+        const filterDate = filterArusKas.tanggal;
+        return itemDate === filterDate;
+      });
     }
 
+    // If PT selected, filter by PT and date
     const filtered = arusKasData.filter(item => {
       const itemDate = item.tanggal.split('T')[0]; // Get YYYY-MM-DD from ISO string
       const filterDate = filterArusKas.tanggal; // Already in YYYY-MM-DD format
@@ -3018,7 +3030,7 @@ const SumberJayaApp = () => {
 
             {/* Date Filter - Single Date */}
             <div>
-              <label className="block text-sm font-medium mb-2">Filter Tanggal</label>
+              <label className="block text-sm font-medium mb-2">Filter Tanggal (Default: Hari Ini)</label>
               <input 
                 type="date" 
                 value={filterKasKecil.tanggal}
@@ -3350,7 +3362,7 @@ const SumberJayaApp = () => {
 
             {/* Date Filter - Single Date */}
             <div>
-              <label className="block text-sm font-medium mb-2">Filter Tanggal</label>
+              <label className="block text-sm font-medium mb-2">Filter Tanggal (Default: Hari Ini)</label>
               <input 
                 type="date" 
                 value={filterArusKas.tanggal}
