@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut, 
-  Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown
+  Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, Search
 } from 'lucide-react';
 import { 
   authService, 
@@ -220,6 +220,11 @@ const SumberJayaApp = () => {
 
   const [showEditKasModal, setShowEditKasModal] = useState(false);
   const [editingKas, setEditingKas] = useState(null);
+
+  // Search State
+  const [searchDate, setSearchDate] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   const [formUser, setFormUser] = useState({
     nama: '',
@@ -507,6 +512,40 @@ const SumberJayaApp = () => {
         alert('Gagal menghapus transaksi: ' + (error.response?.data?.message || error.message));
       }
     }
+  };
+
+  // Search Kas Kecil by Date
+  const handleSearchKas = async () => {
+    if (!searchDate) {
+      alert('Mohon pilih tanggal untuk pencarian!');
+      return;
+    }
+
+    try {
+      const filters = {
+        tanggal_dari: searchDate,
+        tanggal_sampai: searchDate
+      };
+      
+      const results = await kasKecilService.getAll(filters);
+      setSearchResults(results);
+      setShowSearchResults(true);
+      
+      if (results.length === 0) {
+        alert(`Tidak ada transaksi pada tanggal ${searchDate}`);
+      } else {
+        alert(`Ditemukan ${results.length} transaksi pada tanggal ${searchDate}`);
+      }
+    } catch (error) {
+      console.error('Error searching kas:', error);
+      alert('Gagal mencari transaksi: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleCloseSearchResults = () => {
+    setShowSearchResults(false);
+    setSearchResults([]);
+    setSearchDate('');
   };
 
   const handleSavePenjualan = async () => {
@@ -1353,6 +1392,32 @@ const SumberJayaApp = () => {
         </div>
       </div>
 
+      {/* Search Section */}
+      <div className="bg-blue-50 rounded-lg p-6 shadow-md border border-blue-200">
+        <h3 className="text-lg font-bold mb-4 text-blue-800">🔍 Cari Transaksi Tanggal Sebelumnya</h3>
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-2 text-blue-700">Pilih Tanggal</label>
+            <input 
+              type="date" 
+              value={searchDate}
+              onChange={(e) => setSearchDate(e.target.value)}
+              className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+            />
+          </div>
+          <button 
+            onClick={handleSearchKas}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Search size={18} />
+            Cari
+          </button>
+        </div>
+        <p className="text-sm text-blue-600 mt-2">
+          💡 Gunakan fitur ini untuk melihat transaksi kas kecil pada tanggal tertentu
+        </p>
+      </div>
+
       <div className="bg-white rounded-lg p-6 shadow-md">
         <h3 className="text-lg font-bold mb-4">Input Transaksi Kas</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1524,6 +1589,120 @@ const SumberJayaApp = () => {
         </div>
       </div>
     </div>
+    );
+  };
+
+  // Search Results Modal
+  const renderSearchResults = () => {
+    if (!showSearchResults) return null;
+
+    const { masuk, keluar, saldo } = searchResults.reduce((acc, item) => {
+      if (item.jenis === 'masuk') {
+        acc.masuk += item.jumlah;
+      } else {
+        acc.keluar += item.jumlah;
+      }
+      return acc;
+    }, { masuk: 0, keluar: 0 });
+
+    const totalSaldo = masuk - keluar;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between p-6 border-b">
+            <h3 className="text-xl font-bold text-gray-800">
+              🔍 Hasil Pencarian - {searchDate}
+            </h3>
+            <button 
+              onClick={handleCloseSearchResults}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          <div className="p-6">
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                📊 Ditemukan <strong>{searchResults.length}</strong> transaksi pada tanggal <strong>{searchDate}</strong>
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Tanggal</th>
+                    <th className="px-4 py-3 text-left">PT</th>
+                    <th className="px-4 py-3 text-left">Keterangan</th>
+                    <th className="px-4 py-3 text-right">Masuk</th>
+                    <th className="px-4 py-3 text-right">Keluar</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {searchResults.map(kas => (
+                    <tr key={kas.id}>
+                      <td className="px-4 py-3">{kas.tanggal}</td>
+                      <td className="px-4 py-3 font-semibold">{kas.pt}</td>
+                      <td className="px-4 py-3">{kas.keterangan}</td>
+                      <td className="px-4 py-3 text-right">
+                        {kas.jenis === 'masuk' ? (
+                          <span className="text-green-600 font-semibold">
+                            Rp {kas.jumlah.toLocaleString('id-ID')}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {kas.jenis === 'keluar' ? (
+                          <span className="text-red-600 font-semibold">
+                            Rp {kas.jumlah.toLocaleString('id-ID')}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          kas.status === 'approved' 
+                            ? 'bg-green-100 text-green-800' 
+                            : kas.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {kas.status === 'approved' ? 'Approved' : 
+                           kas.status === 'pending' ? 'Pending' : 'Rejected'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  
+                  {/* Total Row */}
+                  <tr className="bg-gray-50 font-semibold">
+                    <td colSpan="3" className="px-4 py-3 text-right">Total</td>
+                    <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
+                    <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
+                    <td className="px-4 py-3"></td>
+                  </tr>
+                  <tr className="bg-blue-50 font-bold">
+                    <td colSpan="3" className="px-4 py-3 text-right">Saldo Akhir</td>
+                    <td colSpan="2" className="px-4 py-3 text-right text-blue-600 text-lg">Rp {totalSaldo.toLocaleString('id-ID')}</td>
+                    <td className="px-4 py-3"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={handleCloseSearchResults}
+                className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -2831,6 +3010,9 @@ const SumberJayaApp = () => {
             </div>
           </div>
         )}
+
+        {/* Search Results Modal */}
+        {renderSearchResults()}
       </div>
     </div>
   );
