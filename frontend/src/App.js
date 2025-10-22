@@ -260,6 +260,23 @@ const SumberJayaApp = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
+  // Filter State for Kas Kecil & Arus Kas
+  const [filterKasKecil, setFilterKasKecil] = useState({
+    pt: '',
+    tanggalDari: '',
+    tanggalSampai: '',
+    isFiltered: false
+  });
+  const [filteredKasKecilData, setFilteredKasKecilData] = useState([]);
+
+  const [filterArusKas, setFilterArusKas] = useState({
+    pt: '',
+    tanggalDari: '',
+    tanggalSampai: '',
+    isFiltered: false
+  });
+  const [filteredArusKasData, setFilteredArusKasData] = useState([]);
+
   const [formUser, setFormUser] = useState({
     nama: '',
     username: '',
@@ -612,6 +629,58 @@ const SumberJayaApp = () => {
     setShowSearchResults(false);
     setSearchResults([]);
     setSearchDate('');
+  };
+
+  // Handler: Filter Kas Kecil
+  const handleFilterKasKecil = () => {
+    if (!filterKasKecil.pt) {
+      alert('Pilih PT terlebih dahulu!');
+      return;
+    }
+
+    let filtered = kasKecilData.filter(item => item.pt === filterKasKecil.pt);
+
+    if (filterKasKecil.tanggalDari) {
+      filtered = filtered.filter(item => item.tanggal >= filterKasKecil.tanggalDari);
+    }
+
+    if (filterKasKecil.tanggalSampai) {
+      filtered = filtered.filter(item => item.tanggal <= filterKasKecil.tanggalSampai);
+    }
+
+    setFilteredKasKecilData(filtered);
+    setFilterKasKecil({...filterKasKecil, isFiltered: true});
+  };
+
+  // Handler: Filter Arus Kas
+  const handleFilterArusKas = () => {
+    if (!filterArusKas.pt) {
+      alert('Pilih PT terlebih dahulu!');
+      return;
+    }
+
+    let filtered = arusKasData.filter(item => item.pt === filterArusKas.pt);
+
+    if (filterArusKas.tanggalDari) {
+      filtered = filtered.filter(item => item.tanggal >= filterArusKas.tanggalDari);
+    }
+
+    if (filterArusKas.tanggalSampai) {
+      filtered = filtered.filter(item => item.tanggal <= filterArusKas.tanggalSampai);
+    }
+
+    setFilteredArusKasData(filtered);
+    setFilterArusKas({...filterArusKas, isFiltered: true});
+  };
+
+  // Handler: Export PDF Kas Kecil
+  const handleExportKasKecilPDF = () => {
+    window.print();
+  };
+
+  // Handler: Export PDF Arus Kas
+  const handleExportArusKasPDF = () => {
+    window.print();
   };
 
   const handleSavePenjualan = async () => {
@@ -1682,19 +1751,6 @@ const SumberJayaApp = () => {
         </div>
       </div>
 
-      {/* Info Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 shadow-md border-l-4 border-blue-500">
-        <div className="flex items-start gap-3">
-          <TrendingUp className="text-blue-600 flex-shrink-0 mt-0.5" size={24} />
-          <div>
-            <h4 className="font-semibold text-blue-900 mb-1">Tentang Arus Kas Komprehensif</h4>
-            <p className="text-sm text-blue-800">
-              Halaman ini menampilkan arus kas dari 3 sumber: <strong>Penjualan LPG</strong>, <strong>Kas Kecil (Cash)</strong>, dan <strong>Transaksi Manual (Cashless)</strong>.
-              Gunakan form di bawah untuk menambah transaksi cashless seperti transfer bank, e-wallet, atau pembayaran online.
-            </p>
-          </div>
-        </div>
-      </div>
 
       <div className="bg-white rounded-lg p-6 shadow-md">
         <h3 className="text-lg font-bold mb-4">Input Transaksi Manual (Cashless)</h3>
@@ -2806,19 +2862,6 @@ const SumberJayaApp = () => {
           </div>
         </div>
 
-        {/* Info Box */}
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 shadow-md border-l-4 border-green-500">
-          <div className="flex items-start gap-3">
-            <DollarSign className="text-green-600 flex-shrink-0 mt-0.5" size={24} />
-            <div>
-              <h4 className="font-semibold text-green-900 mb-1">Tentang Kas Kecil</h4>
-              <p className="text-sm text-green-800">
-                Kas Kecil adalah pembukuan untuk <strong>transaksi tunai (cash)</strong> di kasir.
-                Pemasukan otomatis approved. Pengeluaran kurang dari Rp 300.000 otomatis approved, 300.000 ke atas butuh persetujuan.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Input Form */}
         <div className="bg-white rounded-lg p-6 shadow-md">
@@ -3123,19 +3166,6 @@ const SumberJayaApp = () => {
           </div>
         </div>
 
-        {/* Info Box */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 shadow-md border-l-4 border-blue-500">
-          <div className="flex items-start gap-3">
-            <TrendingUp className="text-blue-600 flex-shrink-0 mt-0.5" size={24} />
-            <div>
-              <h4 className="font-semibold text-blue-900 mb-1">Tentang Arus Kas</h4>
-              <p className="text-sm text-blue-800">
-                Halaman ini menampilkan arus kas dari 3 sumber: <strong>Penjualan LPG</strong>, <strong>Kas Kecil (Cash)</strong>, dan <strong>Input Manual (Cashless)</strong>.
-                Gunakan form di bawah untuk menambah transaksi cashless seperti transfer bank, e-wallet, atau pembayaran online.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Input Form for Cashless Transactions */}
         <div className="bg-white rounded-lg p-6 shadow-md">
