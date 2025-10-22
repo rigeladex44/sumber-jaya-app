@@ -807,7 +807,7 @@ app.get('/api/dashboard/stats', verifyToken, (req, res) => {
 
 // Get All Users (Admin only)
 app.get('/api/users', verifyToken, (req, res) => {
-  const query = 'SELECT id, username, name, role, status FROM users ORDER BY id';
+  const query = 'SELECT id, username, name, role FROM users ORDER BY id';
   db.query(query, (err, results) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
@@ -900,7 +900,7 @@ app.post('/api/users', verifyToken, async (req, res) => {
 // Update User
 app.put('/api/users/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
-  const { username, name, role, aksesPT, fiturAkses, status, password } = req.body;
+  const { username, name, role, aksesPT, fiturAkses, password } = req.body;
   
   try {
     // Check if user exists
@@ -915,8 +915,8 @@ app.put('/api/users/:id', verifyToken, async (req, res) => {
       }
       
       // Build update query
-      let updateQuery = 'UPDATE users SET username = ?, name = ?, role = ?, status = ?';
-      let updateParams = [username, name, role, status];
+      let updateQuery = 'UPDATE users SET username = ?, name = ?, role = ?';
+      let updateParams = [username, name, role];
       
       // If password provided, hash and add to update
       if (password) {
