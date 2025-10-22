@@ -286,8 +286,7 @@ const SumberJayaApp = () => {
     jenis: 'keluar',
     jumlah: '',
     keterangan: '',
-    kategori: '',
-    metodeBayar: 'cashless'
+    kategori: ''
   });
 
   // Hitung Total
@@ -673,8 +672,7 @@ const SumberJayaApp = () => {
         jenis: formArusKas.jenis,
         jumlah: parseFloat(formArusKas.jumlah),
         keterangan: formArusKas.keterangan,
-        kategori: formArusKas.kategori,
-        metodeBayar: formArusKas.metodeBayar
+        kategori: formArusKas.kategori
       };
       
       await arusKasService.create(arusKasData);
@@ -684,13 +682,12 @@ const SumberJayaApp = () => {
       
       // Reset form
       setFormArusKas({ 
-        tanggal: getTodayDate(), 
+        tanggal: new Date().toISOString().split('T')[0], 
         pt: '', 
         jenis: 'keluar', 
         jumlah: '', 
         keterangan: '', 
-        kategori: '', 
-        metodeBayar: 'cashless' 
+        kategori: ''
       });
       
       alert('Data arus kas berhasil disimpan!');
@@ -1801,13 +1798,12 @@ const SumberJayaApp = () => {
           </button>
           <button 
             onClick={() => setFormArusKas({ 
-              tanggal: getTodayDate(), 
+              tanggal: new Date().toISOString().split('T')[0], 
               pt: '', 
               jenis: 'keluar', 
               jumlah: '', 
               keterangan: '', 
-              kategori: '', 
-              metodeBayar: 'cashless' 
+              kategori: ''
             })}
             className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
           >
@@ -2795,22 +2791,289 @@ const SumberJayaApp = () => {
 
   // Render Arus Kas Page (Comprehensive Cash Flow - Cash + Cashless)
   const renderArusKas = () => {
+    const handlePTChange = (ptCode) => {
+      setSelectedPT(prev => {
+        if (prev.includes(ptCode)) {
+          return prev.filter(p => p !== ptCode);
+        } else {
+          return [...prev, ptCode];
+        }
+      });
+    };
+
+    // Calculate totals from aggregated arus kas data
+    const hitungArusKas = (pts = []) => {
+      const filtered = pts.length > 0 ? arusKasData.filter(k => pts.includes(k.pt)) : arusKasData;
+      const masuk = filtered.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      const keluar = filtered.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      return { masuk, keluar, saldo: masuk - keluar };
+    };
+
+    const { masuk, keluar, saldo } = hitungArusKas(selectedPT);
+    const filteredData = selectedPT.length > 0 ? arusKasData.filter(k => selectedPT.includes(k.pt)) : arusKasData;
+
     return (
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h2 className="text-2xl font-bold text-gray-800">Arus Kas</h2>
-          <div className="text-sm text-gray-600">
-            <p>Laporan komprehensif: Penjualan + Kas Kecil + Manual Entry</p>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Arus Kas</h2>
+            <p className="text-sm text-gray-600">Laporan komprehensif: Penjualan + Kas Kecil (Cash) + Manual Entry (Cashless)</p>
           </div>
         </div>
 
+        {/* Info Box */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 shadow-md border-l-4 border-blue-500">
+          <div className="flex items-start gap-3">
+            <TrendingUp className="text-blue-600 flex-shrink-0 mt-0.5" size={24} />
+            <div>
+              <h4 className="font-semibold text-blue-900 mb-1">Tentang Arus Kas</h4>
+              <p className="text-sm text-blue-800">
+                Halaman ini menampilkan arus kas dari 3 sumber: <strong>Penjualan LPG</strong>, <strong>Kas Kecil (Cash)</strong>, dan <strong>Input Manual (Cashless)</strong>.
+                Gunakan form di bawah untuk menambah transaksi cashless seperti transfer bank, e-wallet, atau pembayaran online.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Input Form for Cashless Transactions */}
         <div className="bg-white rounded-lg p-6 shadow-md">
-          <h3 className="text-lg font-bold mb-4">Arus Kas - Coming Soon</h3>
-          <p className="text-gray-600">
-            Fitur Arus Kas sedang dalam pengembangan. 
-            Akan menampilkan data gabungan dari Penjualan, Kas Kecil, dan input manual.
+          <h3 className="text-lg font-bold mb-4">Input Transaksi Manual (Cashless)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal *</label>
+              <input 
+                type="date" 
+                value={formArusKas.tanggal}
+                onChange={(e) => setFormArusKas({...formArusKas, tanggal: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">PT *</label>
+              <select 
+                value={formArusKas.pt}
+                onChange={(e) => setFormArusKas({...formArusKas, pt: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="">Pilih PT</option>
+                {currentUserData?.accessPT?.map(code => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Jenis *</label>
+              <select 
+                value={formArusKas.jenis}
+                onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="keluar">Pengeluaran</option>
+                <option value="masuk">Pemasukan</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
+              <input 
+                type="number" 
+                value={formArusKas.jumlah}
+                onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
+                placeholder="0" 
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Kategori *</label>
+              <select 
+                value={formArusKas.kategori}
+                onChange={(e) => setFormArusKas({...formArusKas, kategori: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+                required
+              >
+                <option value="">Pilih Kategori</option>
+                {kategoriList.map(kategori => (
+                  <option key={kategori} value={kategori}>{kategori}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Keterangan *</label>
+              <textarea
+                value={formArusKas.keterangan}
+                onChange={(e) => setFormArusKas({...formArusKas, keterangan: e.target.value})}
+                placeholder="Masukkan keterangan transaksi" 
+                className="w-full px-4 py-2 border rounded-lg"
+                rows={1}
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <button 
+              onClick={handleSaveArusKas}
+              disabled={isLoadingArusKas}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isLoadingArusKas ? 'Menyimpan...' : 'Simpan Transaksi'}
+            </button>
+          </div>
+        </div>
+
+        {/* PT Filter */}
+        <div className="bg-white rounded-lg shadow-sm border p-4">
+          <h3 className="text-lg font-semibold mb-3">Filter PT</h3>
+          <div className="flex flex-wrap gap-2">
+            {currentUserData?.accessPT?.map(ptCode => (
+              <button
+                key={ptCode}
+                onClick={() => handlePTChange(ptCode)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  selectedPT.includes(ptCode)
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {ptCode}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {selectedPT.length === 0 ? 'Semua PT ditampilkan' : `${selectedPT.length} PT dipilih`}
           </p>
         </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Masuk</p>
+                <p className="text-2xl font-bold text-green-600">Rp {masuk.toLocaleString('id-ID')}</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Keluar</p>
+                <p className="text-2xl font-bold text-red-600">Rp {keluar.toLocaleString('id-ID')}</p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <TrendingDown className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Saldo Akhir</p>
+                <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                  Rp {saldo.toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div className={`p-3 rounded-full ${saldo >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
+                <DollarSign className={`w-6 h-6 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Transaction Table */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-4 border-b">
+            <h3 className="text-lg font-semibold">Riwayat Transaksi Arus Kas</h3>
+            <p className="text-sm text-gray-600">Data gabungan dari Penjualan, Kas Kecil (Cash), dan Manual Entry (Cashless)</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PT</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sumber</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metode</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Keluar</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredData.map((item, index) => (
+                  <tr key={`${item.sumber}-${item.id}-${index}`} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.sumber === 'penjualan' ? 'bg-purple-100 text-purple-800' :
+                        item.sumber === 'kas-kecil' ? 'bg-green-100 text-green-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {item.sumber === 'penjualan' ? 'Penjualan' : 
+                         item.sumber === 'kas-kecil' ? 'Kas Kecil' : 'Manual Entry'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.metode === 'cash' ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'
+                      }`}>
+                        {item.metode === 'cash' ? 'Cash' : 'Cashless'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {item.jenis === 'masuk' ? (
+                        <span className="text-green-600 font-medium">
+                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {item.jenis === 'keluar' ? (
+                        <span className="text-red-600 font-medium">
+                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-gray-100 font-bold">
+                <tr>
+                  <td colSpan="6" className="px-4 py-3 text-right">Total</td>
+                  <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
+                  <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
+                </tr>
+                <tr className="bg-blue-50">
+                  <td colSpan="6" className="px-4 py-3 text-right">Saldo Akhir</td>
+                  <td colSpan="2" className="px-4 py-3 text-right text-blue-600 text-lg">
+                    Rp {saldo.toLocaleString('id-ID')}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {isLoadingArusKas && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span>Memuat data arus kas...</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
