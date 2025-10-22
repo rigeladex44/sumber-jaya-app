@@ -262,7 +262,7 @@ const SumberJayaApp = () => {
 
   // Filter State for Kas Kecil & Arus Kas
   const [filterKasKecil, setFilterKasKecil] = useState({
-    pt: '',
+    pt: [], // Multi-select for Kas Kecil
     tanggal: '',
     isFiltered: false
   });
@@ -629,15 +629,15 @@ const SumberJayaApp = () => {
     setSearchDate('');
   };
 
-  // Handler: Filter Kas Kecil
+  // Handler: Filter Kas Kecil (Multi PT)
   const handleFilterKasKecil = () => {
-    if (!filterKasKecil.pt || !filterKasKecil.tanggal) {
-      alert('Pilih PT dan Tanggal terlebih dahulu!');
+    if (filterKasKecil.pt.length === 0 || !filterKasKecil.tanggal) {
+      alert('Pilih minimal 1 PT dan Tanggal terlebih dahulu!');
       return;
     }
 
     const filtered = kasKecilData.filter(item => 
-      item.pt === filterKasKecil.pt && 
+      filterKasKecil.pt.includes(item.pt) && 
       item.tanggal.split('T')[0] === filterKasKecil.tanggal
     );
 
@@ -2945,19 +2945,34 @@ const SumberJayaApp = () => {
           <h3 className="text-lg font-semibold mb-4">Filter & Export Laporan</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* PT Filter - Dropdown */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Pilih PT *</label>
-              <select 
-                value={filterKasKecil.pt}
-                onChange={(e) => setFilterKasKecil({...filterKasKecil, pt: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="">Pilih PT</option>
-                {currentUserData?.accessPT?.map(code => (
-                  <option key={code} value={code}>{code}</option>
+            {/* PT Filter - Multi Select */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Pilih PT * (bisa lebih dari 1)</label>
+              <div className="flex flex-wrap gap-2">
+                {currentUserData?.accessPT?.map(ptCode => (
+                  <button
+                    key={ptCode}
+                    onClick={() => {
+                      setFilterKasKecil(prev => ({
+                        ...prev,
+                        pt: prev.pt.includes(ptCode)
+                          ? prev.pt.filter(p => p !== ptCode)
+                          : [...prev.pt, ptCode]
+                      }));
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filterKasKecil.pt.includes(ptCode)
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {ptCode}
+                  </button>
                 ))}
-              </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {filterKasKecil.pt.length === 0 ? 'Belum ada PT dipilih' : `${filterKasKecil.pt.length} PT dipilih`}
+              </p>
             </div>
 
             {/* Date Filter - Single Date */}
@@ -2972,11 +2987,11 @@ const SumberJayaApp = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="md:col-span-2 flex items-end gap-2">
+            <div className="flex items-end gap-2">
               {!filterKasKecil.isFiltered ? (
                 <button
                   onClick={handleFilterKasKecil}
-                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                  className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -2987,17 +3002,17 @@ const SumberJayaApp = () => {
                 <>
                   <button
                     onClick={handleExportKasKecilPDF}
-                    className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 mb-2"
                   >
-                    <Download size={20} />
+                    <Download size={18} />
                     Export PDF
                   </button>
                   <button
                     onClick={() => {
-                      setFilterKasKecil({pt: '', tanggal: '', isFiltered: false});
+                      setFilterKasKecil({pt: [], tanggal: '', isFiltered: false});
                       setFilteredKasKecilData([]);
                     }}
-                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                    className="w-full px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
                   >
                     Reset
                   </button>
