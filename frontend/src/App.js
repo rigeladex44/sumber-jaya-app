@@ -700,12 +700,486 @@ const SumberJayaApp = () => {
 
   // Handler: Print Kas Kecil
   const handlePrintKasKecil = () => {
-    window.print();
+    const content = document.getElementById('kas-kecil-content');
+    const tanggal = new Date().toLocaleDateString('id-ID', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const hari = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
+    const tanggalOnly = new Date().toLocaleDateString('id-ID', { 
+      day: 'numeric',
+      month: 'long', 
+      year: 'numeric'
+    });
+
+    let ptInfo = '';
+    if (filterKasKecil.pt.length > 0) {
+      ptInfo = filterKasKecil.pt.join(' - ');
+    } else {
+      ptInfo = 'Semua PT';
+    }
+    
+    if (content) {
+      const printWindow = window.open('', '_blank');
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>LAPORAN KAS KECIL - Sumber Jaya Grup</title>
+            <meta charset="UTF-8">
+            <style>
+              @page {
+                size: A4;
+                margin: 15mm;
+              }
+              * { 
+                margin: 0; 
+                padding: 0; 
+                box-sizing: border-box; 
+              }
+              body { 
+                font-family: 'Arial', sans-serif; 
+                padding: 20px;
+                color: #000;
+                line-height: 1.4;
+                background: white;
+              }
+              
+              .report-header { 
+                text-align: center;
+                margin-bottom: 25px;
+                padding-bottom: 15px;
+                border-bottom: 3px solid #000;
+              }
+              .report-title {
+                font-size: 18px;
+                font-weight: bold;
+                letter-spacing: 1px;
+                margin-bottom: 8px;
+                line-height: 1.2;
+              }
+              .report-subtitle {
+                font-size: 12px;
+                color: #333;
+                margin-bottom: 3px;
+                font-weight: bold;
+                line-height: 1.3;
+              }
+              .report-company {
+                font-size: 9px;
+                color: #666;
+                margin-top: 5px;
+              }
+              
+              .info-section {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 20px;
+                font-size: 12px;
+              }
+              .info-left, .info-right {
+                width: 48%;
+              }
+              .info-row {
+                display: flex;
+                padding: 3px 0;
+              }
+              .info-label {
+                width: 100px;
+                font-weight: normal;
+              }
+              .info-value {
+                flex: 1;
+                font-weight: bold;
+              }
+              
+              table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 15px 0;
+                font-size: 11px;
+              }
+              th { 
+                background: #86ff81;
+                color: #000;
+                padding: 8px 6px;
+                text-align: left;
+                font-weight: bold;
+                border: 1px solid #ddd;
+              }
+              th.text-center { text-align: center; }
+              th.text-right { text-align: right; }
+              td { 
+                border: 1px solid #ddd;
+                padding: 6px;
+                background: white;
+              }
+              tr:nth-child(even) td { 
+                background: #f9f9f9; 
+              }
+              .text-right { text-align: right; }
+              .text-center { text-align: center; }
+              
+              .grand-total-row {
+                background: #86ff81 !important;
+                font-weight: bold;
+                border-top: 2px solid #000 !important;
+                color: #000 !important;
+              }
+              
+              .signature-section {
+                margin-top: 40px;
+                display: flex;
+                justify-content: space-between;
+                font-size: 9px;
+              }
+              .signature-box {
+                width: 30%;
+                text-align: center;
+              }
+              .signature-title {
+                font-weight: bold;
+                margin-bottom: 5px;
+                padding: 5px;
+                background: #86ff81;
+                color: #000;
+              }
+              .signature-space {
+                height: 60px;
+                border: 1px solid #ddd;
+                margin: 10px 0;
+              }
+              .signature-name {
+                font-weight: bold;
+                padding-top: 5px;
+              }
+              
+              .report-footer { 
+                margin-top: 30px; 
+                padding-top: 15px;
+                border-top: 2px solid #ddd;
+                text-align: center; 
+                font-size: 8px; 
+                color: #888;
+                line-height: 1.6;
+              }
+              
+              .report-footer p {
+                margin: 3px 0;
+              }
+              
+              .no-print { 
+                display: none !important; 
+              }
+            </style>
+          </head>
+          <body>
+            <div class="report-header">
+              <div class="report-title">LAPORAN KAS KECIL</div>
+              <div class="report-subtitle">Transaksi Tunai (Cash) di Kasir</div>
+              <div class="report-company">Sistem Sumber Jaya Grup Official</div>
+            </div>
+            
+            <div class="info-section">
+              <div class="info-left">
+                <div class="info-row">
+                  <span class="info-label">Hari</span>
+                  <span class="info-value">: ${hari}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Tanggal</span>
+                  <span class="info-value">: ${tanggalOnly}</span>
+                </div>
+              </div>
+              <div class="info-right">
+                <div class="info-row">
+                  <span class="info-label">Dicetak Oleh</span>
+                  <span class="info-value">: ${currentUserData?.name || 'User'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">PT</span>
+                  <span class="info-value">: ${ptInfo}</span>
+                </div>
+              </div>
+            </div>
+            
+            ${content.innerHTML}
+            
+            <div class="signature-section">
+              <div class="signature-box">
+                <div class="signature-title">Kasir</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">${currentUserData?.name || 'User'}</div>
+              </div>
+              <div class="signature-box">
+                <div class="signature-title">Manager Keuangan</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">( _________________ )</div>
+              </div>
+              <div class="signature-box">
+                <div class="signature-title">Direktur</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">( _________________ )</div>
+              </div>
+            </div>
+            
+            <div class="report-footer">
+              <p><strong>© 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click</strong></p>
+              <p>Laporan ini dicetak secara otomatis dari sistem</p>
+            </div>
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   // Handler: Print Arus Kas
   const handlePrintArusKas = () => {
-    window.print();
+    const content = document.getElementById('arus-kas-content');
+    const tanggal = new Date().toLocaleDateString('id-ID', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const hari = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
+    const tanggalOnly = new Date().toLocaleDateString('id-ID', { 
+      day: 'numeric',
+      month: 'long', 
+      year: 'numeric'
+    });
+
+    let ptInfo = '';
+    if (filterArusKas.pt) {
+      ptInfo = filterArusKas.pt;
+    } else {
+      ptInfo = 'Semua PT';
+    }
+    
+    if (content) {
+      const printWindow = window.open('', '_blank');
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>LAPORAN ARUS KAS - Sumber Jaya Grup</title>
+            <meta charset="UTF-8">
+            <style>
+              @page {
+                size: A4;
+                margin: 15mm;
+              }
+              * { 
+                margin: 0; 
+                padding: 0; 
+                box-sizing: border-box; 
+              }
+              body { 
+                font-family: 'Arial', sans-serif; 
+                padding: 20px;
+                color: #000;
+                line-height: 1.4;
+                background: white;
+              }
+              
+              .report-header { 
+                text-align: center;
+                margin-bottom: 25px;
+                padding-bottom: 15px;
+                border-bottom: 3px solid #000;
+              }
+              .report-title {
+                font-size: 18px;
+                font-weight: bold;
+                letter-spacing: 1px;
+                margin-bottom: 8px;
+                line-height: 1.2;
+              }
+              .report-subtitle {
+                font-size: 12px;
+                color: #333;
+                margin-bottom: 3px;
+                font-weight: bold;
+                line-height: 1.3;
+              }
+              .report-company {
+                font-size: 9px;
+                color: #666;
+                margin-top: 5px;
+              }
+              
+              .info-section {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 20px;
+                font-size: 12px;
+              }
+              .info-left, .info-right {
+                width: 48%;
+              }
+              .info-row {
+                display: flex;
+                padding: 3px 0;
+              }
+              .info-label {
+                width: 100px;
+                font-weight: normal;
+              }
+              .info-value {
+                flex: 1;
+                font-weight: bold;
+              }
+              
+              table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 15px 0;
+                font-size: 11px;
+              }
+              th { 
+                background: #86ff81;
+                color: #000;
+                padding: 8px 6px;
+                text-align: left;
+                font-weight: bold;
+                border: 1px solid #ddd;
+              }
+              th.text-center { text-align: center; }
+              th.text-right { text-align: right; }
+              td { 
+                border: 1px solid #ddd;
+                padding: 6px;
+                background: white;
+              }
+              tr:nth-child(even) td { 
+                background: #f9f9f9; 
+              }
+              .text-right { text-align: right; }
+              .text-center { text-align: center; }
+              
+              .grand-total-row {
+                background: #86ff81 !important;
+                font-weight: bold;
+                border-top: 2px solid #000 !important;
+                color: #000 !important;
+              }
+              
+              .signature-section {
+                margin-top: 40px;
+                display: flex;
+                justify-content: space-between;
+                font-size: 9px;
+              }
+              .signature-box {
+                width: 30%;
+                text-align: center;
+              }
+              .signature-title {
+                font-weight: bold;
+                margin-bottom: 5px;
+                padding: 5px;
+                background: #86ff81;
+                color: #000;
+              }
+              .signature-space {
+                height: 60px;
+                border: 1px solid #ddd;
+                margin: 10px 0;
+              }
+              .signature-name {
+                font-weight: bold;
+                padding-top: 5px;
+              }
+              
+              .report-footer { 
+                margin-top: 30px; 
+                padding-top: 15px;
+                border-top: 2px solid #ddd;
+                text-align: center; 
+                font-size: 8px; 
+                color: #888;
+                line-height: 1.6;
+              }
+              
+              .report-footer p {
+                margin: 3px 0;
+              }
+              
+              .no-print { 
+                display: none !important; 
+              }
+            </style>
+          </head>
+          <body>
+            <div class="report-header">
+              <div class="report-title">LAPORAN ARUS KAS</div>
+              <div class="report-subtitle">Arus Kas Komprehensif (Cash + Cashless)</div>
+              <div class="report-company">Sistem Sumber Jaya Grup Official</div>
+            </div>
+            
+            <div class="info-section">
+              <div class="info-left">
+                <div class="info-row">
+                  <span class="info-label">Hari</span>
+                  <span class="info-value">: ${hari}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Tanggal</span>
+                  <span class="info-value">: ${tanggalOnly}</span>
+                </div>
+              </div>
+              <div class="info-right">
+                <div class="info-row">
+                  <span class="info-label">Dicetak Oleh</span>
+                  <span class="info-value">: ${currentUserData?.name || 'User'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">PT</span>
+                  <span class="info-value">: ${ptInfo}</span>
+                </div>
+              </div>
+            </div>
+            
+            ${content.innerHTML}
+            
+            <div class="signature-section">
+              <div class="signature-box">
+                <div class="signature-title">Kasir</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">${currentUserData?.name || 'User'}</div>
+              </div>
+              <div class="signature-box">
+                <div class="signature-title">Manager Keuangan</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">( _________________ )</div>
+              </div>
+              <div class="signature-box">
+                <div class="signature-title">Direktur</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">( _________________ )</div>
+              </div>
+            </div>
+            
+            <div class="report-footer">
+              <p><strong>© 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click</strong></p>
+              <p>Laporan ini dicetak secara otomatis dari sistem</p>
+            </div>
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   const handleSavePenjualan = async () => {
@@ -2889,7 +3363,7 @@ const SumberJayaApp = () => {
     };
 
     return (
-      <div className="space-y-6">
+      <div id="kas-kecil-content" className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -2900,7 +3374,7 @@ const SumberJayaApp = () => {
 
 
         {/* Input Form */}
-        <div className="bg-white rounded-lg p-6 shadow-md">
+        <div className="bg-white rounded-lg p-6 shadow-md no-print">
           <h3 className="text-lg font-bold mb-4">Input Transaksi Kas Kecil</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -2983,7 +3457,7 @@ const SumberJayaApp = () => {
         </div>
 
         {/* Filter & Print Section */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="bg-white rounded-lg shadow-sm border p-6 no-print">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Filter Laporan</h3>
             <button
@@ -3098,8 +3572,8 @@ const SumberJayaApp = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Keluar</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase no-print">Status</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase no-print">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -3127,7 +3601,7 @@ const SumberJayaApp = () => {
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center no-print">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         item.status === 'approved' ? 'bg-green-100 text-green-700' : 
                         item.status === 'rejected' ? 'bg-red-100 text-red-700' :
@@ -3136,7 +3610,7 @@ const SumberJayaApp = () => {
                         {item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center no-print">
                       {isToday(item.created_at) && (
                         <div className="flex items-center justify-center gap-2">
                           <button
@@ -3235,7 +3709,7 @@ const SumberJayaApp = () => {
     const saldo = masuk - keluar;
 
     return (
-      <div className="space-y-6">
+      <div id="arus-kas-content" className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -3246,7 +3720,7 @@ const SumberJayaApp = () => {
 
 
         {/* Input Form for Cashless Transactions */}
-        <div className="bg-white rounded-lg p-6 shadow-md">
+        <div className="bg-white rounded-lg p-6 shadow-md no-print">
           <h3 className="text-lg font-bold mb-4">Input Transaksi Manual (Cashless)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -3329,7 +3803,7 @@ const SumberJayaApp = () => {
         </div>
 
         {/* Filter & Print Section */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="bg-white rounded-lg shadow-sm border p-6 no-print">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Filter Laporan</h3>
             <button
