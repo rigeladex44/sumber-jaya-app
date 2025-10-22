@@ -215,7 +215,9 @@ const SumberJayaApp = () => {
     pt: '',
     jenis: 'keluar',
     jumlah: '',
-    keterangan: ''
+    keterangan: '',
+    kategori: '', // Kategori untuk transaksi cashless
+    metodeBayar: 'cash' // 'cash' atau 'cashless'
   });
 
   const [showEditKasModal, setShowEditKasModal] = useState(false);
@@ -291,6 +293,12 @@ const SumberJayaApp = () => {
       return;
     }
     
+    // Validasi kategori untuk transaksi cashless
+    if (formKas.metodeBayar === 'cashless' && !formKas.kategori) {
+      alert('Mohon pilih kategori untuk transaksi cashless!');
+      return;
+    }
+    
     setIsLoadingKas(true);
     
     try {
@@ -298,8 +306,10 @@ const SumberJayaApp = () => {
         tanggal: formKas.tanggal,
         pt: formKas.pt,
         jenis: formKas.jenis,
-      jumlah: parseFloat(formKas.jumlah),
-        keterangan: formKas.keterangan
+        jumlah: parseFloat(formKas.jumlah),
+        keterangan: formKas.keterangan,
+        kategori: formKas.kategori,
+        metodeBayar: formKas.metodeBayar
       };
       
       await kasKecilService.create(kasData);
@@ -308,7 +318,7 @@ const SumberJayaApp = () => {
       await loadKasKecilData();
       
       // Reset form
-      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
+      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '', kategori: '', metodeBayar: 'cash' });
       
       const needsApproval = formKas.jenis === 'keluar' && parseFloat(formKas.jumlah) >= 300000;
       if (needsApproval) {
@@ -483,7 +493,9 @@ const SumberJayaApp = () => {
       pt: kas.pt,
       jenis: kas.jenis,
       jumlah: kas.jumlah,
-      keterangan: kas.keterangan
+      keterangan: kas.keterangan,
+      kategori: kas.kategori || '',
+      metodeBayar: kas.metodeBayar || 'cash'
     });
     setShowEditKasModal(true);
   };
@@ -491,6 +503,12 @@ const SumberJayaApp = () => {
   const handleUpdateKas = async () => {
     if (!formKas.pt || !formKas.jumlah || !formKas.keterangan) {
       alert('Mohon lengkapi semua field!');
+      return;
+    }
+    
+    // Validasi kategori untuk transaksi cashless
+    if (formKas.metodeBayar === 'cashless' && !formKas.kategori) {
+      alert('Mohon pilih kategori untuk transaksi cashless!');
       return;
     }
     
@@ -502,7 +520,9 @@ const SumberJayaApp = () => {
         pt: formKas.pt,
         jenis: formKas.jenis,
         jumlah: parseFloat(formKas.jumlah),
-        keterangan: formKas.keterangan
+        keterangan: formKas.keterangan,
+        kategori: formKas.kategori,
+        metodeBayar: formKas.metodeBayar
       };
       
       await kasKecilService.update(editingKas.id, kasData);
@@ -513,7 +533,7 @@ const SumberJayaApp = () => {
       // Close modal & reset
       setShowEditKasModal(false);
       setEditingKas(null);
-      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
+      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '', kategori: '', metodeBayar: 'cash' });
       
       alert('Data kas berhasil diupdate!');
     } catch (error) {
@@ -618,6 +638,29 @@ const SumberJayaApp = () => {
     { code: 'FAB', name: 'PT FADILLAH AMANAH BERSAMA' },
     { code: 'KBS', name: 'PT KHABITSA INDOGAS' },
     { code: 'SJS', name: 'PT SRI JOYO SHAKTI' }
+  ];
+
+  const kategoriPengeluaran = [
+    'BIAYA OPERASIONAL',
+    'BIAYA LAIN-LAIN', 
+    'BEBAN GAJI',
+    'BIAYA TRANSPORTASI',
+    'BIAYA KOMUNIKASI',
+    'BIAYA PERAWATAN',
+    'BIAYA ADMINISTRASI',
+    'BIAYA PEMASARAN',
+    'BIAYA PELATIHAN',
+    'BIAYA LEGAL',
+    'BIAYA ASURANSI',
+    'BIAYA SEWA',
+    'BIAYA LISTRIK',
+    'BIAYA AIR',
+    'BIAYA INTERNET',
+    'BIAYA BANK',
+    'BIAYA PAJAK',
+    'BIAYA DEPRESIASI',
+    'BIAYA AMORTISASI',
+    'LAIN-LAIN'
   ];
 
   const mainMenuItems = [
@@ -1500,6 +1543,33 @@ const SumberJayaApp = () => {
               className="w-full px-4 py-2 border rounded-lg"
             ></textarea>
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Metode Pembayaran</label>
+            <select 
+              value={formKas.metodeBayar}
+              onChange={(e) => setFormKas({...formKas, metodeBayar: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg"
+            >
+              <option value="cash">Cash (Tunai)</option>
+              <option value="cashless">Cashless (Non-Tunai)</option>
+            </select>
+          </div>
+          {formKas.metodeBayar === 'cashless' && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Kategori Pengeluaran</label>
+              <select 
+                value={formKas.kategori}
+                onChange={(e) => setFormKas({...formKas, kategori: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+                required={formKas.metodeBayar === 'cashless'}
+              >
+                <option value="">Pilih Kategori</option>
+                {kategoriPengeluaran.map(kategori => (
+                  <option key={kategori} value={kategori}>{kategori}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
           <AlertCircle className="text-yellow-600 flex-shrink-0" size={20} />
@@ -1536,6 +1606,8 @@ const SumberJayaApp = () => {
                 <th className="px-4 py-3 text-left">Tanggal</th>
                 <th className="px-4 py-3 text-left">PT</th>
                 <th className="px-4 py-3 text-left">Keterangan</th>
+                <th className="px-4 py-3 text-left">Metode</th>
+                <th className="px-4 py-3 text-left">Kategori</th>
                 <th className="px-4 py-3 text-right">Masuk</th>
                 <th className="px-4 py-3 text-right">Keluar</th>
                 <th className="px-4 py-3 text-center no-print">Status</th>
@@ -1563,6 +1635,20 @@ const SumberJayaApp = () => {
                   <td className="px-4 py-3">{kas.tanggal}</td>
                   <td className="px-4 py-3">{kas.pt}</td>
                   <td className="px-4 py-3">{kas.keterangan}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      kas.metodeBayar === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {kas.metodeBayar === 'cash' ? 'Cash' : 'Cashless'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {kas.kategori ? (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                        {kas.kategori}
+                      </span>
+                    ) : '-'}
+                  </td>
                   <td className="px-4 py-3 text-right text-green-600 font-semibold">
                     {kas.jenis === 'masuk' ? `Rp ${kas.jumlah.toLocaleString('id-ID')}` : '-'}
                   </td>
@@ -2519,6 +2605,8 @@ const SumberJayaApp = () => {
                 <th className="px-4 py-3 text-left">Tanggal</th>
                 <th className="px-4 py-3 text-left">PT</th>
                 <th className="px-4 py-3 text-left">Keterangan</th>
+                <th className="px-4 py-3 text-left">Metode</th>
+                <th className="px-4 py-3 text-left">Kategori</th>
                 <th className="px-4 py-3 text-right">Masuk</th>
                 <th className="px-4 py-3 text-right">Keluar</th>
                 <th className="px-4 py-3 text-center">Status</th>
@@ -2533,6 +2621,20 @@ const SumberJayaApp = () => {
                   <td className="px-4 py-3">{kas.tanggal}</td>
                   <td className="px-4 py-3">{kas.pt}</td>
                   <td className="px-4 py-3">{kas.keterangan}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      kas.metodeBayar === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {kas.metodeBayar === 'cash' ? 'Cash' : 'Cashless'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {kas.kategori ? (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                        {kas.kategori}
+                      </span>
+                    ) : '-'}
+                  </td>
                   <td className="px-4 py-3 text-right text-green-600 font-semibold">
                     {kas.jenis === 'masuk' ? `Rp ${kas.jumlah.toLocaleString('id-ID')}` : '-'}
                   </td>
@@ -2982,7 +3084,7 @@ const SumberJayaApp = () => {
                   onClick={() => {
                     setShowEditKasModal(false);
                     setEditingKas(null);
-                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
+                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '', kategori: '', metodeBayar: 'cash' });
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -3051,6 +3153,33 @@ const SumberJayaApp = () => {
                       className="w-full px-4 py-2 border rounded-lg"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Metode Pembayaran</label>
+                    <select 
+                      value={formKas.metodeBayar}
+                      onChange={(e) => setFormKas({...formKas, metodeBayar: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="cash">Cash (Tunai)</option>
+                      <option value="cashless">Cashless (Non-Tunai)</option>
+                    </select>
+                  </div>
+                  {formKas.metodeBayar === 'cashless' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Kategori Pengeluaran</label>
+                      <select 
+                        value={formKas.kategori}
+                        onChange={(e) => setFormKas({...formKas, kategori: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg"
+                        required={formKas.metodeBayar === 'cashless'}
+                      >
+                        <option value="">Pilih Kategori</option>
+                        {kategoriPengeluaran.map(kategori => (
+                          <option key={kategori} value={kategori}>{kategori}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3066,7 +3195,7 @@ const SumberJayaApp = () => {
                   onClick={() => {
                     setShowEditKasModal(false);
                     setEditingKas(null);
-                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
+                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '', kategori: '', metodeBayar: 'cash' });
                   }}
                   className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
                 >
