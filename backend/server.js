@@ -319,6 +319,18 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
       jumlah: parseFloat(item.jumlah)
     }));
     
+    console.log('DEBUG Backend Kas Kecil Load:', {
+      resultCount: formattedResults.length,
+      sampleData: formattedResults.slice(0, 2).map(item => ({
+        id: item.id,
+        tanggal: item.tanggal,
+        tanggalType: typeof item.tanggal,
+        pt: item.pt,
+        keterangan: item.keterangan
+      })),
+      localDate: new Date().toISOString().split('T')[0]
+    });
+    
     res.json(formattedResults);
   });
 });
@@ -326,6 +338,13 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
 // Create Kas Kecil (Cash Only)
 app.post('/api/kas-kecil', verifyToken, (req, res) => {
   const { tanggal, pt, jenis, jumlah, keterangan, kategori } = req.body;
+  
+  console.log('DEBUG Backend Kas Kecil Save:', {
+    tanggal: tanggal,
+    tanggalType: typeof tanggal,
+    localDate: new Date().toISOString().split('T')[0],
+    timezone: 'Asia/Jakarta (UTC+7)'
+  });
   
   // Logic approve/reject:
   // - Semua PEMASUKAN (masuk): Langsung approved
