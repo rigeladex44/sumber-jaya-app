@@ -1627,7 +1627,7 @@ const SumberJayaApp = () => {
   );
   };
 
-  const renderArusKas = () => {
+  const renderKasKecilOld = () => {
     const handlePTChange = (ptCode) => {
       setSelectedPT(prev => {
         if (prev.includes(ptCode)) {
@@ -3166,10 +3166,32 @@ const SumberJayaApp = () => {
     );
   };
 
+  // Render Arus Kas Page (Comprehensive Cash Flow - Cash + Cashless)
+  const renderArusKas = () => {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <h2 className="text-2xl font-bold text-gray-800">Arus Kas</h2>
+          <div className="text-sm text-gray-600">
+            <p>Laporan komprehensif: Penjualan + Kas Kecil + Manual Entry</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-6 shadow-md">
+          <h3 className="text-lg font-bold mb-4">Arus Kas - Coming Soon</h3>
+          <p className="text-gray-600">
+            Fitur Arus Kas sedang dalam pengembangan. 
+            Akan menampilkan data gabungan dari Penjualan, Kas Kecil, dan input manual.
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeMenu) {
       case 'beranda': return renderBeranda();
-      case 'kas-kecil': return renderKasKecil();
+      case 'kas-kecil': return renderKasKecilOld();
       case 'arus-kas': return renderArusKas();
       case 'detail-kas': return renderDetailKas();
       case 'penjualan': return renderPenjualan();
