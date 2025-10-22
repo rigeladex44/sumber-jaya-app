@@ -275,8 +275,7 @@ const SumberJayaApp = () => {
 
   // Filter State for Kas Kecil & Arus Kas (Auto-filter, no manual trigger)
   const [filterKasKecil, setFilterKasKecil] = useState({
-    pt: [], // Multi-select for Kas Kecil
-    tanggal: new Date().toISOString().split('T')[0] // Default to today
+    pt: [] // Multi-select for Kas Kecil, no date filter
   });
 
   const [filterArusKas, setFilterArusKas] = useState({
@@ -638,40 +637,23 @@ const SumberJayaApp = () => {
     setSearchDate('');
   };
 
-  // Auto-filter: Get filtered data for Kas Kecil (real-time)
+  // Auto-filter: Get filtered data for Kas Kecil (PT only, no date filter)
   const getFilteredKasKecilData = () => {
     console.log('DEBUG Kas Kecil Filter:', {
       filterPT: filterKasKecil.pt,
-      filterTanggal: filterKasKecil.tanggal,
       kasKecilData: kasKecilData.slice(0, 3), // First 3 items for debugging
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    // If no PT selected, show all data for selected date
+    // If no PT selected, show all data
     if (filterKasKecil.pt.length === 0) {
-      return kasKecilData.filter(item => {
-        const itemDate = item.tanggal.split('T')[0];
-        const filterDate = filterKasKecil.tanggal;
-        return itemDate === filterDate;
-      });
+      return kasKecilData;
     }
 
-    // If PT selected, filter by PT and date
-    const filtered = kasKecilData.filter(item => {
-      const itemDate = item.tanggal.split('T')[0]; // Get YYYY-MM-DD from ISO string
-      const filterDate = filterKasKecil.tanggal; // Already in YYYY-MM-DD format
-      
-      console.log('DEBUG Date Comparison:', {
-        itemDate,
-        filterDate,
-        match: itemDate === filterDate,
-        itemPT: item.pt,
-        filterPT: filterKasKecil.pt,
-        ptMatch: filterKasKecil.pt.includes(item.pt)
-      });
-      
-      return filterKasKecil.pt.includes(item.pt) && itemDate === filterDate;
-    });
+    // If PT selected, filter by PT only
+    const filtered = kasKecilData.filter(item => 
+      filterKasKecil.pt.includes(item.pt)
+    );
 
     console.log('DEBUG Filtered Kas Kecil:', filtered);
     return filtered;
@@ -3016,9 +2998,9 @@ const SumberJayaApp = () => {
             </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* PT Filter - Multi Select */}
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
               <div className="flex flex-wrap gap-2">
                 {currentUserData?.accessPT?.map(ptCode => (
@@ -3047,15 +3029,14 @@ const SumberJayaApp = () => {
               </p>
             </div>
 
-            {/* Date Filter - Single Date */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Filter Tanggal (Default: Hari Ini)</label>
-              <input 
-                type="date" 
-                value={filterKasKecil.tanggal}
-                onChange={(e) => setFilterKasKecil({...filterKasKecil, tanggal: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              />
+            {/* Info Text */}
+            <div className="flex items-center">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full">
+                <p className="text-sm text-blue-800">
+                  <strong>Info:</strong> Kas Kecil menampilkan semua transaksi tunai. 
+                  Data sudah tersinkronisasi dengan menu Arus Kas untuk laporan lengkap.
+                </p>
+              </div>
             </div>
           </div>
         </div>
