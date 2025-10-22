@@ -147,7 +147,7 @@ const SumberJayaApp = () => {
   const [penjualanData, setPenjualanData] = useState([]);
   const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
   
-  // Kas Kecil State (untuk pembukuan kasir tunai)
+  // Kas Kecil State (untuk pembukuan kasir tunai - Cash Only)
   const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
   const [formKasKecil, setFormKasKecil] = useState({
     tanggal: new Date().toISOString().split('T')[0],
@@ -155,7 +155,6 @@ const SumberJayaApp = () => {
     jenis: 'keluar',
     jumlah: '',
     keterangan: '',
-    metodeBayar: 'cash',
     kategori: ''
   });
   const [showEditKasKecilModal, setShowEditKasKecilModal] = useState(false);
@@ -705,7 +704,7 @@ const SumberJayaApp = () => {
 
   // Handler Save Kas Kecil (untuk pembukuan kasir tunai)
   const handleSaveKasKecil = async () => {
-    if (!formKasKecil.pt || !formKasKecil.jumlah || !formKasKecil.keterangan) {
+    if (!formKasKecil.pt || !formKasKecil.jumlah || !formKasKecil.keterangan || !formKasKecil.kategori) {
       alert('Mohon lengkapi semua field!');
       return;
     }
@@ -719,8 +718,7 @@ const SumberJayaApp = () => {
         jenis: formKasKecil.jenis,
         jumlah: parseFloat(formKasKecil.jumlah),
         keterangan: formKasKecil.keterangan,
-        kategori: formKasKecil.kategori,
-        metodeBayar: formKasKecil.metodeBayar
+        kategori: formKasKecil.kategori
       };
       
       await kasKecilService.create(kasKecilData);
@@ -730,13 +728,12 @@ const SumberJayaApp = () => {
       
       // Reset form
       setFormKasKecil({ 
-        tanggal: getTodayDate(), 
+        tanggal: new Date().toISOString().split('T')[0], 
         pt: '', 
         jenis: 'keluar', 
         jumlah: '', 
         keterangan: '', 
-        kategori: '', 
-        metodeBayar: 'cash' 
+        kategori: ''
       });
       
       alert('Data kas kecil berhasil disimpan!');
@@ -784,8 +781,7 @@ const SumberJayaApp = () => {
         jenis: formKasKecil.jenis,
         jumlah: parseFloat(formKasKecil.jumlah),
         keterangan: formKasKecil.keterangan,
-        kategori: formKasKecil.kategori,
-        metodeBayar: formKasKecil.metodeBayar
+        kategori: formKasKecil.kategori
       };
       
       await kasKecilService.update(editingKasKecil.id, kasKecilData);
@@ -797,13 +793,12 @@ const SumberJayaApp = () => {
       setShowEditKasKecilModal(false);
       setEditingKasKecil(null);
       setFormKasKecil({ 
-        tanggal: getTodayDate(), 
+        tanggal: new Date().toISOString().split('T')[0], 
         pt: '', 
         jenis: 'keluar', 
         jumlah: '', 
         keterangan: '', 
-        kategori: '', 
-        metodeBayar: 'cash' 
+        kategori: ''
       });
       
       alert('Data kas kecil berhasil diupdate!');
@@ -891,12 +886,11 @@ const SumberJayaApp = () => {
       
       // Initialize forms
       setFormKasKecil({
-        tanggal: getTodayDate(),
+        tanggal: new Date().toISOString().split('T')[0],
         pt: '',
         jenis: 'keluar',
         jumlah: '',
         keterangan: '',
-        metodeBayar: 'cash',
         kategori: ''
       });
     } catch (error) {
@@ -3580,32 +3574,19 @@ const SumberJayaApp = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Metode Pembayaran</label>
+                    <label className="block text-sm font-medium mb-2">Kategori *</label>
                     <select 
-                      value={formKasKecil.metodeBayar}
-                      onChange={(e) => setFormKasKecil({...formKasKecil, metodeBayar: e.target.value})}
+                      value={formKasKecil.kategori}
+                      onChange={(e) => setFormKasKecil({...formKasKecil, kategori: e.target.value})}
                       className="w-full px-4 py-2 border rounded-lg"
+                      required
                     >
-                      <option value="cash">Cash (Tunai)</option>
-                      <option value="cashless">Cashless (Non-Tunai)</option>
+                      <option value="">Pilih Kategori</option>
+                      {kategoriList.map(kategori => (
+                        <option key={kategori} value={kategori}>{kategori}</option>
+                      ))}
                     </select>
                   </div>
-                  {formKasKecil.metodeBayar === 'cashless' && (
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Kategori Pengeluaran</label>
-                      <select 
-                        value={formKasKecil.kategori}
-                        onChange={(e) => setFormKasKecil({...formKasKecil, kategori: e.target.value})}
-                        className="w-full px-4 py-2 border rounded-lg"
-                        required={formKasKecil.metodeBayar === 'cashless'}
-                      >
-                        <option value="">Pilih Kategori</option>
-                        {kategoriPengeluaran.map(kategori => (
-                          <option key={kategori} value={kategori}>{kategori}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
                 </div>
               </div>
 
