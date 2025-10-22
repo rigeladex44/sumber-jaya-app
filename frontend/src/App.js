@@ -2764,27 +2764,328 @@ const SumberJayaApp = () => {
     );
   };
 
-  // Render Kas Kecil Page (untuk pembukuan kasir tunai)
+  // Render Kas Kecil Page (untuk pembukuan kasir tunai - Cash Only)
   const renderKasKecil = () => {
+    const handlePTChange = (ptCode) => {
+      setSelectedPT(prev => {
+        if (prev.includes(ptCode)) {
+          return prev.filter(p => p !== ptCode);
+        } else {
+          return [...prev, ptCode];
+        }
+      });
+    };
+
+    // Calculate totals from kas kecil data
+    const hitungKasKecil = (pts = []) => {
+      const filtered = pts.length > 0 ? kasKecilData.filter(k => pts.includes(k.pt)) : kasKecilData;
+      const masuk = filtered.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      const keluar = filtered.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      return { masuk, keluar, saldo: masuk - keluar };
+    };
+
+    const { masuk, keluar, saldo } = hitungKasKecil(selectedPT);
+    const filteredData = selectedPT.length > 0 ? kasKecilData.filter(k => selectedPT.includes(k.pt)) : kasKecilData;
+
+    // Check if transaction is from today for edit/delete
+    const isToday = (createdAt) => {
+      if (!createdAt) return false;
+      const today = new Date();
+      const transDate = new Date(createdAt);
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      return transDate >= todayStart;
+    };
+
     return (
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h2 className="text-2xl font-bold text-gray-800">Kas Kecil</h2>
-          <div className="text-sm text-gray-600">
-            <p>Kas fisik tunai di kasir</p>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Kas Kecil</h2>
+            <p className="text-sm text-gray-600">Pembukuan kas fisik tunai di kasir (Cash Only)</p>
           </div>
         </div>
 
+        {/* Info Box */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 shadow-md border-l-4 border-green-500">
+          <div className="flex items-start gap-3">
+            <DollarSign className="text-green-600 flex-shrink-0 mt-0.5" size={24} />
+            <div>
+              <h4 className="font-semibold text-green-900 mb-1">Tentang Kas Kecil</h4>
+              <p className="text-sm text-green-800">
+                Kas Kecil adalah pembukuan untuk <strong>transaksi tunai (cash)</strong> di kasir.
+                Pemasukan otomatis approved. Pengeluaran < Rp 300.000 otomatis approved, ≥ Rp 300.000 butuh persetujuan.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Input Form */}
         <div className="bg-white rounded-lg p-6 shadow-md">
-          <h3 className="text-lg font-bold mb-4">Kas Kecil - Test</h3>
-          <p className="text-gray-600">
-            Function renderKasKecil sedang dalam perbaikan. 
-            Data akan ditampilkan setelah fix selesai.
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Debug: activeMenu = {activeMenu}
+          <h3 className="text-lg font-bold mb-4">Input Transaksi Kas Kecil</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal *</label>
+              <input 
+                type="date" 
+                value={formKasKecil.tanggal}
+                onChange={(e) => setFormKasKecil({...formKasKecil, tanggal: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">PT *</label>
+              <select 
+                value={formKasKecil.pt}
+                onChange={(e) => setFormKasKecil({...formKasKecil, pt: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="">Pilih PT</option>
+                {currentUserData?.accessPT?.map(code => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Jenis *</label>
+              <select 
+                value={formKasKecil.jenis}
+                onChange={(e) => setFormKasKecil({...formKasKecil, jenis: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="keluar">Pengeluaran</option>
+                <option value="masuk">Pemasukan</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
+              <input 
+                type="number" 
+                value={formKasKecil.jumlah}
+                onChange={(e) => setFormKasKecil({...formKasKecil, jumlah: e.target.value})}
+                placeholder="0" 
+                className="w-full px-4 py-2 border rounded-lg" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Kategori *</label>
+              <select 
+                value={formKasKecil.kategori}
+                onChange={(e) => setFormKasKecil({...formKasKecil, kategori: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+                required
+              >
+                <option value="">Pilih Kategori</option>
+                {kategoriList.map(kategori => (
+                  <option key={kategori} value={kategori}>{kategori}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Keterangan *</label>
+              <textarea
+                value={formKasKecil.keterangan}
+                onChange={(e) => setFormKasKecil({...formKasKecil, keterangan: e.target.value})}
+                placeholder="Masukkan keterangan transaksi" 
+                className="w-full px-4 py-2 border rounded-lg"
+                rows={1}
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <button 
+              onClick={handleSaveKasKecil}
+              disabled={isLoadingKasKecil}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            >
+              {isLoadingKasKecil ? 'Menyimpan...' : 'Simpan Transaksi'}
+            </button>
+          </div>
+        </div>
+
+        {/* PT Filter */}
+        <div className="bg-white rounded-lg shadow-sm border p-4">
+          <h3 className="text-lg font-semibold mb-3">Filter PT</h3>
+          <div className="flex flex-wrap gap-2">
+            {currentUserData?.accessPT?.map(ptCode => (
+              <button
+                key={ptCode}
+                onClick={() => handlePTChange(ptCode)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  selectedPT.includes(ptCode)
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {ptCode}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {selectedPT.length === 0 ? 'Semua PT ditampilkan' : `${selectedPT.length} PT dipilih`}
           </p>
         </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Masuk</p>
+                <p className="text-2xl font-bold text-green-600">Rp {masuk.toLocaleString('id-ID')}</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Keluar</p>
+                <p className="text-2xl font-bold text-red-600">Rp {keluar.toLocaleString('id-ID')}</p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <TrendingDown className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Saldo Akhir</p>
+                <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                  Rp {saldo.toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div className={`p-3 rounded-full ${saldo >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
+                <DollarSign className={`w-6 h-6 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Transaction Table */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-4 border-b">
+            <h3 className="text-lg font-semibold">Riwayat Transaksi Kas Kecil</h3>
+            <p className="text-sm text-gray-600">Transaksi tunai (cash) di kasir</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PT</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Keluar</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredData.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {item.jenis === 'masuk' ? (
+                        <span className="text-green-600 font-medium">
+                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {item.jenis === 'keluar' ? (
+                        <span className="text-red-600 font-medium">
+                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                        item.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {isToday(item.created_at) && (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingKasKecil(item);
+                              setFormKasKecil({
+                                tanggal: item.tanggal.split('T')[0],
+                                pt: item.pt,
+                                jenis: item.jenis,
+                                jumlah: item.jumlah.toString(),
+                                keterangan: item.keterangan,
+                                kategori: item.kategori || ''
+                              });
+                              setShowEditKasKecilModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Edit"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteKasKecil(item.id, item.keterangan)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Hapus"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-gray-100 font-bold">
+                <tr>
+                  <td colSpan="4" className="px-4 py-3 text-right">Total (Approved)</td>
+                  <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
+                  <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
+                  <td colSpan="2" className="px-4 py-3"></td>
+                </tr>
+                <tr className="bg-blue-50">
+                  <td colSpan="4" className="px-4 py-3 text-right">Saldo Akhir</td>
+                  <td colSpan="4" className="px-4 py-3 text-right text-blue-600 text-lg">
+                    Rp {saldo.toLocaleString('id-ID')}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {isLoadingKasKecil && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+              <span>Memuat data kas kecil...</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
