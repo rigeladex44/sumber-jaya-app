@@ -734,7 +734,7 @@ const SumberJayaApp = () => {
             <style>
               @page {
                 size: A4;
-                margin: 15mm;
+                margin: 8mm;
               }
               * { 
                 margin: 0; 
@@ -743,7 +743,7 @@ const SumberJayaApp = () => {
               }
               body { 
                 font-family: 'Arial', sans-serif; 
-                padding: 20px;
+                padding: 15px;
                 color: #000;
                 line-height: 1.4;
                 background: white;
@@ -751,34 +751,34 @@ const SumberJayaApp = () => {
               
               .report-header { 
                 text-align: center;
-                margin-bottom: 25px;
-                padding-bottom: 15px;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
                 border-bottom: 3px solid #000;
               }
               .report-title {
                 font-size: 18px;
                 font-weight: bold;
                 letter-spacing: 1px;
-                margin-bottom: 8px;
-                line-height: 1.2;
+                margin-bottom: 4px;
+                line-height: 1.1;
               }
               .report-subtitle {
                 font-size: 12px;
                 color: #333;
-                margin-bottom: 3px;
+                margin-bottom: 2px;
                 font-weight: bold;
-                line-height: 1.3;
+                line-height: 1.2;
               }
               .report-company {
                 font-size: 9px;
                 color: #666;
-                margin-top: 5px;
+                margin-top: 2px;
               }
               
               .info-section {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 20px;
+                margin-bottom: 10px;
                 font-size: 12px;
               }
               .info-left, .info-right {
@@ -804,8 +804,8 @@ const SumberJayaApp = () => {
                 font-size: 11px;
               }
               th { 
-                background: #86ff81;
-                color: #000;
+                background: #86ff81 !important;
+                color: #000 !important;
                 padding: 8px 6px;
                 text-align: left;
                 font-weight: bold;
@@ -829,6 +829,11 @@ const SumberJayaApp = () => {
                 font-weight: bold;
                 border-top: 2px solid #000 !important;
                 color: #000 !important;
+              }
+              .grand-total-row td {
+                background: #86ff81 !important;
+                color: #000 !important;
+                font-weight: bold !important;
               }
               
               .signature-section {
@@ -976,7 +981,7 @@ const SumberJayaApp = () => {
             <style>
               @page {
                 size: A4;
-                margin: 15mm;
+                margin: 8mm;
               }
               * { 
                 margin: 0; 
@@ -985,7 +990,7 @@ const SumberJayaApp = () => {
               }
               body { 
                 font-family: 'Arial', sans-serif; 
-                padding: 20px;
+                padding: 15px;
                 color: #000;
                 line-height: 1.4;
                 background: white;
@@ -993,34 +998,34 @@ const SumberJayaApp = () => {
               
               .report-header { 
                 text-align: center;
-                margin-bottom: 25px;
-                padding-bottom: 15px;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
                 border-bottom: 3px solid #000;
               }
               .report-title {
                 font-size: 18px;
                 font-weight: bold;
                 letter-spacing: 1px;
-                margin-bottom: 8px;
-                line-height: 1.2;
+                margin-bottom: 4px;
+                line-height: 1.1;
               }
               .report-subtitle {
                 font-size: 12px;
                 color: #333;
-                margin-bottom: 3px;
+                margin-bottom: 2px;
                 font-weight: bold;
-                line-height: 1.3;
+                line-height: 1.2;
               }
               .report-company {
                 font-size: 9px;
                 color: #666;
-                margin-top: 5px;
+                margin-top: 2px;
               }
               
               .info-section {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 20px;
+                margin-bottom: 10px;
                 font-size: 12px;
               }
               .info-left, .info-right {
@@ -1046,8 +1051,8 @@ const SumberJayaApp = () => {
                 font-size: 11px;
               }
               th { 
-                background: #86ff81;
-                color: #000;
+                background: #86ff81 !important;
+                color: #000 !important;
                 padding: 8px 6px;
                 text-align: left;
                 font-weight: bold;
@@ -1071,6 +1076,11 @@ const SumberJayaApp = () => {
                 font-weight: bold;
                 border-top: 2px solid #000 !important;
                 color: #000 !important;
+              }
+              .grand-total-row td {
+                background: #86ff81 !important;
+                color: #000 !important;
+                font-weight: bold !important;
               }
               
               .signature-section {
@@ -1670,7 +1680,7 @@ const SumberJayaApp = () => {
             <style>
               @page {
                 size: A4;
-                margin: 15mm;
+                margin: 8mm;
               }
               * { 
                 margin: 0; 
@@ -1679,7 +1689,7 @@ const SumberJayaApp = () => {
               }
               body { 
                 font-family: 'Arial', sans-serif; 
-                padding: 20px;
+                padding: 15px;
                 color: #000;
                 line-height: 1.4;
                 background: white;
@@ -1715,13 +1725,13 @@ const SumberJayaApp = () => {
               .report-company {
                 font-size: 9px;
                 color: #666;
-                margin-top: 5px;
+                margin-top: 2px;
               }
               
               .info-section {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 20px;
+                margin-bottom: 10px;
                 font-size: 12px;
               }
               .info-left, .info-right {
@@ -1747,8 +1757,8 @@ const SumberJayaApp = () => {
                 font-size: 11px;
               }
               th { 
-                background: #86ff81;
-                color: #000;
+                background: #86ff81 !important;
+                color: #000 !important;
                 padding: 8px 6px;
                 text-align: left;
                 font-weight: bold;
@@ -1772,6 +1782,11 @@ const SumberJayaApp = () => {
                 font-weight: bold;
                 border-top: 2px solid #000 !important;
                 color: #000 !important;
+              }
+              .grand-total-row td {
+                background: #86ff81 !important;
+                color: #000 !important;
+                font-weight: bold !important;
               }
               
               .signature-section {
