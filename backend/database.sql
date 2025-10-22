@@ -34,6 +34,8 @@ CREATE TABLE kas_kecil (
   jenis ENUM('masuk', 'keluar') NOT NULL,
   jumlah DECIMAL(15, 2) NOT NULL,
   keterangan TEXT,
+  kategori VARCHAR(100) NULL,
+  metode_bayar VARCHAR(20) DEFAULT 'cash',
   status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
   created_by INT NOT NULL,
   approved_by INT NULL,
@@ -98,11 +100,11 @@ INSERT INTO pangkalan (pt_code, name, alamat, kontak) VALUES
 ('KSS', 'Pangkalan Sejahtera', 'Jl. Ahmad Yani No. 789', '081234567892');
 
 -- Insert Data Kas Kecil Contoh
-INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by) VALUES
-('2025-10-11', 'SJE', 'masuk', 5000000, 'Penjualan Tunai Pangkalan Jaya', 'approved', 1, 1),
-('2025-10-11', 'SJE', 'keluar', 250000, 'Pembelian ATK Kantor', 'approved', 1, 1),
-('2025-10-10', 'KSS', 'masuk', 3500000, 'Penjualan Tunai Pangkalan Sejahtera', 'approved', 1, 1),
-('2025-10-10', 'KSS', 'keluar', 180000, 'Biaya Operasional', 'approved', 1, 1);
+INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, status, created_by, approved_by) VALUES
+('2025-10-11', 'SJE', 'masuk', 5000000, 'Penjualan Tunai Pangkalan Jaya', NULL, 'cash', 'approved', 1, 1),
+('2025-10-11', 'SJE', 'keluar', 250000, 'Pembelian ATK Kantor', 'BIAYA OPERASIONAL', 'cashless', 'approved', 1, 1),
+('2025-10-10', 'KSS', 'masuk', 3500000, 'Penjualan Tunai Pangkalan Sejahtera', NULL, 'cash', 'approved', 1, 1),
+('2025-10-10', 'KSS', 'keluar', 180000, 'Biaya Operasional', 'BIAYA OPERASIONAL', 'cash', 'approved', 1, 1);
 
 -- Insert Data Penjualan Contoh
 INSERT INTO penjualan (tanggal, pt_code, pangkalan, qty, harga, total, ppn, ppn_percent, metode_bayar, created_by) VALUES
@@ -114,5 +116,7 @@ INSERT INTO penjualan (tanggal, pt_code, pangkalan, qty, harga, total, ppn, ppn_
 CREATE INDEX idx_kas_tanggal ON kas_kecil(tanggal);
 CREATE INDEX idx_kas_pt ON kas_kecil(pt_code);
 CREATE INDEX idx_kas_status ON kas_kecil(status);
+CREATE INDEX idx_kas_metode_bayar ON kas_kecil(metode_bayar);
+CREATE INDEX idx_kas_kategori ON kas_kecil(kategori);
 CREATE INDEX idx_penjualan_tanggal ON penjualan(tanggal);
 CREATE INDEX idx_penjualan_pt ON penjualan(pt_code);

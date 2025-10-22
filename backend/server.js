@@ -105,6 +105,64 @@ db.connect((err) => {
       });
     }
   });
+  
+  // Auto-migrate: Add kategori and metode_bayar columns to kas_kecil if not exists
+  const checkColumnsSQL = `
+    SELECT COLUMN_NAME 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'kas_kecil' 
+    AND COLUMN_NAME IN ('kategori', 'metode_bayar')
+  `;
+  
+  db.query(checkColumnsSQL, (err, results) => {
+    if (err) {
+      console.error('⚠️ Error checking kas_kecil columns:', err.message);
+      return;
+    }
+    
+    const existingColumns = results.map(row => row.COLUMN_NAME);
+    const needsKategori = !existingColumns.includes('kategori');
+    const needsMetodeBayar = !existingColumns.includes('metode_bayar');
+    
+    if (needsKategori || needsMetodeBayar) {
+      console.log('🔄 Running migration: Adding kategori and metode_bayar columns...');
+      
+      let alterSQL = 'ALTER TABLE kas_kecil ';
+      const alterStatements = [];
+      
+      if (needsKategori) {
+        alterStatements.push("ADD COLUMN kategori VARCHAR(100) NULL AFTER keterangan");
+      }
+      
+      if (needsMetodeBayar) {
+        alterStatements.push("ADD COLUMN metode_bayar VARCHAR(20) DEFAULT 'cash' AFTER " + (needsKategori ? 'kategori' : 'keterangan'));
+      }
+      
+      alterSQL += alterStatements.join(', ');
+      
+      db.query(alterSQL, (err) => {
+        if (err) {
+          console.error('⚠️ Migration failed:', err.message);
+        } else {
+          console.log('✅ Migration successful: kategori and metode_bayar columns added');
+          
+          // Update existing records to have default 'cash' payment method
+          if (needsMetodeBayar) {
+            db.query("UPDATE kas_kecil SET metode_bayar = 'cash' WHERE metode_bayar IS NULL", (err) => {
+              if (err) {
+                console.error('⚠️ Error updating default metode_bayar:', err.message);
+              } else {
+                console.log('✅ Default metode_bayar values set');
+              }
+            });
+          }
+        }
+      });
+    } else {
+      console.log('✅ kas_kecil table schema up to date');
+    }
+  });
 });
 
 // JWT Secret
@@ -238,7 +296,7 @@ app.get('/api/pt', verifyToken, (req, res) => {
 app.get('/api/kas-kecil', verifyToken, (req, res) => {
   const { pt, tanggal_dari, tanggal_sampai, status } = req.query;
   
-  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, status, created_by, approved_by, created_at, updated_at FROM kas_kecil WHERE 1=1';
+  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, kategori, metode_bayar AS metodeBayar, status, created_by, approved_by, created_at, updated_at FROM kas_kecil WHERE 1=1';
   let params = [];
   
   if (pt) {
@@ -280,7 +338,7 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
 
 // Create Kas Kecil
 app.post('/api/kas-kecil', verifyToken, (req, res) => {
-  const { tanggal, pt, jenis, jumlah, keterangan } = req.body;
+  const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
   
   // Logic approve/reject:
   // - Semua PEMASUKAN (masuk): Langsung approved
@@ -294,9 +352,9 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
     approved_by = null;
   }
   
-  const query = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+  const query = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
   
-  db.query(query, [tanggal, pt, jenis, jumlah, keterangan, status, req.userId, approved_by], (err, result) => {
+  db.query(query, [tanggal, pt, jenis, jumlah, keterangan, kategori || null, metodeBayar || 'cash', status, req.userId, approved_by], (err, result) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
@@ -473,7 +531,7 @@ app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
 // Update Kas Kecil (hanya untuk transaksi hari ini)
 app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
   const { id } = req.params;
-  const { tanggal, pt, jenis, jumlah, keterangan } = req.body;
+  const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
   const today = new Date().toISOString().split('T')[0];
   
   // Step 1: Get existing kas data
@@ -517,11 +575,11 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
     
     const updateQuery = `
       UPDATE kas_kecil 
-      SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, status = ?, approved_by = ?
+      SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, metode_bayar = ?, status = ?, approved_by = ?
       WHERE id = ?
     `;
     
-    db.query(updateQuery, [tanggal, pt, jenis, jumlah, keterangan, status, approved_by, id], (err, result) => {
+    db.query(updateQuery, [tanggal, pt, jenis, jumlah, keterangan, kategori || null, metodeBayar || 'cash', status, approved_by, id], (err, result) => {
       if (err) {
         return res.status(500).json({ message: 'Server error', error: err });
       }

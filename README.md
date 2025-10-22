@@ -97,9 +97,12 @@ Visit your Vercel URL and login!
 
 ### ✅ Manajemen Kas Kecil
 - Input transaksi kas masuk/keluar
+- **Metode Pembayaran**: Cash & Cashless
+- **Kategori Pengeluaran**: 20+ kategori untuk transaksi cashless
 - Approval otomatis untuk transaksi ≤ Rp 300.000
 - Tracking saldo real-time per PT
 - Filter berdasarkan PT, tanggal, dan status
+- Edit & delete untuk transaksi hari ini
 
 ### ✅ Entri Penjualan Gas LPG
 - Input penjualan dengan kalkulasi otomatis
@@ -220,9 +223,10 @@ Password: hengky123
 1. **users** - Data user dan authentication
 2. **pt_list** - Daftar PT (5 PT)
 3. **pt_access** - Akses user ke PT
-4. **kas_kecil** - Transaksi kas kecil
-5. **penjualan** - Data penjualan gas LPG
-6. **pangkalan** - Master data pangkalan
+4. **feature_access** - Akses fitur per user
+5. **kas_kecil** - Transaksi kas kecil (+ kategori & metode bayar)
+6. **penjualan** - Data penjualan gas LPG
+7. **pangkalan** - Master data pangkalan
 
 ### ER Diagram
 
