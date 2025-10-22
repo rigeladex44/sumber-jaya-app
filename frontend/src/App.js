@@ -312,9 +312,9 @@ const SumberJayaApp = () => {
         role: formUser.jabatan,
         aksesPT: formUser.aksesPT,
         fiturAkses: formUser.fiturAkses,
-        status: 'aktif'
-      };
-      
+      status: 'aktif'
+    };
+
       await userService.create(userData);
       await loadUsers(); // Refresh user list
       
@@ -407,7 +407,7 @@ const SumberJayaApp = () => {
       alert('Anda tidak bisa menghapus user yang sedang login!');
       return;
     }
-
+    
     if (window.confirm('Apakah Anda yakin ingin menghapus user ini?')) {
       try {
         await userService.delete(userId);
@@ -1180,7 +1180,7 @@ const SumberJayaApp = () => {
             </div>
 
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-[10px] text-gray-600 text-right">
+              <p className="text-[10px] text-gray-600 text-center">
                 © 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click
               </p>
             </div>
@@ -1881,8 +1881,8 @@ const SumberJayaApp = () => {
           <div className="labarugi-section mb-8">
             <div className="labarugi-title">
               <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">PENDAPATAN</p>
-            </div>
-            
+          </div>
+          
             <div className="mb-4">
               <div className="labarugi-item">
                 <span className="labarugi-item-label">Penjualan Gas LPG</span>
@@ -1892,15 +1892,15 @@ const SumberJayaApp = () => {
               <div className="labarugi-item">
                 <span className="labarugi-item-label">Pendapatan Lain (Kas Masuk)</span>
                 <span className="labarugi-item-value">Rp {laporanData.pendapatanLain.toLocaleString('id-ID')}</span>
-              </div>
           </div>
-          
+        </div>
+
             <div className="labarugi-total">
               <span className="labarugi-total-label">Total Pendapatan</span>
               <span className="labarugi-total-value" style={{color: '#059669'}}>Rp {laporanData.totalPendapatan.toLocaleString('id-ID')}</span>
           </div>
-        </div>
-
+          </div>
+          
           <div className="labarugi-section mb-8">
             <div className="labarugi-title">
               <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">PENGELUARAN</p>
