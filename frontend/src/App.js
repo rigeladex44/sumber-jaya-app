@@ -190,6 +190,19 @@ const SumberJayaApp = () => {
       
       // Load data kas kecil
       const data = await kasKecilService.getAll(filters);
+      
+      console.log('DEBUG Load Kas Kecil Data:', {
+        dataCount: data.length,
+        sampleData: data.slice(0, 2).map(item => ({
+          id: item.id,
+          tanggal: item.tanggal,
+          tanggalSplit: item.tanggal?.split('T')[0],
+          pt: item.pt,
+          keterangan: item.keterangan
+        })),
+        localDate: new Date().toISOString().split('T')[0]
+      });
+      
       setKasKecilData(data);
     } catch (error) {
       console.error('Error loading kas kecil:', error);
@@ -816,6 +829,12 @@ const SumberJayaApp = () => {
         keterangan: formKasKecil.keterangan,
         kategori: formKasKecil.kategori
       };
+
+      console.log('DEBUG Save Kas Kecil:', {
+        tanggal: kasKecilData.tanggal,
+        localDate: new Date().toISOString().split('T')[0],
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      });
       
       await kasKecilService.create(kasKecilData);
       
@@ -3143,7 +3162,7 @@ const SumberJayaApp = () => {
                             onClick={() => {
                               setEditingKasKecil(item);
                               setFormKasKecil({
-                                tanggal: item.tanggal.split('T')[0],
+                                tanggal: item.tanggal.split('T')[0], // Keep original date format
                                 pt: item.pt,
                                 jenis: item.jenis,
                                 jumlah: item.jumlah.toString(),
