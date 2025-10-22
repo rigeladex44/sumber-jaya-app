@@ -872,7 +872,7 @@ const SumberJayaApp = () => {
                 display: flex;
                 justify-content: space-between;
                 margin-bottom: 20px;
-                font-size: 10px;
+                font-size: 12px;
               }
               .info-left, .info-right {
                 width: 48%;
@@ -894,7 +894,7 @@ const SumberJayaApp = () => {
                 width: 100%; 
                 border-collapse: collapse; 
                 margin: 15px 0;
-                font-size: 9px;
+                font-size: 11px;
               }
               th { 
                 background: #f0f8f0;
