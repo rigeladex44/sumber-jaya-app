@@ -26,7 +26,7 @@ CREATE TABLE pt_list (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabel: kas_kecil
+-- Tabel: kas_kecil (Cash Only - Kas Fisik)
 CREATE TABLE kas_kecil (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tanggal DATE NOT NULL,
@@ -34,8 +34,6 @@ CREATE TABLE kas_kecil (
   jenis ENUM('masuk', 'keluar') NOT NULL,
   jumlah DECIMAL(15, 2) NOT NULL,
   keterangan TEXT,
-  kategori VARCHAR(100) NULL,
-  metode_bayar VARCHAR(20) DEFAULT 'cash',
   status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
   created_by INT NOT NULL,
   approved_by INT NULL,
@@ -43,6 +41,22 @@ CREATE TABLE kas_kecil (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (created_by) REFERENCES users(id),
   FOREIGN KEY (approved_by) REFERENCES users(id)
+);
+
+-- Tabel: arus_kas (Cash + Cashless - Comprehensive Cash Flow)
+CREATE TABLE arus_kas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tanggal DATE NOT NULL,
+  pt_code VARCHAR(10) NOT NULL,
+  jenis ENUM('masuk', 'keluar') NOT NULL,
+  jumlah DECIMAL(15, 2) NOT NULL,
+  keterangan TEXT NOT NULL,
+  kategori VARCHAR(100) NOT NULL,
+  metode_bayar VARCHAR(20) DEFAULT 'cashless',
+  created_by INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 -- Tabel: penjualan
@@ -99,12 +113,18 @@ INSERT INTO pangkalan (pt_code, name, alamat, kontak) VALUES
 ('SJE', 'Pangkalan Makmur', 'Jl. Soekarno Hatta No. 456', '081234567891'),
 ('KSS', 'Pangkalan Sejahtera', 'Jl. Ahmad Yani No. 789', '081234567892');
 
--- Insert Data Kas Kecil Contoh
-INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, status, created_by, approved_by) VALUES
-('2025-10-11', 'SJE', 'masuk', 5000000, 'Penjualan Tunai Pangkalan Jaya', NULL, 'cash', 'approved', 1, 1),
-('2025-10-11', 'SJE', 'keluar', 250000, 'Pembelian ATK Kantor', 'BIAYA OPERASIONAL', 'cashless', 'approved', 1, 1),
-('2025-10-10', 'KSS', 'masuk', 3500000, 'Penjualan Tunai Pangkalan Sejahtera', NULL, 'cash', 'approved', 1, 1),
-('2025-10-10', 'KSS', 'keluar', 180000, 'Biaya Operasional', 'BIAYA OPERASIONAL', 'cash', 'approved', 1, 1);
+-- Insert Data Kas Kecil Contoh (Cash Only)
+INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by) VALUES
+('2025-10-11', 'SJE', 'masuk', 5000000, 'Penjualan Tunai Pangkalan Jaya', 'approved', 1, 1),
+('2025-10-11', 'SJE', 'keluar', 180000, 'Biaya Operasional Tunai', 'approved', 1, 1),
+('2025-10-10', 'KSS', 'masuk', 3500000, 'Penjualan Tunai Pangkalan Sejahtera', 'approved', 1, 1),
+('2025-10-10', 'KSS', 'keluar', 150000, 'Pembelian ATK Tunai', 'approved', 1, 1);
+
+-- Insert Data Arus Kas Contoh (Cashless Transactions)
+INSERT INTO arus_kas (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, created_by) VALUES
+('2025-10-11', 'SJE', 'keluar', 250000, 'Pembelian ATK Kantor Transfer', 'BIAYA OPERASIONAL', 'cashless', 1),
+('2025-10-11', 'KSS', 'keluar', 3000000, 'Gaji Staff Bulanan', 'BEBAN GAJI', 'cashless', 1),
+('2025-10-10', 'SJE', 'keluar', 500000, 'Biaya Transportasi', 'BIAYA TRANSPORTASI', 'cashless', 1);
 
 -- Insert Data Penjualan Contoh
 INSERT INTO penjualan (tanggal, pt_code, pangkalan, qty, harga, total, ppn, ppn_percent, metode_bayar, created_by) VALUES
@@ -116,7 +136,9 @@ INSERT INTO penjualan (tanggal, pt_code, pangkalan, qty, harga, total, ppn, ppn_
 CREATE INDEX idx_kas_tanggal ON kas_kecil(tanggal);
 CREATE INDEX idx_kas_pt ON kas_kecil(pt_code);
 CREATE INDEX idx_kas_status ON kas_kecil(status);
-CREATE INDEX idx_kas_metode_bayar ON kas_kecil(metode_bayar);
-CREATE INDEX idx_kas_kategori ON kas_kecil(kategori);
+CREATE INDEX idx_arus_kas_tanggal ON arus_kas(tanggal);
+CREATE INDEX idx_arus_kas_pt ON arus_kas(pt_code);
+CREATE INDEX idx_arus_kas_kategori ON arus_kas(kategori);
+CREATE INDEX idx_arus_kas_metode ON arus_kas(metode_bayar);
 CREATE INDEX idx_penjualan_tanggal ON penjualan(tanggal);
 CREATE INDEX idx_penjualan_pt ON penjualan(pt_code);
