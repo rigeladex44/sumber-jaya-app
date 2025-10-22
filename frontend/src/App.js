@@ -710,28 +710,23 @@ const SumberJayaApp = () => {
 
   // Kategori untuk Arus Kas (cashless transactions)
   const kategoriList = [
-    'PENDAPATAN PENJUALAN',
-    'KAS TUNAI',
+    'PENJUALAN',
+    'PEMASUKAN LAIN',
+    'TRANSPORT FEE',
     'BIAYA OPERASIONAL',
     'BIAYA LAIN-LAIN',
-    'BEBAN GAJI',
-    'BIAYA TRANSPORTASI',
-    'BIAYA KOMUNIKASI',
-    'BIAYA PERAWATAN',
-    'BIAYA ADMINISTRASI',
-    'BIAYA PEMASARAN'
+    'BEBAN GAJI KARYAWAN',
+    'BEBAN DIMUKA',
+    'BIAYA PAJAK & KONSULTAN',
+    'BIAYA ANGSURAN',
+    'BIAYA SEWA',
+    'KASBON KARYAWAN'
   ];
 
   // Kategori Pengeluaran untuk Kas Kecil (cashless)
   const kategoriPengeluaran = [
     'BIAYA OPERASIONAL',
-    'BIAYA LAIN-LAIN',
-    'BEBAN GAJI',
-    'BIAYA TRANSPORTASI',
-    'BIAYA KOMUNIKASI',
-    'BIAYA PERAWATAN',
-    'BIAYA ADMINISTRASI',
-    'BIAYA PEMASARAN'
+    'BIAYA LAIN-LAIN'
   ];
 
   const mainMenuItems = [
@@ -1627,8 +1622,7 @@ const SumberJayaApp = () => {
               className="w-full px-4 py-2 border rounded-lg"
             >
               <option value="cashless">Transfer Bank</option>
-              <option value="cashless">E-Wallet</option>
-              <option value="cashless">Kartu Kredit/Debit</option>
+              <option value="cashless">LinkAja</option>
             </select>
           </div>
           <div className="md:col-span-2">
