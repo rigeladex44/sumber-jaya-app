@@ -1743,7 +1743,7 @@ const SumberJayaApp = () => {
           </div>
           <div>
             <h3 className="font-bold text-gray-800 text-lg">Gas LPG 3 Kg</h3>
-            <p className="text-2xl font-bold text-green-600">Rp 16.000 / Tabung</p>
+            <p className="text-2xl font-bold text-green-600">Refil Pertamina</p>
           </div>
         </div>
       </div>
