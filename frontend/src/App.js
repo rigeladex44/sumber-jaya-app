@@ -750,7 +750,7 @@ const SumberJayaApp = () => {
 
   // Handler Delete Kas Kecil (only for today's entries)
   const handleDeleteKasKecil = async (kasKecilId, keterangan) => {
-    if (!confirm(`Yakin ingin menghapus transaksi "${keterangan}"?`)) return;
+    if (!window.confirm(`Yakin ingin menghapus transaksi "${keterangan}"?`)) return;
     
     setIsLoadingKasKecil(true);
     
