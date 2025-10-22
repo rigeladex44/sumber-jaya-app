@@ -147,6 +147,20 @@ const SumberJayaApp = () => {
   const [penjualanData, setPenjualanData] = useState([]);
   const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
   
+  // Kas Kecil State (untuk pembukuan kasir tunai)
+  const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
+  const [formKasKecil, setFormKasKecil] = useState({
+    tanggal: getTodayDate(),
+    pt: '',
+    jenis: 'keluar',
+    jumlah: '',
+    keterangan: '',
+    metodeBayar: 'cash',
+    kategori: ''
+  });
+  const [showEditKasKecilModal, setShowEditKasKecilModal] = useState(false);
+  const [editingKasKecil, setEditingKasKecil] = useState(null);
+  
   // Load Users from API
   const loadUsers = async () => {
     if (!isLoggedIn) return;
@@ -159,10 +173,11 @@ const SumberJayaApp = () => {
     }
   };
   
-  // Load Kas Kecil Data from API
+  // Load Kas Kecil Data from API (untuk pembukuan kasir tunai)
   const loadKasKecilData = async (filters = {}) => {
     if (!isLoggedIn) return;
     
+    setIsLoadingKasKecil(true);
     try {
       // Auto-transfer saldo kemarin jika belum
       try {
@@ -180,6 +195,8 @@ const SumberJayaApp = () => {
     } catch (error) {
       console.error('Error loading kas kecil:', error);
       // Don't alert on load error, just log it
+    } finally {
+      setIsLoadingKasKecil(false);
     }
   };
   
@@ -686,6 +703,118 @@ const SumberJayaApp = () => {
     }
   };
 
+  // Handler Save Kas Kecil (untuk pembukuan kasir tunai)
+  const handleSaveKasKecil = async () => {
+    if (!formKasKecil.pt || !formKasKecil.jumlah || !formKasKecil.keterangan) {
+      alert('Mohon lengkapi semua field!');
+      return;
+    }
+    
+    setIsLoadingKasKecil(true);
+    
+    try {
+      const kasKecilData = {
+        tanggal: formKasKecil.tanggal,
+        pt: formKasKecil.pt,
+        jenis: formKasKecil.jenis,
+        jumlah: parseFloat(formKasKecil.jumlah),
+        keterangan: formKasKecil.keterangan,
+        kategori: formKasKecil.kategori,
+        metodeBayar: formKasKecil.metodeBayar
+      };
+      
+      await kasKecilService.create(kasKecilData);
+      
+      // Refresh data
+      await loadKasKecilData();
+      
+      // Reset form
+      setFormKasKecil({ 
+        tanggal: getTodayDate(), 
+        pt: '', 
+        jenis: 'keluar', 
+        jumlah: '', 
+        keterangan: '', 
+        kategori: '', 
+        metodeBayar: 'cash' 
+      });
+      
+      alert('Data kas kecil berhasil disimpan!');
+    } catch (error) {
+      console.error('Error saving kas kecil:', error);
+      alert('Gagal menyimpan data kas kecil: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoadingKasKecil(false);
+    }
+  };
+
+  // Handler Delete Kas Kecil (only for today's entries)
+  const handleDeleteKasKecil = async (kasKecilId, keterangan) => {
+    if (!confirm(`Yakin ingin menghapus transaksi "${keterangan}"?`)) return;
+    
+    setIsLoadingKasKecil(true);
+    
+    try {
+      await kasKecilService.delete(kasKecilId);
+      await loadKasKecilData();
+      alert('Data kas kecil berhasil dihapus!');
+    } catch (error) {
+      console.error('Error deleting kas kecil:', error);
+      alert('Gagal menghapus data kas kecil: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoadingKasKecil(false);
+    }
+  };
+
+  // Handler Update Kas Kecil (only for today's entries)
+  const handleUpdateKasKecil = async () => {
+    if (!editingKasKecil) return;
+    
+    if (!formKasKecil.pt || !formKasKecil.jumlah || !formKasKecil.keterangan) {
+      alert('Mohon lengkapi semua field!');
+      return;
+    }
+    
+    setIsLoadingKasKecil(true);
+    
+    try {
+      const kasKecilData = {
+        tanggal: formKasKecil.tanggal,
+        pt: formKasKecil.pt,
+        jenis: formKasKecil.jenis,
+        jumlah: parseFloat(formKasKecil.jumlah),
+        keterangan: formKasKecil.keterangan,
+        kategori: formKasKecil.kategori,
+        metodeBayar: formKasKecil.metodeBayar
+      };
+      
+      await kasKecilService.update(editingKasKecil.id, kasKecilData);
+      
+      // Refresh data
+      await loadKasKecilData();
+      
+      // Close modal and reset
+      setShowEditKasKecilModal(false);
+      setEditingKasKecil(null);
+      setFormKasKecil({ 
+        tanggal: getTodayDate(), 
+        pt: '', 
+        jenis: 'keluar', 
+        jumlah: '', 
+        keterangan: '', 
+        kategori: '', 
+        metodeBayar: 'cash' 
+      });
+      
+      alert('Data kas kecil berhasil diupdate!');
+    } catch (error) {
+      console.error('Error updating kas kecil:', error);
+      alert('Gagal mengupdate data kas kecil: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoadingKasKecil(false);
+    }
+  };
+
   // Handler Delete Arus Kas Manual Entry (only for manual entries from today)
   const handleDeleteArusKas = async (arusKasId, keterangan) => {
     if (window.confirm(`Hapus transaksi arus kas: "${keterangan}"?\n\nData yang sudah dihapus tidak dapat dikembalikan!`)) {
@@ -726,7 +855,17 @@ const SumberJayaApp = () => {
   // Kategori Pengeluaran untuk Kas Kecil (cashless)
   const kategoriPengeluaran = [
     'BIAYA OPERASIONAL',
-    'BIAYA LAIN-LAIN'
+    'BIAYA LAIN-LAIN',
+    'TRANSPORT FEE',
+    'BEBAN GAJI KARYAWAN',
+    'BEBAN DIMUKA',
+    'BIAYA PAJAK & KONSULTAN',
+    'BIAYA ANGSURAN',
+    'BIAYA SEWA',
+    'KASBON KARYAWAN',
+    'PEMBELIAN BARANG',
+    'MAINTENANCE',
+    'KOMUNIKASI'
   ];
 
   const mainMenuItems = [
@@ -749,6 +888,17 @@ const SumberJayaApp = () => {
       setCurrentUserData(data.user);
       setActiveMenu('beranda');
       setPassword(''); // Clear password for security
+      
+      // Initialize forms
+      setFormKasKecil({
+        tanggal: getTodayDate(),
+        pt: '',
+        jenis: 'keluar',
+        jumlah: '',
+        keterangan: '',
+        metodeBayar: 'cash',
+        kategori: ''
+      });
     } catch (error) {
       console.error('Login error:', error);
       setLoginError(error.response?.data?.message || 'Username atau password salah!');
@@ -2624,6 +2774,243 @@ const SumberJayaApp = () => {
     );
   };
 
+  // Render Kas Kecil Page (untuk pembukuan kasir tunai)
+  const renderKasKecil = () => {
+    const handlePTChange = (ptCode) => {
+      setSelectedPT(prev => {
+        if (prev.includes(ptCode)) {
+          return prev.filter(p => p !== ptCode);
+        } else {
+          return [...prev, ptCode];
+        }
+      });
+    };
+
+    // Filter data berdasarkan PT yang dipilih
+    const getFilteredData = () => {
+      const pts = selectedPT.length > 0 ? selectedPT : currentUserData?.accessPT || [];
+      return pts.length > 0 ? kasKecilData.filter(k => pts.includes(k.pt)) : kasKecilData;
+    };
+
+    // Calculate totals from kas kecil data
+    const hitungKasKecil = (pts = []) => {
+      const filteredData = pts.length > 0 ? kasKecilData.filter(k => pts.includes(k.pt)) : kasKecilData;
+      
+      const masuk = filteredData
+        .filter(item => item.jenis === 'masuk')
+        .reduce((sum, item) => sum + (item.jumlah || 0), 0);
+      
+      const keluar = filteredData
+        .filter(item => item.jenis === 'keluar')
+        .reduce((sum, item) => sum + (item.jumlah || 0), 0);
+      
+      const saldo = masuk - keluar;
+      
+      return { masuk, keluar, saldo };
+    };
+
+    const { masuk, keluar, saldo } = hitungKasKecil(selectedPT);
+    const filteredData = getFilteredData();
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Kas Kecil</h2>
+            <p className="text-gray-600">Pembukuan kasir tunai</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowEditKasKecilModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Tambah Transaksi
+            </button>
+          </div>
+        </div>
+
+        {/* PT Filter */}
+        <div className="bg-white rounded-lg shadow-sm border p-4">
+          <h3 className="text-lg font-semibold mb-3">Filter PT</h3>
+          <div className="flex flex-wrap gap-2">
+            {currentUserData?.accessPT?.map(ptCode => (
+              <button
+                key={ptCode}
+                onClick={() => handlePTChange(ptCode)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  selectedPT.includes(ptCode)
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {ptCode}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {selectedPT.length === 0 ? 'Semua PT ditampilkan' : `${selectedPT.length} PT dipilih`}
+          </p>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Masuk</p>
+                <p className="text-2xl font-bold text-green-600">
+                  Rp {masuk.toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Keluar</p>
+                <p className="text-2xl font-bold text-red-600">
+                  Rp {keluar.toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <TrendingDown className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Saldo Akhir</p>
+                <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  Rp {saldo.toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div className={`p-3 rounded-full ${saldo >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                <DollarSign className={`w-6 h-6 ${saldo >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Data Table */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-4 border-b">
+            <h3 className="text-lg font-semibold">Data Transaksi Kas Kecil</h3>
+            <p className="text-sm text-gray-600">
+              Total {filteredData.length} transaksi
+            </p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PT</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keterangan</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metode</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredData.map((item, index) => {
+                  const isToday = new Date(item.tanggal).toDateString() === new Date().toDateString();
+                  return (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {new Date(item.tanggal).toLocaleDateString('id-ID')}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          item.jenis === 'masuk' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {item.jenis === 'masuk' ? 'Masuk' : 'Keluar'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        Rp {item.jumlah?.toLocaleString('id-ID')}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          item.metodeBayar === 'cash' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {item.metodeBayar === 'cash' ? 'Cash' : 'Cashless'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {isToday && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingKasKecil(item);
+                                setFormKasKecil({
+                                  tanggal: item.tanggal,
+                                  pt: item.pt,
+                                  jenis: item.jenis,
+                                  jumlah: item.jumlah.toString(),
+                                  keterangan: item.keterangan,
+                                  kategori: item.kategori || '',
+                                  metodeBayar: item.metodeBayar || 'cash'
+                                });
+                                setShowEditKasKecilModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Edit"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteKasKecil(item.id, item.keterangan)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Hapus"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {isLoadingKasKecil && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span>Memuat data kas kecil...</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderDetailKas = () => {
     const handlePTChange = (ptCode) => {
       setSelectedPT(prev => {
@@ -2782,7 +3169,7 @@ const SumberJayaApp = () => {
   const renderContent = () => {
     switch (activeMenu) {
       case 'beranda': return renderBeranda();
-      case 'kas-kecil': return renderArusKas();
+      case 'kas-kecil': return renderKasKecil();
       case 'arus-kas': return renderArusKas();
       case 'detail-kas': return renderDetailKas();
       case 'penjualan': return renderPenjualan();
@@ -3283,6 +3670,156 @@ const SumberJayaApp = () => {
                     setShowEditKasModal(false);
                     setEditingKas(null);
                     setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
+                  }}
+                  className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Kas Kecil */}
+        {showEditKasKecilModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-gray-800">
+                  {editingKasKecil ? 'Edit Transaksi Kas Kecil' : 'Tambah Transaksi Kas Kecil'}
+                </h3>
+                <button 
+                  onClick={() => {
+                    setShowEditKasKecilModal(false);
+                    setEditingKasKecil(null);
+                    setFormKasKecil({ 
+                      tanggal: getTodayDate(), 
+                      pt: '', 
+                      jenis: 'keluar', 
+                      jumlah: '', 
+                      keterangan: '', 
+                      kategori: '', 
+                      metodeBayar: 'cash' 
+                    });
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <span className="text-2xl">&times;</span>
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                  <p className="text-sm text-blue-800">
+                    <strong>Info:</strong> Kas Kecil untuk pembukuan kasir tunai. Hanya transaksi hari ini yang bisa diedit.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tanggal</label>
+                    <input 
+                      type="date" 
+                      value={formKasKecil.tanggal}
+                      onChange={(e) => setFormKasKecil({...formKasKecil, tanggal: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">PT *</label>
+                    <select 
+                      value={formKasKecil.pt}
+                      onChange={(e) => setFormKasKecil({...formKasKecil, pt: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="">Pilih PT</option>
+                      {currentUserData?.accessPT?.map(code => (
+                        <option key={code} value={code}>{code}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jenis Transaksi *</label>
+                    <select 
+                      value={formKasKecil.jenis}
+                      onChange={(e) => setFormKasKecil({...formKasKecil, jenis: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="keluar">Pengeluaran</option>
+                      <option value="masuk">Pemasukan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
+                    <input 
+                      type="number" 
+                      value={formKasKecil.jumlah}
+                      onChange={(e) => setFormKasKecil({...formKasKecil, jumlah: e.target.value})}
+                      placeholder="0" 
+                      className="w-full px-4 py-2 border rounded-lg" 
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-2">Keterangan *</label>
+                    <textarea 
+                      rows={3}
+                      value={formKasKecil.keterangan}
+                      onChange={(e) => setFormKasKecil({...formKasKecil, keterangan: e.target.value})}
+                      placeholder="Masukkan keterangan transaksi" 
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Metode Pembayaran</label>
+                    <select 
+                      value={formKasKecil.metodeBayar}
+                      onChange={(e) => setFormKasKecil({...formKasKecil, metodeBayar: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="cash">Cash (Tunai)</option>
+                      <option value="cashless">Cashless (Non-Tunai)</option>
+                    </select>
+                  </div>
+                  {formKasKecil.metodeBayar === 'cashless' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Kategori Pengeluaran</label>
+                      <select 
+                        value={formKasKecil.kategori}
+                        onChange={(e) => setFormKasKecil({...formKasKecil, kategori: e.target.value})}
+                        className="w-full px-4 py-2 border rounded-lg"
+                        required={formKasKecil.metodeBayar === 'cashless'}
+                      >
+                        <option value="">Pilih Kategori</option>
+                        {kategoriPengeluaran.map(kategori => (
+                          <option key={kategori} value={kategori}>{kategori}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 p-6 border-t bg-gray-50">
+                <button
+                  onClick={editingKasKecil ? handleUpdateKasKecil : handleSaveKasKecil}
+                  disabled={isLoadingKasKecil}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:bg-gray-400"
+                >
+                  {isLoadingKasKecil ? 'Menyimpan...' : (editingKasKecil ? 'Update Transaksi' : 'Simpan Transaksi')}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditKasKecilModal(false);
+                    setEditingKasKecil(null);
+                    setFormKasKecil({ 
+                      tanggal: getTodayDate(), 
+                      pt: '', 
+                      jenis: 'keluar', 
+                      jumlah: '', 
+                      keterangan: '', 
+                      kategori: '', 
+                      metodeBayar: 'cash' 
+                    });
                   }}
                   className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
                 >
