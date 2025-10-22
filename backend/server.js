@@ -41,7 +41,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Database Connection - Support Railway
-const dbConfig = process.env.MYSQLHOST
+const dbConfig = process.env.MYSQLHOST 
   ? {
       host: process.env.MYSQLHOST,
       port: process.env.MYSQLPORT || 3306,
@@ -168,20 +168,20 @@ app.post('/api/auth/login', (req, res) => {
         }
         
         const fiturAkses = featureResults.map(row => row.feature_id);
-        
-        // Create token
-        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '24h' });
-        
-        res.json({
-          token,
-          user: {
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            role: user.role,
+      
+      // Create token
+      const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '24h' });
+      
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.role,
             accessPT,
             fiturAkses
-          }
+        }
         });
       });
     });
@@ -1144,6 +1144,37 @@ app.get('/api/setup-database', async (req, res) => {
       error: error.message 
     });
   }
+});
+
+// ==================== HEALTH CHECK & MONITORING ====================
+
+// Health check endpoint untuk monitoring
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    service: 'Sumber Jaya API',
+    version: '1.0.0'
+  });
+});
+
+// Database health check
+app.get('/api/health/db', (req, res) => {
+  db.ping((err) => {
+    if (err) {
+      return res.status(503).json({
+        status: 'ERROR',
+        message: 'Database connection failed',
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.status(200).json({
+      status: 'OK',
+      message: 'Database connected',
+      timestamp: new Date().toISOString()
+    });
+  });
 });
 
 // Start Server
