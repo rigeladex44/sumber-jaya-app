@@ -172,6 +172,20 @@ const verifyToken = (req, res, next) => {
   });
 };
 
+// Helper function to get local date in Asia/Jakarta timezone
+const getLocalDate = () => {
+  const now = new Date();
+  // Convert to Asia/Jakarta timezone (UTC+7)
+  const localTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  return localTime.toISOString().split('T')[0];
+};
+
+// Helper function to process tanggal (remove timezone info)
+const processTanggal = (tanggal) => {
+  if (!tanggal) return null;
+  return tanggal.split('T')[0]; // Remove any timezone info
+};
+
 // ==================== AUTH ROUTES ====================
 
 // Login
@@ -347,7 +361,7 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
   });
   
   // Force tanggal to be treated as local date (no timezone conversion)
-  const localTanggal = tanggal.split('T')[0]; // Remove any timezone info
+  const localTanggal = processTanggal(tanggal);
   
   console.log('DEBUG Processed Tanggal:', {
     original: tanggal,
@@ -383,7 +397,7 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
 
 // Auto Transfer Saldo Kemarin
 app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -546,7 +560,7 @@ app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
 app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
   const { id } = req.params;
   const { tanggal, pt, jenis, jumlah, keterangan, kategori } = req.body;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   
   // Step 1: Get existing kas data
   const getKasQuery = 'SELECT tanggal, created_by FROM kas_kecil WHERE id = ?';
@@ -588,7 +602,7 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
     }
     
     // Force tanggal to be treated as local date (no timezone conversion)
-    const localTanggal = tanggal.split('T')[0]; // Remove any timezone info
+    const localTanggal = processTanggal(tanggal);
     
     const updateQuery = `
       UPDATE kas_kecil 
@@ -612,7 +626,7 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
 // Delete Kas Kecil (hanya untuk transaksi hari ini)
 app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
   const { id } = req.params;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   
   // Step 1: Get existing kas data
   const getKasQuery = 'SELECT tanggal, created_by, created_at FROM kas_kecil WHERE id = ?';
@@ -824,9 +838,12 @@ app.post('/api/arus-kas', verifyToken, (req, res) => {
     return res.status(400).json({ message: 'Kategori wajib diisi' });
   }
   
+  // Force tanggal to be treated as local date
+  const localTanggal = processTanggal(tanggal);
+  
   const query = 'INSERT INTO arus_kas (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
   
-  db.query(query, [tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', req.userId], (err, result) => {
+  db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', req.userId], (err, result) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
@@ -842,7 +859,7 @@ app.post('/api/arus-kas', verifyToken, (req, res) => {
 app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
   const { id } = req.params;
   const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   
   // Get existing entry
   const getQuery = 'SELECT tanggal, created_by FROM arus_kas WHERE id = ?';
@@ -869,9 +886,12 @@ app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
       return res.status(403).json({ message: 'Anda tidak memiliki akses untuk mengedit transaksi ini' });
     }
     
+    // Force tanggal to be treated as local date
+    const localTanggal = processTanggal(tanggal);
+    
     const updateQuery = 'UPDATE arus_kas SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, metode_bayar = ? WHERE id = ?';
     
-    db.query(updateQuery, [tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', id], (err, result) => {
+    db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', id], (err, result) => {
       if (err) {
         return res.status(500).json({ message: 'Server error', error: err });
       }
@@ -884,7 +904,7 @@ app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
 // Delete Manual Arus Kas Entry (only for today's entries)
 app.delete('/api/arus-kas/:id', verifyToken, (req, res) => {
   const { id } = req.params;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
   
   // Get existing entry
   const getQuery = 'SELECT tanggal, created_by FROM arus_kas WHERE id = ?';
@@ -962,13 +982,16 @@ app.get('/api/penjualan', verifyToken, (req, res) => {
 app.post('/api/penjualan', verifyToken, (req, res) => {
   const { tanggal, pt, pangkalan, qty, ppnPercent, metodeBayar } = req.body;
   
+  // Force tanggal to be treated as local date
+  const localTanggal = processTanggal(tanggal);
+  
   const harga = 16000;
   const total = qty * harga;
   const ppn = total * (ppnPercent / 100);
   
   const query = 'INSERT INTO penjualan (tanggal, pt_code, pangkalan, qty, harga, total, ppn, ppn_percent, metode_bayar, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
   
-  db.query(query, [tanggal, pt, pangkalan, qty, harga, total, ppn, ppnPercent, metodeBayar, req.userId], (err, result) => {
+  db.query(query, [localTanggal, pt, pangkalan, qty, harga, total, ppn, ppnPercent, metodeBayar, req.userId], (err, result) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
@@ -978,7 +1001,7 @@ app.post('/api/penjualan', verifyToken, (req, res) => {
       const kasQuery = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
       const keterangan = `Penjualan Tunai ${pangkalan}`;
       
-      db.query(kasQuery, [tanggal, pt, 'masuk', total, keterangan, 'approved', req.userId, req.userId], (kasErr) => {
+      db.query(kasQuery, [localTanggal, pt, 'masuk', total, keterangan, 'approved', req.userId, req.userId], (kasErr) => {
         if (kasErr) {
           console.error('Error inserting kas:', kasErr);
         }
