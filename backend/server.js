@@ -346,6 +346,14 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
     timezone: 'Asia/Jakarta (UTC+7)'
   });
   
+  // Force tanggal to be treated as local date (no timezone conversion)
+  const localTanggal = tanggal.split('T')[0]; // Remove any timezone info
+  
+  console.log('DEBUG Processed Tanggal:', {
+    original: tanggal,
+    processed: localTanggal
+  });
+  
   // Logic approve/reject:
   // - Semua PEMASUKAN (masuk): Langsung approved
   // - PENGELUARAN (keluar) < 300k: Auto approved  
@@ -360,7 +368,7 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
   
   const query = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, kategori, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
   
-  db.query(query, [tanggal, pt, jenis, jumlah, keterangan, kategori || null, status, req.userId, approved_by], (err, result) => {
+  db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategori || null, status, req.userId, approved_by], (err, result) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
@@ -579,13 +587,16 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
       approved_by = null;
     }
     
+    // Force tanggal to be treated as local date (no timezone conversion)
+    const localTanggal = tanggal.split('T')[0]; // Remove any timezone info
+    
     const updateQuery = `
       UPDATE kas_kecil 
       SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, status = ?, approved_by = ?
       WHERE id = ?
     `;
     
-    db.query(updateQuery, [tanggal, pt, jenis, jumlah, keterangan, kategori || null, status, approved_by, id], (err, result) => {
+    db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategori || null, status, approved_by, id], (err, result) => {
       if (err) {
         return res.status(500).json({ message: 'Server error', error: err });
       }
