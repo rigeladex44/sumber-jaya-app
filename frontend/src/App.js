@@ -215,9 +215,7 @@ const SumberJayaApp = () => {
     pt: '',
     jenis: 'keluar',
     jumlah: '',
-    keterangan: '',
-    kategori: '', // Kategori untuk transaksi cashless
-    metodeBayar: 'cash' // 'cash' atau 'cashless'
+    keterangan: ''
   });
 
   const [showEditKasModal, setShowEditKasModal] = useState(false);
@@ -293,12 +291,6 @@ const SumberJayaApp = () => {
       return;
     }
     
-    // Validasi kategori untuk transaksi cashless
-    if (formKas.metodeBayar === 'cashless' && !formKas.kategori) {
-      alert('Mohon pilih kategori untuk transaksi cashless!');
-      return;
-    }
-    
     setIsLoadingKas(true);
     
     try {
@@ -307,9 +299,7 @@ const SumberJayaApp = () => {
         pt: formKas.pt,
         jenis: formKas.jenis,
         jumlah: parseFloat(formKas.jumlah),
-        keterangan: formKas.keterangan,
-        kategori: formKas.kategori,
-        metodeBayar: formKas.metodeBayar
+        keterangan: formKas.keterangan
       };
       
       await kasKecilService.create(kasData);
@@ -318,7 +308,7 @@ const SumberJayaApp = () => {
       await loadKasKecilData();
       
       // Reset form
-      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '', kategori: '', metodeBayar: 'cash' });
+      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
       
       const needsApproval = formKas.jenis === 'keluar' && parseFloat(formKas.jumlah) >= 300000;
       if (needsApproval) {
@@ -493,9 +483,7 @@ const SumberJayaApp = () => {
       pt: kas.pt,
       jenis: kas.jenis,
       jumlah: kas.jumlah,
-      keterangan: kas.keterangan,
-      kategori: kas.kategori || '',
-      metodeBayar: kas.metodeBayar || 'cash'
+      keterangan: kas.keterangan
     });
     setShowEditKasModal(true);
   };
@@ -503,12 +491,6 @@ const SumberJayaApp = () => {
   const handleUpdateKas = async () => {
     if (!formKas.pt || !formKas.jumlah || !formKas.keterangan) {
       alert('Mohon lengkapi semua field!');
-      return;
-    }
-    
-    // Validasi kategori untuk transaksi cashless
-    if (formKas.metodeBayar === 'cashless' && !formKas.kategori) {
-      alert('Mohon pilih kategori untuk transaksi cashless!');
       return;
     }
     
@@ -520,9 +502,7 @@ const SumberJayaApp = () => {
         pt: formKas.pt,
         jenis: formKas.jenis,
         jumlah: parseFloat(formKas.jumlah),
-        keterangan: formKas.keterangan,
-        kategori: formKas.kategori,
-        metodeBayar: formKas.metodeBayar
+        keterangan: formKas.keterangan
       };
       
       await kasKecilService.update(editingKas.id, kasData);
@@ -533,7 +513,7 @@ const SumberJayaApp = () => {
       // Close modal & reset
       setShowEditKasModal(false);
       setEditingKas(null);
-      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '', kategori: '', metodeBayar: 'cash' });
+      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
       
       alert('Data kas berhasil diupdate!');
     } catch (error) {
@@ -638,29 +618,6 @@ const SumberJayaApp = () => {
     { code: 'FAB', name: 'PT FADILLAH AMANAH BERSAMA' },
     { code: 'KBS', name: 'PT KHABITSA INDOGAS' },
     { code: 'SJS', name: 'PT SRI JOYO SHAKTI' }
-  ];
-
-  const kategoriPengeluaran = [
-    'BIAYA OPERASIONAL',
-    'BIAYA LAIN-LAIN', 
-    'BEBAN GAJI',
-    'BIAYA TRANSPORTASI',
-    'BIAYA KOMUNIKASI',
-    'BIAYA PERAWATAN',
-    'BIAYA ADMINISTRASI',
-    'BIAYA PEMASARAN',
-    'BIAYA PELATIHAN',
-    'BIAYA LEGAL',
-    'BIAYA ASURANSI',
-    'BIAYA SEWA',
-    'BIAYA LISTRIK',
-    'BIAYA AIR',
-    'BIAYA INTERNET',
-    'BIAYA BANK',
-    'BIAYA PAJAK',
-    'BIAYA DEPRESIASI',
-    'BIAYA AMORTISASI',
-    'LAIN-LAIN'
   ];
 
   const mainMenuItems = [
@@ -1627,8 +1584,10 @@ const SumberJayaApp = () => {
                   isToday = createdDate >= todayStart;
                 }
                 
-                // Hide non-approved transactions in print/export
-                const rowClass = kas.status !== 'approved' ? 'no-print-row' : '';
+                // Hide non-approved transactions AND cashless transactions in print/export
+                // Kas Kecil export hanya untuk transaksi TUNAI (cash) karena merepresentasikan kas fisik
+                const shouldHideInPrint = kas.status !== 'approved' || kas.metodeBayar === 'cashless';
+                const rowClass = shouldHideInPrint ? 'no-print-row' : '';
                 
                 return (
                 <tr key={kas.id} className={rowClass}>
@@ -3084,7 +3043,7 @@ const SumberJayaApp = () => {
                   onClick={() => {
                     setShowEditKasModal(false);
                     setEditingKas(null);
-                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '', kategori: '', metodeBayar: 'cash' });
+                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -3195,7 +3154,7 @@ const SumberJayaApp = () => {
                   onClick={() => {
                     setShowEditKasModal(false);
                     setEditingKas(null);
-                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '', kategori: '', metodeBayar: 'cash' });
+                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
                   }}
                   className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
                 >
