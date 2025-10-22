@@ -1284,42 +1284,6 @@ const SumberJayaApp = () => {
         </div>
       </div>
 
-      {/* Akses Cepat Mobile - Filtered & Modern UI */}
-      <div className="md:hidden">
-        <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">🚀 Akses Cepat</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {filteredMenuItems.map(item => {
-            const ItemIcon = item.icon;
-            const isActive = activeMenu === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveMenu(item.id)}
-                className={`rounded-xl p-6 shadow-md hover:shadow-xl transition-all group text-center transform hover:scale-105 ${
-                  isActive 
-                    ? 'bg-gradient-to-br from-gray-900 to-gray-700 text-white ring-4 ring-gray-300' 
-                    : 'bg-white text-gray-800'
-                }`}
-              >
-                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-xl mb-4 transition-all mx-auto ${
-                  isActive 
-                    ? 'bg-white text-gray-900 shadow-lg' 
-                    : 'bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
-                }`}>
-                  <ItemIcon size={32} />
-                </div>
-                <h4 className={`font-bold text-sm ${isActive ? 'text-white' : 'text-gray-800'}`}>
-                  {item.label}
-                </h4>
-                {isActive && (
-                  <div className="mt-2 text-xs text-gray-300">● Aktif</div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       <div className="bg-white rounded-xl p-6 shadow-md">
         <h3 className="text-lg font-bold text-gray-800 mb-4">PT Yang Dapat Diakses</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -2565,25 +2529,34 @@ const SumberJayaApp = () => {
         </main>
 
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
-          <div className="flex justify-around items-center">
-            {mainMenuItems
-              .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User')
-              .map(item => {
+          <div className="flex justify-around items-center py-2">
+            {(() => {
+              const filteredItems = mainMenuItems.filter(item => 
+                currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User'
+              );
+              
+              // Dynamic icon size based on number of features
+              const iconSize = filteredItems.length <= 3 ? 32 : 
+                              filteredItems.length <= 5 ? 28 : 24;
+              
+              return filteredItems.map(item => {
                 const ItemIcon = item.icon;
                 const isActive = activeMenu === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveMenu(item.id)}
-                    className={`flex flex-col items-center px-3 py-2 transition-all ${
-                      isActive ? 'text-gray-900 scale-110' : 'text-gray-600'
+                    className={`flex items-center justify-center p-3 rounded-xl transition-all ${
+                      isActive 
+                        ? 'bg-blue-600 text-white shadow-lg scale-110' 
+                        : 'text-gray-500 hover:bg-gray-100'
                     }`}
                   >
-                    <ItemIcon size={24} />
-                    <span className="text-xs mt-1 font-medium">{item.label}</span>
+                    <ItemIcon size={iconSize} strokeWidth={2.5} />
                   </button>
                 );
-              })}
+              });
+            })()}
           </div>
         </nav>
 
