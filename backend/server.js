@@ -89,7 +89,9 @@ db.connect((err) => {
       const insertSQL = `
         INSERT IGNORE INTO feature_access (user_id, feature_id) VALUES
         (1, 'dashboard'),
+        (1, 'beranda'),
         (1, 'kas-kecil'),
+        (1, 'arus-kas'),
         (1, 'detail-kas'),
         (1, 'penjualan'),
         (1, 'laporan'),
