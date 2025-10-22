@@ -2782,6 +2782,7 @@ const SumberJayaApp = () => {
   const renderContent = () => {
     switch (activeMenu) {
       case 'beranda': return renderBeranda();
+      case 'kas-kecil': return renderArusKas();
       case 'arus-kas': return renderArusKas();
       case 'detail-kas': return renderDetailKas();
       case 'penjualan': return renderPenjualan();
