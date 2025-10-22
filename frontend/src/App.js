@@ -352,7 +352,7 @@ const SumberJayaApp = () => {
         tanggal: formKas.tanggal,
         pt: formKas.pt,
         jenis: formKas.jenis,
-        jumlah: parseFloat(formKas.jumlah),
+      jumlah: parseFloat(formKas.jumlah),
         keterangan: formKas.keterangan
       };
       
@@ -627,26 +627,46 @@ const SumberJayaApp = () => {
 
   // Auto-filter: Get filtered data for Kas Kecil (real-time)
   const getFilteredKasKecilData = () => {
+    console.log('DEBUG Kas Kecil Filter:', {
+      filterPT: filterKasKecil.pt,
+      filterTanggal: filterKasKecil.tanggal,
+      kasKecilData: kasKecilData.slice(0, 3), // First 3 items for debugging
+      currentUserAccessPT: currentUserData?.accessPT
+    });
+
     if (filterKasKecil.pt.length === 0 || !filterKasKecil.tanggal) {
       return kasKecilData; // Show all if no filter
     }
 
-    return kasKecilData.filter(item => 
+    const filtered = kasKecilData.filter(item => 
       filterKasKecil.pt.includes(item.pt) && 
       item.tanggal.split('T')[0] === filterKasKecil.tanggal
     );
+
+    console.log('DEBUG Filtered Kas Kecil:', filtered);
+    return filtered;
   };
 
   // Auto-filter: Get filtered data for Arus Kas (real-time)
   const getFilteredArusKasData = () => {
+    console.log('DEBUG Arus Kas Filter:', {
+      filterPT: filterArusKas.pt,
+      filterTanggal: filterArusKas.tanggal,
+      arusKasData: arusKasData.slice(0, 3), // First 3 items for debugging
+      currentUserAccessPT: currentUserData?.accessPT
+    });
+
     if (!filterArusKas.pt || !filterArusKas.tanggal) {
       return arusKasData; // Show all if no filter
     }
 
-    return arusKasData.filter(item => 
+    const filtered = arusKasData.filter(item => 
       item.pt === filterArusKas.pt && 
       item.tanggal.split('T')[0] === filterArusKas.tanggal
     );
+
+    console.log('DEBUG Filtered Arus Kas:', filtered);
+    return filtered;
   };
 
   // Handler: Print Kas Kecil
@@ -672,7 +692,7 @@ const SumberJayaApp = () => {
         tanggal: formPenjualan.tanggal,
         pt: formPenjualan.pt,
         pangkalan: formPenjualan.pangkalan,
-        qty: parseFloat(formPenjualan.qty),
+      qty: parseFloat(formPenjualan.qty),
         harga: parseFloat(formPenjualan.harga),
         ppnPercent: parseFloat(formPenjualan.ppnPercent),
         ppnType: formPenjualan.ppnType,
@@ -686,7 +706,7 @@ const SumberJayaApp = () => {
       await loadArusKasData(); // Refresh arus kas since penjualan affects it
       
       // If cash payment, kas kecil will be auto-created by backend
-      if (formPenjualan.metodeBayar === 'cash') {
+    if (formPenjualan.metodeBayar === 'cash') {
         await loadKasKecilData();
       }
       
@@ -1912,26 +1932,26 @@ const SumberJayaApp = () => {
                         ) : '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
+                    <span className={`px-2 py-1 rounded-full text-xs ${
                           item.metodeBayar === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                        }`}>
+                    }`}>
                           {item.metodeBayar === 'cash' ? 'Cash' : 'Cashless'}
-                        </span>
-                      </td>
+                    </span>
+                  </td>
                       <td className="px-4 py-3 text-right text-green-600 font-semibold">
                         {item.jenis === 'masuk' ? `Rp ${item.jumlah.toLocaleString('id-ID')}` : '-'}
                       </td>
                       <td className="px-4 py-3 text-right text-red-600 font-semibold">
                         {item.jenis === 'keluar' ? `Rp ${item.jumlah.toLocaleString('id-ID')}` : '-'}
                       </td>
-                      <td className="px-4 py-3 text-center no-print">
+                  <td className="px-4 py-3 text-center no-print">
                         {isToday && item.source === 'manual' && (
-                          <button
+                        <button
                             onClick={() => handleDeleteArusKas(item.id, item.keterangan)}
                             className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
-                          >
+                        >
                             Hapus
-                          </button>
+                        </button>
                         )}
                         {!isToday && item.source === 'manual' && (
                           <span className="text-xs text-gray-400">-</span>
@@ -1989,13 +2009,13 @@ const SumberJayaApp = () => {
             <h3 className="text-xl font-bold text-gray-800">
               Hasil Pencarian - {searchDate}
             </h3>
-            <button 
+                        <button
               onClick={handleCloseSearchResults}
               className="text-gray-500 hover:text-gray-700"
-            >
+                        >
               <X size={24} />
-            </button>
-          </div>
+                        </button>
+                      </div>
 
           <div className="p-6">
             <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -2047,24 +2067,24 @@ const SumberJayaApp = () => {
                           {kas.status === 'approved' ? 'Approved' : 
                            kas.status === 'pending' ? 'Pending' : 'Rejected'}
                         </span>
-                      </td>
-                    </tr>
-                  ))}
+                  </td>
+                </tr>
+              ))}
                   
                   {/* Total Row */}
                   <tr className="bg-gray-50 font-semibold">
-                    <td colSpan="3" className="px-4 py-3 text-right">Total</td>
-                    <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
-                    <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
+                <td colSpan="3" className="px-4 py-3 text-right">Total</td>
+                <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
+                <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
                     <td className="px-4 py-3"></td>
-                  </tr>
+              </tr>
                   <tr className="bg-blue-50 font-bold">
-                    <td colSpan="3" className="px-4 py-3 text-right">Saldo Akhir</td>
+                <td colSpan="3" className="px-4 py-3 text-right">Saldo Akhir</td>
                     <td colSpan="2" className="px-4 py-3 text-right text-blue-600 text-lg">Rp {totalSaldo.toLocaleString('id-ID')}</td>
                     <td className="px-4 py-3"></td>
-                  </tr>
-                </tbody>
-              </table>
+              </tr>
+            </tbody>
+          </table>
             </div>
 
             <div className="mt-6 flex justify-end">
@@ -2075,9 +2095,9 @@ const SumberJayaApp = () => {
                 Tutup
               </button>
             </div>
-          </div>
         </div>
       </div>
+    </div>
     );
   };
 
