@@ -638,10 +638,21 @@ const SumberJayaApp = () => {
       return kasKecilData; // Show all if no filter
     }
 
-    const filtered = kasKecilData.filter(item => 
-      filterKasKecil.pt.includes(item.pt) && 
-      item.tanggal.split('T')[0] === filterKasKecil.tanggal
-    );
+    const filtered = kasKecilData.filter(item => {
+      const itemDate = item.tanggal.split('T')[0]; // Get YYYY-MM-DD from ISO string
+      const filterDate = filterKasKecil.tanggal; // Already in YYYY-MM-DD format
+      
+      console.log('DEBUG Date Comparison:', {
+        itemDate,
+        filterDate,
+        match: itemDate === filterDate,
+        itemPT: item.pt,
+        filterPT: filterKasKecil.pt,
+        ptMatch: filterKasKecil.pt.includes(item.pt)
+      });
+      
+      return filterKasKecil.pt.includes(item.pt) && itemDate === filterDate;
+    });
 
     console.log('DEBUG Filtered Kas Kecil:', filtered);
     return filtered;
@@ -660,10 +671,21 @@ const SumberJayaApp = () => {
       return arusKasData; // Show all if no filter
     }
 
-    const filtered = arusKasData.filter(item => 
-      item.pt === filterArusKas.pt && 
-      item.tanggal.split('T')[0] === filterArusKas.tanggal
-    );
+    const filtered = arusKasData.filter(item => {
+      const itemDate = item.tanggal.split('T')[0]; // Get YYYY-MM-DD from ISO string
+      const filterDate = filterArusKas.tanggal; // Already in YYYY-MM-DD format
+      
+      console.log('DEBUG Arus Kas Date Comparison:', {
+        itemDate,
+        filterDate,
+        match: itemDate === filterDate,
+        itemPT: item.pt,
+        filterPT: filterArusKas.pt,
+        ptMatch: item.pt === filterArusKas.pt
+      });
+      
+      return item.pt === filterArusKas.pt && itemDate === filterDate;
+    });
 
     console.log('DEBUG Filtered Arus Kas:', filtered);
     return filtered;
