@@ -2576,7 +2576,7 @@ const SumberJayaApp = () => {
                     type="password"
                     value={formUser.password}
                     onChange={(e) => setFormUser({...formUser, password: e.target.value})}
-                    placeholder="Masukkan password"
+                    placeholder="Password"
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -2679,7 +2679,7 @@ const SumberJayaApp = () => {
                     type="text"
                     value={formUser.username}
                     onChange={(e) => setFormUser({...formUser, username: e.target.value})}
-                    placeholder="Masukkan username"
+                    placeholder="Username"
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -2814,7 +2814,7 @@ const SumberJayaApp = () => {
               <h4 className="font-semibold text-green-900 mb-1">Tentang Kas Kecil</h4>
               <p className="text-sm text-green-800">
                 Kas Kecil adalah pembukuan untuk <strong>transaksi tunai (cash)</strong> di kasir.
-                Pemasukan otomatis approved. Pengeluaran < Rp 300.000 otomatis approved, ≥ Rp 300.000 butuh persetujuan.
+                Pemasukan otomatis approved. Pengeluaran kurang dari Rp 300.000 otomatis approved, 300.000 ke atas butuh persetujuan.
               </p>
             </div>
           </div>
