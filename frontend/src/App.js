@@ -791,6 +791,8 @@ const SumberJayaApp = () => {
 
   // Handler: Print Kas Kecil
   const handlePrintKasKecil = () => {
+    console.log('🖨️ TOMBOL PRINT DIKLIK! Starting print process...');
+
     const tanggal = new Date().toLocaleDateString('id-ID', {
       weekday: 'long',
       year: 'numeric',
