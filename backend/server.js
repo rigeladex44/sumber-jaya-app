@@ -109,6 +109,32 @@ db.connect((err) => {
     }
   });
   
+  // Auto-migration: Create arus_kas table if not exists
+  const createArusKasTable = `
+    CREATE TABLE IF NOT EXISTS arus_kas (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tanggal DATE NOT NULL,
+      pt_code VARCHAR(10) NOT NULL,
+      jenis ENUM('masuk', 'keluar') NOT NULL,
+      jumlah DECIMAL(15,2) NOT NULL,
+      keterangan TEXT,
+      kategori VARCHAR(100),
+      metode_bayar ENUM('cash', 'cashless') DEFAULT 'cashless',
+      created_by INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (pt_code) REFERENCES pt_list(code)
+    )
+  `;
+  
+  db.query(createArusKasTable, (err) => {
+    if (err) {
+      console.error('⚠️ Error creating arus_kas table:', err.message);
+    } else {
+      console.log('✅ Arus Kas table ready');
+    }
+  });
+  
   // Auto-migration: Add kategori column to kas_kecil if not exists
   const checkKategoriColumn = `
     SELECT COUNT(*) as count 
