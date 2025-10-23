@@ -1,1 +1,0 @@
-cd /Users/macbookairi52019/Desktop/sumber-jaya-app && git add . && git commit -m "feat: Add health check endpoints for monitoring and stability" && git push origin main

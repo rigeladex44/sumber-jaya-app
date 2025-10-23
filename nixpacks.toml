@@ -10,3 +10,7 @@ cmds = ['echo "Build complete"']
 [start]
 cmd = 'cd backend && node server.js'
 
+[variables]
+NODE_ENV = "production"
+NIXPACKS_NO_CACHE = "1"
+

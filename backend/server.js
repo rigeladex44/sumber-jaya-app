@@ -1490,6 +1490,16 @@ app.get('/api/health/db', (req, res) => {
   });
 });
 
+// Keep-alive endpoint to prevent sleep
+app.get('/api/keep-alive', (req, res) => {
+  res.status(200).json({
+    status: 'ALIVE',
+    message: 'Server is awake',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // Start Server
 // Production: Listen on all interfaces (0.0.0.0)
 // Development: Listen on localhost only (127.0.0.1) to avoid macOS EPERM

@@ -225,5 +225,18 @@ export const profileService = {
   },
 };
 
+// Keep-alive service to prevent server sleep
+export const keepAliveService = {
+  ping: async () => {
+    try {
+      const response = await api.get('/keep-alive');
+      return response.data;
+    } catch (error) {
+      console.error('Keep-alive ping failed:', error);
+      return { status: 'ERROR', message: error.message };
+    }
+  }
+};
+
 // Export default api instance untuk custom requests
 export default api;
