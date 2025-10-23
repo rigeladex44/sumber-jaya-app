@@ -230,22 +230,6 @@ const SumberJayaApp = () => {
     };
   }, [isLoggedIn, activeMenu]); // Re-run when menu changes
 
-  // Refresh Kas Kecil data when filter changes
-  useEffect(() => {
-    if (!isLoggedIn || activeMenu !== 'kas-kecil') return;
-
-    console.log('🔄 Kas Kecil filter changed, refreshing data...');
-    loadKasKecilData();
-  }, [filterKasKecil.pt]); // Watch filter changes
-
-  // Refresh Arus Kas data when filter changes
-  useEffect(() => {
-    if (!isLoggedIn || activeMenu !== 'arus-kas') return;
-
-    console.log('🔄 Arus Kas filter changed, refreshing data...');
-    loadArusKasData();
-  }, [filterArusKas.pt, filterArusKas.tanggal]); // Watch filter changes
-
 
   // Data Management State
   const [kasKecilData, setKasKecilData] = useState([]);
