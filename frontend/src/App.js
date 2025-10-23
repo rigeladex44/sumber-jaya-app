@@ -735,7 +735,7 @@ const SumberJayaApp = () => {
             <style>
               @page {
                 size: A4;
-                margin: 8mm;
+                margin: 15mm;
               }
               * { 
                 margin: 0; 
@@ -743,238 +743,459 @@ const SumberJayaApp = () => {
                 box-sizing: border-box; 
               }
               body { 
-                font-family: 'Arial', sans-serif; 
-                padding: 15px;
-                color: #000;
-                line-height: 1.4;
+                font-family: 'Segoe UI', 'Arial', sans-serif; 
+                padding: 20px;
+                color: #1a1a1a;
+                line-height: 1.5;
                 background: white;
               }
               
+              /* ========== HEADER SECTION ========== */
               .report-header { 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 text-align: center;
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-                border-bottom: 3px solid #000;
+                margin-bottom: 25px;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                color: white;
               }
+
               .report-title {
-                font-size: 18px;
-                font-weight: bold;
-                letter-spacing: 1px;
-                margin-bottom: 4px;
-                line-height: 1.1;
+                font-size: 24px;
+                font-weight: 700;
+                letter-spacing: 2px;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
               }
               .report-subtitle {
-                font-size: 12px;
-                color: #333;
-                margin-bottom: 2px;
-                font-weight: bold;
-                line-height: 1.2;
+                font-size: 13px;
+                margin-bottom: 5px;
+                font-weight: 400;
+                opacity: 0.95;
               }
+                
               .report-company {
-                font-size: 9px;
-                color: #666;
-                margin-top: 2px;
+                font-size: 11px;
+                margin-top: 8px;
+                opacity: 0.85;
+                font-style: italic;
               }
-              
+
+              /* ========== INFO SECTION ========== */
               .info-section {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 10px;
-                font-size: 12px;
+                margin-bottom: 20px;
+                gap: 20px;
               }
-              .info-left, .info-right {
-                width: 48%;
-              }
+              
               .info-row {
                 display: flex;
-                padding: 3px 0;
+                padding: 5px 0;
+                font-size: 12px;
+                align-items: center;
               }
+              
               .info-label {
-                width: 100px;
-                font-weight: normal;
+                width: 120px;
+                font-weight: 500;
+                color: #666;
               }
               .info-value {
                 flex: 1;
-                font-weight: bold;
+                font-weight: 600;
+                color: #1a1a1a;
+              }
+
+
+              /* ========== TABLE SECTION ========== */   
+              .table-container {
+                margin: 20px 0;
+                border-radius: 8px;
+                overflow: hidden;
+               box-shadow: 0 2px 4px rgba(0,0,0,0.08);
               }
               
-              table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                margin: 15px 0;
-                font-size: 11px;
+              thead {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
               }
+              
               th { 
-                background: #86ff81 !important;
-                color: #000 !important;
-                padding: 8px 6px;
+                padding: 12px 8px;
                 text-align: left;
-                font-weight: bold;
-                border: 1px solid #ddd;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 10px;
+                letter-spacing: 0.5px;
+                border: none;
               }
+              
               th.text-center { text-align: center; }
               th.text-right { text-align: right; }
+              
+              tbody tr:hover {
+                background-color: #f8f9fa;
+              }
+        
+              tbody tr:nth-child(even) {
+                background-color: #fafbfc;
+              }
+        
               td { 
-                border: 1px solid #ddd;
-                padding: 6px;
-                background: white;
+                padding: 10px 8px;
+                border: none;
+                color: #2d3748;
               }
-              tr:nth-child(even) td { 
-                background: #f9f9f9; 
+        
+              .text-right { 
+                text-align: right;
+                font-family: 'Courier New', monospace;
+                font-weight: 500;
               }
-              .text-right { text-align: right; }
+        
               .text-center { text-align: center; }
-              
-              .grand-total-row {
-                background: #86ff81 !important;
-                font-weight: bold;
-                border-top: 2px solid #000 !important;
-                color: #000 !important;
+
+              /* ========== AMOUNT STYLING ========== */
+              .amount-positive {
+                color: #059669;
+                font-weight: 600;
               }
-              .grand-total-row td {
-                background: #86ff81 !important;
-                color: #000 !important;
-                font-weight: bold !important;
+              /* ========== SUMMARY SECTION ========== */
+              .summary-section {
+                margin-top: 25px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
               }
-              
-              .signature-section {
-                margin-top: 40px;
-                display: flex;
-                justify-content: space-between;
-                font-size: 9px;
-              }
-              .signature-box {
-                width: 30%;
+        
+              .summary-card {
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                border: 2px solid #e9ecef;
                 text-align: center;
               }
-              .signature-title {
-                font-weight: bold;
-                margin-bottom: 5px;
-                padding: 5px;
-                background: #86ff81;
-                color: #000;
+        
+              .summary-card.total-in {
+                border-color: #10b981;
+                background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
               }
-              .signature-space {
-                height: 60px;
-                border: 1px solid #ddd;
-                margin: 10px 0;
+        
+              .summary-card.total-out {
+                border-color: #ef4444;
+                background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
               }
-              .signature-name {
-                font-weight: bold;
-                padding-top: 5px;
+        
+              .summary-card.balance {
+                border-color: #667eea;
+                background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+              }
+        
+              .summary-label {
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                color: #64748b;
+                margin-bottom: 8px;
+                letter-spacing: 0.5px;
+              }
+        
+              .summary-amount {
+                font-size: 18px;
+                font-weight: 700;
+                font-family: 'Courier New', monospace;
+              }
+        
+              .summary-card.total-in .summary-amount {
+                color: #059669;
+              }
+        
+              .summary-card.total-out .summary-amount {
+                color: #dc2626;
+              }
+        
+              .summary-card.balance .summary-amount {
+                color: #667eea;
               }
               
+              /* ========== GRAND TOTAL ROW ========== */
+              .grand-total-row {
+               background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+               font-weight: 700;
+               border-top: 3px solid #10b981 !important;
+               border-bottom: 3px solid #10b981 !important;
+             }
+        
+             .grand-total-row td {
+               padding: 12px 8px;
+               font-size: 12px;
+               color: #065f46;
+             }
+        
+             .balance-row {
+               background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+               font-weight: 700;
+               border-top: 3px solid #667eea !important;
+               border-bottom: 3px solid #667eea !important;
+             }
+        
+             .balance-row td {
+               padding: 12px 8px;
+               font-size: 13px;
+               color: #1e40af;
+             }
+              
+             /* ========== SIGNATURE SECTION ========== */
+             .signature-section {
+                margin-top: 50px;
+                display: flex;
+                justify-content: space-between;
+                gap: 20px;
+              }
+        
+              .signature-box {
+                flex: 1;
+                text-align: center;
+                padding: 15px;
+                background: white;
+                border-radius: 8px;
+                border: 2px solid #e9ecef;
+              }
+        
+              .signature-title {
+                font-weight: 600;
+                margin-bottom: 10px;
+                padding: 8px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 6px;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              
+              .signature-space {
+                height: 70px;
+                border: 2px dashed #cbd5e0;
+                margin: 15px 0;
+                border-radius: 6px;
+                background: white;
+              }
+              
+              .signature-name {
+                font-weight: 600;
+                padding-top: 5px;
+                font-size: 11px;
+                color: #2d3748;
+              }
+              
+              /* ========== FOOTER ========== */
               .report-footer { 
-                margin-top: 30px; 
-                padding-top: 15px;
-                border-top: 2px solid #ddd;
+                margin-top: 40px; 
+                padding-top: 20px;
+                border-top: 2px solid #e9ecef;
                 text-align: center; 
-                font-size: 8px; 
-                color: #888;
-                line-height: 1.6;
+                font-size: 9px; 
+                color: #718096;
+                line-height: 1.8;
               }
               
               .report-footer p {
                 margin: 3px 0;
               }
-              
-              .no-print { 
-                display: none !important; 
+              .report-footer strong {
+                color: #667eea;
               }
-            </style>
-          </head>
-          <body>
-            <div class="report-header">
-              <div class="report-title">LAPORAN KAS KECIL</div>
-              <div class="report-subtitle">Transaksi Tunai (Cash) di Kasir</div>
-              <div class="report-company">Sistem Sumber Jaya Grup Official</div>
-            </div>
-            
-            <div class="info-section">
-              <div class="info-left">
-                <div class="info-row">
+              
+              /* ========== PRINT SPECIFIC ========== */
+              @media print {
+                body {
+                  padding: 10px;
+                }
+              }
+                .report-header {
+                  box-shadow: none;
+                }
+                .table-container {
+                  box-shadow: none;
+                }
+                tbody tr:hover {
+                  background-color: inherit;
+                }
+              }
+
+              /* ========== CATEGORY BADGE ========== */
+              .category-badge {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: 600;
+                background: #e0e7ff;
+                color: #4338ca;
+              }
+              /* ========== STATUS INDICATOR ========== */
+              .status-pending {
+                color: #f59e0b;
+                font-weight: 600;
+              }
+
+              <!-- INFO SECTION -->
+              <div class="info-section">
+                <div class="info-box">
+                  <div class="info-row">
                   <span class="info-label">Hari</span>
-                  <span class="info-value">: ${hari}</span>
+                  <span class="info-value">${hari}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Tanggal</span>
-                  <span class="info-value">: ${tanggalOnly}</span>
+                  <span class="info-value">${tanggalOnly}</span>
                 </div>
               </div>
-              <div class="info-right">
+              <div class="info-box">
                 <div class="info-row">
                   <span class="info-label">Dicetak Oleh</span>
-                  <span class="info-value">: ${currentUserData?.name || 'User'}</span>
+                  <span class="info-value">${currentUserData?.name || 'User'}</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">PT</span>
-                  <span class="info-value">: ${ptInfo}</span>
+                  <span class="info-value">${ptInfo}</span>
                 </div>
               </div>
             </div>
-            
-            <table>
-              <thead>
-                <tr>
-                  <th class="text-center">Tanggal</th>
-                  <th class="text-center">PT</th>
-                  <th class="text-center">Kategori</th>
-                  <th class="text-center">Keterangan</th>
-                  <th class="text-right">Masuk</th>
-                  <th class="text-right">Keluar</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${displayData.map(item => `
+      
+            <!-- TABLE -->
+            <div class="table-container">
+              <table>
+                <thead>
                   <tr>
-                    <td>${new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                    <td>${item.pt}</td>
-                    <td>${item.kategori || '-'}</td>
-                    <td>${item.keterangan}</td>
-                    <td class="text-right">${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
-                    <td class="text-right">${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                    <th class="text-center" width="12%">Tanggal</th>
+                    <th class="text-center" width="10%">PT</th>
+                    <th class="text-center" width="15%">Kategori</th>
+                    <th width="33%">Keterangan</th>
+                    <th class="text-right" width="15%">Pemasukan</th>
+                    <th class="text-right" width="15%">Pengeluaran</th>
                   </tr>
-                `).join('')}
-                <tr class="grand-total-row">
-                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
-                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
-                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
-                </tr>
-                <tr class="grand-total-row">
-                  <td colspan="5" class="text-center"><strong>Saldo Akhir</strong></td>
-                  <td class="text-right"><strong>Rp ${(displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)).toLocaleString('id-ID')}</strong></td>
-                </tr>
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  ${displayData.map(item => `
+                    <tr>
+                      <td class="text-center">${new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td class="text-center"><strong>${item.pt}</strong></td>
+                      <td class="text-center">
+                        <span class="category-badge">${item.kategori || '-'}</span>
+                      </td>
+                      <td>${item.keterangan}</td>
+                      <td class="text-right ${item.jenis === 'masuk' ? 'amount-positive' : ''}">
+                        ${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
+                      </td>
+                      <td class="text-right ${item.jenis === 'keluar' ? 'amount-negative' : ''}">
+                        ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
+                      </td>
+                    </tr>
+                  `).join('')}
             
+                  <!-- GRAND TOTAL -->
+                  <tr class="grand-total-row">
+                    <td colspan="4" class="text-center">
+                      <strong>TOTAL TRANSAKSI (APPROVED)</strong>
+                    </td>
+                    <td class="text-right">
+                      <strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
+                    </td>
+                    <td class="text-right">
+                      <strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
+                    </td>
+                  </tr>
+            
+                  <!-- BALANCE -->
+                  <tr class="balance-row">
+                    <td colspan="5" class="text-center">
+                      <strong>SALDO AKHIR KAS</strong>
+                          </td>
+                    <td class="text-right">
+                      <strong>Rp ${(
+                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - 
+                        displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
+                      ).toLocaleString('id-ID')}</strong>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+      
+            <!-- SUMMARY CARDS -->
+            <div class="summary-section">
+              <div class="summary-card total-in">
+                <div class="summary-label">Total Pemasukan</div>
+                <div class="summary-amount">
+                  Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}
+                </div>
+              </div>
+              <div class="summary-card total-out">
+                <div class="summary-label">Total Pengeluaran</div>
+                <div class="summary-amount">
+                  Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}
+                </div>
+              </div>
+              <div class="summary-card balance">
+                <div class="summary-label">Saldo Akhir</div>
+                <div class="summary-amount">
+                  Rp ${(
+                    displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - 
+                    displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
+                  ).toLocaleString('id-ID')}
+                </div>
+              </div>
+            </div>
+
+            <!-- SIGNATURE SECTION -->
             <div class="signature-section">
               <div class="signature-box">
                 <div class="signature-title">Kasir</div>
                 <div class="signature-space"></div>
                 <div class="signature-name">${currentUserData?.name || 'User'}</div>
+                <div class="signature-date">Tanggal: ${tanggalOnly}</div>
               </div>
               <div class="signature-box">
                 <div class="signature-title">Manager Keuangan</div>
                 <div class="signature-space"></div>
                 <div class="signature-name">( _________________ )</div>
+                <div class="signature-date">Tanggal: ___________</div>
               </div>
               <div class="signature-box">
-                <div class="signature-title">Direktur</div>
+                <div class="signature-title">🏆 Direktur</div>
                 <div class="signature-space"></div>
                 <div class="signature-name">( _________________ )</div>
+                <div class="signature-date">Tanggal: ___________</div>
               </div>
             </div>
-            
+      
+            <!-- FOOTER -->
             <div class="report-footer">
               <p><strong>© 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click</strong></p>
-              <p>Laporan ini dicetak secara otomatis dari sistem</p>
+              <p>Laporan ini dicetak secara otomatis dari sistem • Dokumen ini sah tanpa tanda tangan basah</p>
+              <p>Dicetak pada: ${new Date().toLocaleString('id-ID', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</p>
             </div>
           </body>
         </html>
       `);
-      
+
       printWindow.document.close();
       printWindow.print();
+
+    
+
   };
 
   // Handler: Print Arus Kas
