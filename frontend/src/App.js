@@ -166,8 +166,87 @@ const SumberJayaApp = () => {
       clearInterval(keepAliveInterval);
     };
   }, [isLoggedIn]);
-  
-  
+
+  // Auto-refresh for Kas Kecil menu - sync data every 30 seconds
+  useEffect(() => {
+    if (!isLoggedIn || activeMenu !== 'kas-kecil') return;
+
+    console.log('🔄 Kas Kecil auto-refresh: ACTIVATED (30s interval)');
+
+    // Refresh immediately when entering menu
+    loadKasKecilData();
+
+    // Then refresh every 30 seconds for real-time collaboration
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing Kas Kecil data...');
+      loadKasKecilData();
+    }, 30000); // 30 seconds
+
+    return () => {
+      console.log('⏹️ Kas Kecil auto-refresh: DEACTIVATED');
+      clearInterval(refreshInterval);
+    };
+  }, [isLoggedIn, activeMenu]); // Re-run when menu changes
+
+  // Auto-refresh for Arus Kas menu - sync data every 30 seconds
+  useEffect(() => {
+    if (!isLoggedIn || activeMenu !== 'arus-kas') return;
+
+    console.log('🔄 Arus Kas auto-refresh: ACTIVATED (30s interval)');
+
+    // Refresh immediately when entering menu
+    loadArusKasData();
+
+    // Then refresh every 30 seconds for real-time collaboration
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing Arus Kas data...');
+      loadArusKasData();
+    }, 30000); // 30 seconds
+
+    return () => {
+      console.log('⏹️ Arus Kas auto-refresh: DEACTIVATED');
+      clearInterval(refreshInterval);
+    };
+  }, [isLoggedIn, activeMenu]); // Re-run when menu changes
+
+  // Auto-refresh for Penjualan menu - sync data every 30 seconds
+  useEffect(() => {
+    if (!isLoggedIn || activeMenu !== 'penjualan') return;
+
+    console.log('🔄 Penjualan auto-refresh: ACTIVATED (30s interval)');
+
+    // Refresh immediately when entering menu
+    loadPenjualanData();
+
+    // Then refresh every 30 seconds for real-time collaboration
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing Penjualan data...');
+      loadPenjualanData();
+    }, 30000); // 30 seconds
+
+    return () => {
+      console.log('⏹️ Penjualan auto-refresh: DEACTIVATED');
+      clearInterval(refreshInterval);
+    };
+  }, [isLoggedIn, activeMenu]); // Re-run when menu changes
+
+  // Refresh Kas Kecil data when filter changes
+  useEffect(() => {
+    if (!isLoggedIn || activeMenu !== 'kas-kecil') return;
+
+    console.log('🔄 Kas Kecil filter changed, refreshing data...');
+    loadKasKecilData();
+  }, [filterKasKecil.pt]); // Watch filter changes
+
+  // Refresh Arus Kas data when filter changes
+  useEffect(() => {
+    if (!isLoggedIn || activeMenu !== 'arus-kas') return;
+
+    console.log('🔄 Arus Kas filter changed, refreshing data...');
+    loadArusKasData();
+  }, [filterArusKas.pt, filterArusKas.tanggal]); // Watch filter changes
+
+
   // Data Management State
   const [kasKecilData, setKasKecilData] = useState([]);
   const [arusKasData, setArusKasData] = useState([]);
