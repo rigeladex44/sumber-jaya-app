@@ -41,32 +41,75 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Database Connection - Support Railway
-const dbConfig = process.env.MYSQLHOST 
+// Database Connection Pool - Support Railway with Keep-Alive
+const dbConfig = process.env.MYSQLHOST
   ? {
       host: process.env.MYSQLHOST,
       port: process.env.MYSQLPORT || 3306,
       user: process.env.MYSQLUSER,
       password: process.env.MYSQLPASSWORD,
       database: process.env.MYSQLDATABASE || 'railway',
-      timezone: '+07:00' // WIB (Western Indonesian Time)
+      timezone: '+07:00', // WIB (Western Indonesian Time)
+      // Connection Pool Settings
+      connectionLimit: 10,           // Max concurrent connections
+      waitForConnections: true,      // Queue requests when all connections busy
+      queueLimit: 0,                 // Unlimited queue
+      // Timeout Settings
+      connectTimeout: 10000,         // 10 seconds to establish connection
+      acquireTimeout: 10000,         // 10 seconds to get connection from pool
+      timeout: 60000,                // 60 seconds for query execution
+      // Keep-Alive Settings (prevent idle disconnection)
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000   // Start keep-alive after 10s idle
     }
   : {
       host: process.env.DB_HOST || '127.0.0.1',
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'sumber_jaya_db',
-      timezone: '+07:00' // WIB (Western Indonesian Time)
+      timezone: '+07:00',
+      connectionLimit: 10,
+      waitForConnections: true,
+      queueLimit: 0,
+      connectTimeout: 10000,
+      acquireTimeout: 10000,
+      timeout: 60000,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000
     };
 
-const db = mysql.createConnection(dbConfig);
+// Create connection pool instead of single connection
+const db = mysql.createPool(dbConfig);
 
-db.connect((err) => {
+// Pool event handlers for monitoring and auto-reconnect
+db.on('connection', (connection) => {
+  console.log('✅ New database connection established (ID:', connection.threadId, ')');
+});
+
+db.on('acquire', (connection) => {
+  console.log('🔄 Connection %d acquired from pool', connection.threadId);
+});
+
+db.on('release', (connection) => {
+  console.log('🔓 Connection %d released back to pool', connection.threadId);
+});
+
+db.on('enqueue', () => {
+  console.log('⏳ Waiting for available connection slot...');
+});
+
+// Test pool connectivity and initialize database
+db.getConnection((err, connection) => {
   if (err) {
-    console.error('Database connection failed:', err);
+    console.error('❌ Database pool connection failed:', err);
+    console.error('⚠️ Will retry connections on demand...');
     return;
   }
-  console.log('✅ Connected to MySQL Database');
+  console.log('✅ Database connection pool initialized successfully');
+  console.log('📊 Pool config: Max connections =', dbConfig.connectionLimit);
+
+  // Release test connection back to pool
+  connection.release();
   
   // Auto-create feature_access table if not exists
   const createTableSQL = `
@@ -1495,26 +1538,38 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     service: 'Sumber Jaya API',
-    version: '1.0.0'
+    version: '1.0.0',
+    connectionPool: {
+      configured: true,
+      maxConnections: dbConfig.connectionLimit
+    }
   });
 });
 
-// Database health check
-app.get('/api/health/db', (req, res) => {
-  db.ping((err) => {
-    if (err) {
-      return res.status(503).json({
-        status: 'ERROR',
-        message: 'Database connection failed',
-        timestamp: new Date().toISOString()
-      });
-    }
+// Enhanced database health check with pool status
+app.get('/api/health/db', async (req, res) => {
+  try {
+    // Test actual query execution (more thorough than just ping)
+    const [result] = await db.promise().query('SELECT 1 + 1 AS result');
+
     res.status(200).json({
       status: 'OK',
-      message: 'Database connected',
+      message: 'Database connection pool healthy',
+      timestamp: new Date().toISOString(),
+      pool: {
+        active: true,
+        testQuery: 'passed'
+      }
+    });
+  } catch (err) {
+    console.error('❌ Health check failed:', err);
+    res.status(503).json({
+      status: 'ERROR',
+      message: 'Database connection pool unhealthy',
+      error: err.message,
       timestamp: new Date().toISOString()
     });
-  });
+  }
 });
 
 // Keep-alive endpoint to prevent sleep
@@ -1532,10 +1587,54 @@ app.get('/api/keep-alive', (req, res) => {
 // Development: Listen on localhost only (127.0.0.1) to avoid macOS EPERM
 const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
 
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 API: http://${HOST}:${PORT}/api`);
+  console.log(`🔄 Connection pool: ACTIVE with ${dbConfig.connectionLimit} max connections`);
   if (process.env.NODE_ENV === 'production') {
     console.log(`🌐 Public URL configured for Railway`);
   }
+});
+
+// ==================== GRACEFUL SHUTDOWN HANDLER ====================
+
+// Handle graceful shutdown to close pool connections properly
+const gracefulShutdown = (signal) => {
+  console.log(`\n⚠️ ${signal} signal received: closing HTTP server...`);
+
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+
+    // Close database pool connections gracefully
+    db.end((err) => {
+      if (err) {
+        console.error('❌ Error closing database pool:', err);
+        process.exit(1);
+      }
+      console.log('✅ Database connection pool closed');
+      console.log('👋 Server shutdown complete');
+      process.exit(0);
+    });
+  });
+
+  // Force shutdown after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('⚠️ Forcing shutdown after timeout...');
+    process.exit(1);
+  }, 10000);
+};
+
+// Listen for termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught errors to prevent pool connection leaks
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit on unhandled rejection, just log it
 });

@@ -3,14 +3,15 @@ import {
   Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut, 
   Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Search
 } from 'lucide-react';
-import { 
-  authService, 
-  kasKecilService, 
+import {
+  authService,
+  kasKecilService,
   arusKasService,
-  penjualanService, 
+  penjualanService,
   dashboardService,
   userService,
-  profileService
+  profileService,
+  keepAliveService
 } from './services/api';
 
 const SumberJayaApp = () => {
@@ -111,7 +112,7 @@ const SumberJayaApp = () => {
   // Fetch Dashboard Stats
   useEffect(() => {
     if (!isLoggedIn) return;
-    
+
     const fetchDashboardStats = async () => {
       setIsLoadingStats(true);
       try {
@@ -130,14 +131,41 @@ const SumberJayaApp = () => {
         setIsLoadingStats(false);
       }
     };
-    
+
     fetchDashboardStats();
-    
+
     // Refresh stats every 30 seconds
     const interval = setInterval(fetchDashboardStats, 30000);
-    
+
     return () => clearInterval(interval);
   }, [isLoggedIn, activeMenu]); // Re-fetch when menu changes
+
+  // Keep-Alive Service - Prevent server & database from sleeping
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    console.log('🔄 Keep-alive service: ACTIVATED');
+
+    // Ping immediately on login
+    keepAliveService.ping().then(result => {
+      console.log('✅ Initial keep-alive ping:', result.status);
+    });
+
+    // Auto-ping every 5 minutes to keep server & DB connection alive
+    const keepAliveInterval = setInterval(async () => {
+      try {
+        const result = await keepAliveService.ping();
+        console.log('✅ Keep-alive ping successful:', result.status);
+      } catch (error) {
+        console.error('❌ Keep-alive ping failed:', error.message);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => {
+      console.log('⏹️ Keep-alive service: DEACTIVATED');
+      clearInterval(keepAliveInterval);
+    };
+  }, [isLoggedIn]);
   
   
   // Data Management State
