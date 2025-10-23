@@ -832,10 +832,20 @@ const SumberJayaApp = () => {
       alert('Tidak ada data untuk dicetak. Total data: ' + kasKecilData.length + ', Filter PT: ' + filterKasKecil.pt.join(', '));
       return;
     }
-    
-    const printWindow = window.open('', '_blank');
-      
-      printWindow.document.write(`
+
+    // DEBUG: Alert untuk konfirmasi data sebelum print
+    console.log('✅ PRINT START - Data Count:', displayData.length);
+
+    try {
+      const printWindow = window.open('', '_blank');
+
+      if (!printWindow) {
+        alert('Gagal membuka window baru. Mohon izinkan popup di browser Anda.');
+        return;
+      }
+
+      // Generate HTML content
+      const htmlContent = `
         <!DOCTYPE html>
         <html>
           <head>
@@ -1329,13 +1339,25 @@ const SumberJayaApp = () => {
             </div>
           </body>
         </html>
-      `);
+      `;
 
+      // Write HTML to new window
+      console.log('✅ HTML Content generated, length:', htmlContent.length);
+      printWindow.document.write(htmlContent);
       printWindow.document.close();
-      printWindow.print();
 
-    
+      console.log('✅ Document written and closed');
 
+      // Wait for content to load before printing
+      setTimeout(() => {
+        console.log('✅ Triggering print dialog');
+        printWindow.print();
+      }, 500);
+
+    } catch (error) {
+      console.error('❌ ERROR in handlePrintKasKecil:', error);
+      alert('Error saat generate PDF: ' + error.message + '\n\nSilakan cek console untuk detail.');
+    }
   };
 
   // Handler: Print Arus Kas
