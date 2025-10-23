@@ -793,6 +793,27 @@ const SumberJayaApp = () => {
   const handlePrintKasKecil = () => {
     console.log('🖨️ TOMBOL PRINT DIKLIK! Starting print process...');
 
+    // Get filtered data for PDF (TAMPILKAN SEMUA DATA TERMASUK PENDING)
+    const displayData = getFilteredKasKecilData();
+
+    console.log('DEBUG Print Kas Kecil - FULL DETAILS:', {
+      totalKasKecilData: kasKecilData.length,
+      displayDataLength: displayData.length,
+      filterPT: filterKasKecil.pt,
+      sampleData: displayData.slice(0, 3),
+      allStatuses: displayData.map(d => d.status)
+    });
+
+    // ALERT untuk debugging - PASTI TERLIHAT!
+    alert('DEBUG INFO:\n\n' +
+      'Total Kas Kecil Data: ' + kasKecilData.length + '\n' +
+      'Display Data (filtered): ' + displayData.length + '\n' +
+      'Filter PT: ' + filterKasKecil.pt.join(', ') + '\n\n' +
+      'Sample Data:\n' +
+      (displayData.length > 0 ? JSON.stringify(displayData[0], null, 2) : 'KOSONG!') + '\n\n' +
+      'Klik OK untuk lanjut print...'
+    );
+
     const tanggal = new Date().toLocaleDateString('id-ID', {
       weekday: 'long',
       year: 'numeric',
@@ -813,17 +834,6 @@ const SumberJayaApp = () => {
     } else {
       ptInfo = 'Semua PT';
     }
-
-    // Get filtered data for PDF (TAMPILKAN SEMUA DATA TERMASUK PENDING)
-    const displayData = getFilteredKasKecilData();
-
-    console.log('DEBUG Print Kas Kecil - FULL DETAILS:', {
-      totalKasKecilData: kasKecilData.length,
-      displayDataLength: displayData.length,
-      filterPT: filterKasKecil.pt,
-      sampleData: displayData.slice(0, 3),
-      allStatuses: displayData.map(d => d.status)
-    });
 
     // Check if data is empty
     if (!displayData || displayData.length === 0) {
