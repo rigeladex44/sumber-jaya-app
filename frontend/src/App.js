@@ -791,17 +791,40 @@ const SumberJayaApp = () => {
 
   // Handler: Print Kas Kecil
   const handlePrintKasKecil = () => {
-    const tanggal = new Date().toLocaleDateString('id-ID', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    console.log('🖨️ TOMBOL PRINT DIKLIK! Starting print process...');
+
+    // Get filtered data for PDF (TAMPILKAN SEMUA DATA TERMASUK PENDING)
+    const displayData = getFilteredKasKecilData();
+
+    console.log('DEBUG Print Kas Kecil - FULL DETAILS:', {
+      totalKasKecilData: kasKecilData.length,
+      displayDataLength: displayData.length,
+      filterPT: filterKasKecil.pt,
+      sampleData: displayData.slice(0, 3),
+      allStatuses: displayData.map(d => d.status)
     });
-    
+
+    // ALERT untuk debugging - PASTI TERLIHAT!
+    alert('DEBUG INFO:\n\n' +
+      'Total Kas Kecil Data: ' + kasKecilData.length + '\n' +
+      'Display Data (filtered): ' + displayData.length + '\n' +
+      'Filter PT: ' + filterKasKecil.pt.join(', ') + '\n\n' +
+      'Sample Data:\n' +
+      (displayData.length > 0 ? JSON.stringify(displayData[0], null, 2) : 'KOSONG!') + '\n\n' +
+      'Klik OK untuk lanjut print...'
+    );
+
+    const tanggal = new Date().toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
     const hari = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-    const tanggalOnly = new Date().toLocaleDateString('id-ID', { 
+    const tanggalOnly = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
-      month: 'long', 
+      month: 'long',
       year: 'numeric'
     });
 
@@ -812,12 +835,29 @@ const SumberJayaApp = () => {
       ptInfo = 'Semua PT';
     }
 
-    // Get filtered data for PDF
-    const displayData = getFilteredKasKecilData();
-    
-    const printWindow = window.open('', '_blank');
-      
-      printWindow.document.write(`
+    // Check if data is empty
+    if (!displayData || displayData.length === 0) {
+      console.error('ERROR: No data to print!', {
+        kasKecilData: kasKecilData,
+        filterKasKecil: filterKasKecil
+      });
+      alert('Tidak ada data untuk dicetak. Total data: ' + kasKecilData.length + ', Filter PT: ' + filterKasKecil.pt.join(', '));
+      return;
+    }
+
+    // DEBUG: Alert untuk konfirmasi data sebelum print
+    console.log('✅ PRINT START - Data Count:', displayData.length);
+
+    try {
+      const printWindow = window.open('', '_blank');
+
+      if (!printWindow) {
+        alert('Gagal membuka window baru. Mohon izinkan popup di browser Anda.');
+        return;
+      }
+
+      // Generate HTML content
+      const htmlContent = `
         <!DOCTYPE html>
         <html>
           <head>
@@ -1130,9 +1170,35 @@ const SumberJayaApp = () => {
               }
               /* ========== STATUS INDICATOR ========== */
               .status-pending {
-                color: #f59e0b;
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 9px;
                 font-weight: 600;
+                background: #fef3c7;
+                color: #f59e0b;
               }
+              .status-approved {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                background: #d1fae5;
+                color: #059669;
+              }
+              .status-rejected {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                background: #fee2e2;
+                color: #dc2626;
+              }
+            </style>
+          </head>
+          <body>
 
               <!-- INFO SECTION -->
               <div class="info-section">
@@ -1163,16 +1229,17 @@ const SumberJayaApp = () => {
               <table>
                 <thead>
                   <tr>
-                    <th class="text-center" width="12%">Tanggal</th>
-                    <th class="text-center" width="10%">PT</th>
-                    <th class="text-center" width="15%">Kategori</th>
-                    <th width="33%">Keterangan</th>
-                    <th class="text-right" width="15%">Pemasukan</th>
-                    <th class="text-right" width="15%">Pengeluaran</th>
+                    <th class="text-center" width="10%">Tanggal</th>
+                    <th class="text-center" width="8%">PT</th>
+                    <th class="text-center" width="12%">Kategori</th>
+                    <th width="25%">Keterangan</th>
+                    <th class="text-right" width="13%">Pemasukan</th>
+                    <th class="text-right" width="13%">Pengeluaran</th>
+                    <th class="text-center" width="10%">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${displayData.map(item => `
+                  ${displayData && displayData.length > 0 ? displayData.map(item => `
                     <tr>
                       <td class="text-center">${new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                       <td class="text-center"><strong>${item.pt}</strong></td>
@@ -1186,8 +1253,11 @@ const SumberJayaApp = () => {
                       <td class="text-right ${item.jenis === 'keluar' ? 'amount-negative' : ''}">
                         ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
                       </td>
+                      <td class="text-center">
+                        <span class="${item.status === 'approved' ? 'status-approved' : item.status === 'rejected' ? 'status-rejected' : 'status-pending'}">${item.status || 'N/A'}</span>
+                      </td>
                     </tr>
-                  `).join('')}
+                  `).join('') : '<tr><td colspan="7" style="text-align:center; padding: 20px;">Tidak ada data</td></tr>'}
             
                   <!-- GRAND TOTAL -->
                   <tr class="grand-total-row">
@@ -1200,16 +1270,17 @@ const SumberJayaApp = () => {
                     <td class="text-right">
                       <strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
                     </td>
+                    <td></td>
                   </tr>
-            
+
                   <!-- BALANCE -->
                   <tr class="balance-row">
-                    <td colspan="5" class="text-center">
+                    <td colspan="6" class="text-center">
                       <strong>SALDO AKHIR KAS</strong>
                           </td>
                     <td class="text-right">
                       <strong>Rp ${(
-                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - 
+                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) -
                         displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
                       ).toLocaleString('id-ID')}</strong>
                     </td>
@@ -1280,13 +1351,25 @@ const SumberJayaApp = () => {
             </div>
           </body>
         </html>
-      `);
+      `;
 
+      // Write HTML to new window
+      console.log('✅ HTML Content generated, length:', htmlContent.length);
+      printWindow.document.write(htmlContent);
       printWindow.document.close();
-      printWindow.print();
 
-    
+      console.log('✅ Document written and closed');
 
+      // Wait for content to load before printing
+      setTimeout(() => {
+        console.log('✅ Triggering print dialog');
+        printWindow.print();
+      }, 500);
+
+    } catch (error) {
+      console.error('❌ ERROR in handlePrintKasKecil:', error);
+      alert('Error saat generate PDF: ' + error.message + '\n\nSilakan cek console untuk detail.');
+    }
   };
 
   // Handler: Print Arus Kas
