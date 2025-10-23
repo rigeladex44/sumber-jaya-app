@@ -1890,7 +1890,6 @@ const SumberJayaApp = () => {
                 </div>
               </div>
             </div>
-          </div>
         </header>
 
         {/* Mobile Header */}
