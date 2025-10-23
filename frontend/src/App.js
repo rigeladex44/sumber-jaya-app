@@ -1850,26 +1850,27 @@ const SumberJayaApp = () => {
                   src="/images/logo.png" 
                   alt="Logo" 
                   className="w-12 h-12 object-contain rounded-lg bg-white p-1"
-      headerTitle = 'LAPORAN LABA RUGI';
-      
-      // Nama PT lengkap untuk laba rugi
-      let ptNamesForLabaRugi = '';
-      if (selectedPT.length > 0) {
-        ptNamesForLabaRugi = selectedPT.map(code => {
-          const pt = ptList.find(p => p.code === code);
-          return pt ? pt.name : code;
-        }).join(' - ');
-        ptInfo = selectedPT.join(', ');
-      } else {
-        ptNamesForLabaRugi = 'Semua PT';
-        ptInfo = 'Semua PT';
-      }
-      
-      headerSubtitle = `${ptNamesForLabaRugi}`;
-    }
-    
-    if (content) {
-      const printWindow = window.open('', '_blank');
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div className="w-12 h-12 bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden">
+                  SJ
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">SUMBER JAYA GRUP</h1>
+                  <p className="text-xs text-gray-600">Sistem Sumber Jaya Grup Official</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 flex-1">
+                {mainMenuItems
+                  .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User')
+                  .map(item => {
+                    const ItemIcon = item.icon;
+                    const isActive = activeMenu === item.id;
+                    return (
       
       // Untuk Laporan Laba Rugi, tidak ada tanda tangan
       const signatureSection = type === 'kas' ? `
