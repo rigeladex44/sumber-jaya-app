@@ -167,20 +167,20 @@ const SumberJayaApp = () => {
     };
   }, [isLoggedIn]);
 
-  // Auto-refresh for Kas Kecil menu - sync data every 60 seconds
+  // Auto-refresh for Kas Kecil menu - sync data every 30 seconds
   useEffect(() => {
     if (!isLoggedIn || activeMenu !== 'kas-kecil') return;
 
-    console.log('🔄 Kas Kecil auto-refresh: ACTIVATED');
+    console.log('🔄 Kas Kecil auto-refresh: ACTIVATED (30s interval)');
 
     // Refresh immediately when entering menu
     loadKasKecilData();
 
-    // Then refresh every 60 seconds
+    // Then refresh every 30 seconds for real-time collaboration
     const refreshInterval = setInterval(() => {
       console.log('🔄 Auto-refreshing Kas Kecil data...');
       loadKasKecilData();
-    }, 60000); // 60 seconds
+    }, 30000); // 30 seconds
 
     return () => {
       console.log('⏹️ Kas Kecil auto-refresh: DEACTIVATED');
@@ -188,20 +188,20 @@ const SumberJayaApp = () => {
     };
   }, [isLoggedIn, activeMenu]); // Re-run when menu changes
 
-  // Auto-refresh for Arus Kas menu - sync data every 60 seconds
+  // Auto-refresh for Arus Kas menu - sync data every 30 seconds
   useEffect(() => {
     if (!isLoggedIn || activeMenu !== 'arus-kas') return;
 
-    console.log('🔄 Arus Kas auto-refresh: ACTIVATED');
+    console.log('🔄 Arus Kas auto-refresh: ACTIVATED (30s interval)');
 
     // Refresh immediately when entering menu
     loadArusKasData();
 
-    // Then refresh every 60 seconds
+    // Then refresh every 30 seconds for real-time collaboration
     const refreshInterval = setInterval(() => {
       console.log('🔄 Auto-refreshing Arus Kas data...');
       loadArusKasData();
-    }, 60000); // 60 seconds
+    }, 30000); // 30 seconds
 
     return () => {
       console.log('⏹️ Arus Kas auto-refresh: DEACTIVATED');
@@ -209,20 +209,20 @@ const SumberJayaApp = () => {
     };
   }, [isLoggedIn, activeMenu]); // Re-run when menu changes
 
-  // Auto-refresh for Penjualan menu - sync data every 60 seconds
+  // Auto-refresh for Penjualan menu - sync data every 30 seconds
   useEffect(() => {
     if (!isLoggedIn || activeMenu !== 'penjualan') return;
 
-    console.log('🔄 Penjualan auto-refresh: ACTIVATED');
+    console.log('🔄 Penjualan auto-refresh: ACTIVATED (30s interval)');
 
     // Refresh immediately when entering menu
     loadPenjualanData();
 
-    // Then refresh every 60 seconds
+    // Then refresh every 30 seconds for real-time collaboration
     const refreshInterval = setInterval(() => {
       console.log('🔄 Auto-refreshing Penjualan data...');
       loadPenjualanData();
-    }, 60000); // 60 seconds
+    }, 30000); // 30 seconds
 
     return () => {
       console.log('⏹️ Penjualan auto-refresh: DEACTIVATED');
