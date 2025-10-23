@@ -876,10 +876,17 @@ const SumberJayaApp = () => {
 
               /* ========== INFO SECTION ========== */
               .info-section {
-                display: flex;
-                justify-content: space-between;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
                 margin-bottom: 20px;
-                gap: 20px;
+                gap: 15px;
+              }
+
+              .info-box {
+                background: #f8f9fa;
+                padding: 12px;
+                border-radius: 6px;
+                border: 1px solid #e9ecef;
               }
               
               .info-row {
@@ -935,10 +942,11 @@ const SumberJayaApp = () => {
                 background-color: #fafbfc;
               }
         
-              td { 
+              td {
                 padding: 10px 8px;
                 border: none;
                 color: #2d3748;
+                font-size: 11px;
               }
         
               .text-right { 
@@ -952,6 +960,11 @@ const SumberJayaApp = () => {
               /* ========== AMOUNT STYLING ========== */
               .amount-positive {
                 color: #059669;
+                font-weight: 600;
+              }
+
+              .amount-negative {
+                color: #dc2626;
                 font-weight: 600;
               }
               /* ========== SUMMARY SECTION ========== */
@@ -1106,9 +1119,10 @@ const SumberJayaApp = () => {
                 body {
                   padding: 10px;
                 }
-              }
                 .report-header {
                   box-shadow: none;
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
                 }
                 .table-container {
                   box-shadow: none;
@@ -1116,17 +1130,30 @@ const SumberJayaApp = () => {
                 tbody tr:hover {
                   background-color: inherit;
                 }
+                thead {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                .category-badge, .summary-card {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                .grand-total-row, .balance-row {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
               }
 
               /* ========== CATEGORY BADGE ========== */
               .category-badge {
                 display: inline-block;
-                padding: 4px 8px;
+                padding: 5px 10px;
                 border-radius: 4px;
                 font-size: 10px;
                 font-weight: 600;
                 background: #e0e7ff;
                 color: #4338ca;
+                border: 1px solid #c7d2fe;
               }
               /* ========== STATUS INDICATOR ========== */
               .status-pending {
@@ -1134,7 +1161,32 @@ const SumberJayaApp = () => {
                 font-weight: 600;
               }
 
-              <!-- INFO SECTION -->
+              .signature-date {
+                font-size: 10px;
+                color: #64748b;
+                margin-top: 3px;
+              }
+
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                background: white;
+              }
+
+              tbody tr {
+                border-bottom: 1px solid #e5e7eb;
+              }
+            </style>
+          </head>
+          <body>
+            <!-- HEADER -->
+            <div class="report-header">
+              <div class="report-title">LAPORAN KAS KECIL</div>
+              <div class="report-subtitle">PT ${ptInfo}</div>
+              <div class="report-company">Sumber Jaya Grup Official</div>
+            </div>
+
+            <!-- INFO SECTION -->
               <div class="info-section">
                 <div class="info-box">
                   <div class="info-row">
@@ -1156,6 +1208,16 @@ const SumberJayaApp = () => {
                   <span class="info-value">${ptInfo}</span>
                 </div>
               </div>
+              <div class="info-box">
+                <div class="info-row">
+                  <span class="info-label">Total Transaksi</span>
+                  <span class="info-value">${displayData.length} transaksi</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Status</span>
+                  <span class="info-value">Approved Only</span>
+                </div>
+              </div>
             </div>
       
             <!-- TABLE -->
@@ -1163,17 +1225,19 @@ const SumberJayaApp = () => {
               <table>
                 <thead>
                   <tr>
-                    <th class="text-center" width="12%">Tanggal</th>
-                    <th class="text-center" width="10%">PT</th>
-                    <th class="text-center" width="15%">Kategori</th>
-                    <th width="33%">Keterangan</th>
-                    <th class="text-right" width="15%">Pemasukan</th>
-                    <th class="text-right" width="15%">Pengeluaran</th>
+                    <th class="text-center" width="5%">No</th>
+                    <th class="text-center" width="10%">Tanggal</th>
+                    <th class="text-center" width="8%">PT</th>
+                    <th class="text-center" width="12%">Kategori</th>
+                    <th width="30%">Keterangan</th>
+                    <th class="text-right" width="17%">Pemasukan</th>
+                    <th class="text-right" width="18%">Pengeluaran</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${displayData.map(item => `
+                  ${displayData.map((item, index) => `
                     <tr>
+                      <td class="text-center">${index + 1}</td>
                       <td class="text-center">${new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                       <td class="text-center"><strong>${item.pt}</strong></td>
                       <td class="text-center">
@@ -1191,7 +1255,7 @@ const SumberJayaApp = () => {
             
                   <!-- GRAND TOTAL -->
                   <tr class="grand-total-row">
-                    <td colspan="4" class="text-center">
+                    <td colspan="5" class="text-center">
                       <strong>TOTAL TRANSAKSI (APPROVED)</strong>
                     </td>
                     <td class="text-right">
@@ -1201,15 +1265,15 @@ const SumberJayaApp = () => {
                       <strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
                     </td>
                   </tr>
-            
+
                   <!-- BALANCE -->
                   <tr class="balance-row">
-                    <td colspan="5" class="text-center">
+                    <td colspan="6" class="text-center">
                       <strong>SALDO AKHIR KAS</strong>
                           </td>
                     <td class="text-right">
                       <strong>Rp ${(
-                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - 
+                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) -
                         displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
                       ).toLocaleString('id-ID')}</strong>
                     </td>
@@ -1258,7 +1322,7 @@ const SumberJayaApp = () => {
                 <div class="signature-date">Tanggal: ___________</div>
               </div>
               <div class="signature-box">
-                <div class="signature-title">🏆 Direktur</div>
+                <div class="signature-title">Direktur</div>
                 <div class="signature-space"></div>
                 <div class="signature-name">( _________________ )</div>
                 <div class="signature-date">Tanggal: ___________</div>
