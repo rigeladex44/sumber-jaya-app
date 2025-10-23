@@ -804,16 +804,6 @@ const SumberJayaApp = () => {
       allStatuses: displayData.map(d => d.status)
     });
 
-    // ALERT untuk debugging - PASTI TERLIHAT!
-    alert('DEBUG INFO:\n\n' +
-      'Total Kas Kecil Data: ' + kasKecilData.length + '\n' +
-      'Display Data (filtered): ' + displayData.length + '\n' +
-      'Filter PT: ' + filterKasKecil.pt.join(', ') + '\n\n' +
-      'Sample Data:\n' +
-      (displayData.length > 0 ? JSON.stringify(displayData[0], null, 2) : 'KOSONG!') + '\n\n' +
-      'Klik OK untuk lanjut print...'
-    );
-
     const tanggal = new Date().toLocaleDateString('id-ID', {
       weekday: 'long',
       year: 'numeric',
@@ -1143,18 +1133,53 @@ const SumberJayaApp = () => {
               
               /* ========== PRINT SPECIFIC ========== */
               @media print {
-                body {
-                  padding: 10px;
+                @page {
+                  size: A4 portrait;
+                  margin: 10mm;
                 }
-              }
+
+                body {
+                  padding: 5px;
+                  font-size: 10px;
+                }
+
                 .report-header {
                   box-shadow: none;
+                  page-break-inside: avoid;
                 }
+
                 .table-container {
                   box-shadow: none;
+                  page-break-inside: auto;
                 }
+
+                table {
+                  width: 100%;
+                  font-size: 9px;
+                  border-collapse: collapse;
+                }
+
+                th {
+                  padding: 6px 4px;
+                  font-size: 8px;
+                }
+
+                td {
+                  padding: 5px 4px;
+                  font-size: 9px;
+                }
+
                 tbody tr:hover {
                   background-color: inherit;
+                }
+
+                .signature-section {
+                  page-break-inside: avoid;
+                }
+
+                .report-footer {
+                  page-break-inside: avoid;
+                  font-size: 7px;
                 }
               }
 
