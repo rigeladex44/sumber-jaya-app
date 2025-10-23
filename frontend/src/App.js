@@ -1966,7 +1966,6 @@ const SumberJayaApp = () => {
           </div>
         </nav>
       </div>
-    </div>
   );
 };
 
