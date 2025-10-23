@@ -14,8 +14,9 @@ const allowedOrigins = [
   'http://127.0.0.1:3000',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  // Add your production frontend URL here after deployment
-  // Example: 'https://sumber-jaya-app.vercel.app'
+  // Production frontend URLs
+  'https://sumber-jaya-app.vercel.app',
+  'https://sje-grup.rigeel.id'
 ];
 
 // If FRONTEND_URL environment variable is set, add it to allowed origins
