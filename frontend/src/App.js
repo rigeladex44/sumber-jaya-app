@@ -812,20 +812,24 @@ const SumberJayaApp = () => {
       ptInfo = 'Semua PT';
     }
 
-    // Get filtered data for PDF (exclude pending status)
-    const allFilteredData = getFilteredKasKecilData();
-    const displayData = allFilteredData.filter(item => item.status !== 'pending');
+    // Get filtered data for PDF (TAMPILKAN SEMUA DATA TERMASUK PENDING)
+    const displayData = getFilteredKasKecilData();
 
-    console.log('DEBUG Print Kas Kecil:', {
-      allData: kasKecilData.length,
-      filteredData: allFilteredData.length,
-      displayData: displayData.length,
-      filterPT: filterKasKecil.pt
+    console.log('DEBUG Print Kas Kecil - FULL DETAILS:', {
+      totalKasKecilData: kasKecilData.length,
+      displayDataLength: displayData.length,
+      filterPT: filterKasKecil.pt,
+      sampleData: displayData.slice(0, 3),
+      allStatuses: displayData.map(d => d.status)
     });
 
     // Check if data is empty
-    if (displayData.length === 0) {
-      alert('Tidak ada data untuk dicetak. Pastikan ada transaksi yang sudah di-approve atau di-reject.');
+    if (!displayData || displayData.length === 0) {
+      console.error('ERROR: No data to print!', {
+        kasKecilData: kasKecilData,
+        filterKasKecil: filterKasKecil
+      });
+      alert('Tidak ada data untuk dicetak. Total data: ' + kasKecilData.length + ', Filter PT: ' + filterKasKecil.pt.join(', '));
       return;
     }
     
@@ -1144,9 +1148,35 @@ const SumberJayaApp = () => {
               }
               /* ========== STATUS INDICATOR ========== */
               .status-pending {
-                color: #f59e0b;
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 9px;
                 font-weight: 600;
+                background: #fef3c7;
+                color: #f59e0b;
               }
+              .status-approved {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                background: #d1fae5;
+                color: #059669;
+              }
+              .status-rejected {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                background: #fee2e2;
+                color: #dc2626;
+              }
+            </style>
+          </head>
+          <body>
 
               <!-- INFO SECTION -->
               <div class="info-section">
@@ -1177,16 +1207,17 @@ const SumberJayaApp = () => {
               <table>
                 <thead>
                   <tr>
-                    <th class="text-center" width="12%">Tanggal</th>
-                    <th class="text-center" width="10%">PT</th>
-                    <th class="text-center" width="15%">Kategori</th>
-                    <th width="33%">Keterangan</th>
-                    <th class="text-right" width="15%">Pemasukan</th>
-                    <th class="text-right" width="15%">Pengeluaran</th>
+                    <th class="text-center" width="10%">Tanggal</th>
+                    <th class="text-center" width="8%">PT</th>
+                    <th class="text-center" width="12%">Kategori</th>
+                    <th width="25%">Keterangan</th>
+                    <th class="text-right" width="13%">Pemasukan</th>
+                    <th class="text-right" width="13%">Pengeluaran</th>
+                    <th class="text-center" width="10%">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${displayData.map(item => `
+                  ${displayData && displayData.length > 0 ? displayData.map(item => `
                     <tr>
                       <td class="text-center">${new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                       <td class="text-center"><strong>${item.pt}</strong></td>
@@ -1200,8 +1231,11 @@ const SumberJayaApp = () => {
                       <td class="text-right ${item.jenis === 'keluar' ? 'amount-negative' : ''}">
                         ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
                       </td>
+                      <td class="text-center">
+                        <span class="${item.status === 'approved' ? 'status-approved' : item.status === 'rejected' ? 'status-rejected' : 'status-pending'}">${item.status || 'N/A'}</span>
+                      </td>
                     </tr>
-                  `).join('')}
+                  `).join('') : '<tr><td colspan="7" style="text-align:center; padding: 20px;">Tidak ada data</td></tr>'}
             
                   <!-- GRAND TOTAL -->
                   <tr class="grand-total-row">
@@ -1214,16 +1248,17 @@ const SumberJayaApp = () => {
                     <td class="text-right">
                       <strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
                     </td>
+                    <td></td>
                   </tr>
-            
+
                   <!-- BALANCE -->
                   <tr class="balance-row">
-                    <td colspan="5" class="text-center">
+                    <td colspan="6" class="text-center">
                       <strong>SALDO AKHIR KAS</strong>
                           </td>
                     <td class="text-right">
                       <strong>Rp ${(
-                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - 
+                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) -
                         displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
                       ).toLocaleString('id-ID')}</strong>
                     </td>
