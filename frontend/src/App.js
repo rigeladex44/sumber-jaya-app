@@ -1834,7 +1834,6 @@ const SumberJayaApp = () => {
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
