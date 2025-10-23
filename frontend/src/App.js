@@ -835,6 +835,29 @@ const SumberJayaApp = () => {
       return;
     }
 
+    // Calculate running balance
+    let runningBalance = 0;
+    const dataWithBalance = displayData.map((item, index) => {
+      // Only count approved transactions for balance
+      if (item.status === 'approved') {
+        if (item.jenis === 'masuk') {
+          runningBalance += item.jumlah || 0;
+        } else if (item.jenis === 'keluar') {
+          runningBalance -= item.jumlah || 0;
+        }
+      }
+      return {
+        ...item,
+        no: index + 1,
+        saldo: runningBalance
+      };
+    });
+
+    // Calculate totals
+    const totalMasuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const totalKeluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const saldoAkhir = totalMasuk - totalKeluar;
+
     // DEBUG: Alert untuk konfirmasi data sebelum print
     console.log('✅ PRINT START - Data Count:', displayData.length);
 
@@ -1225,139 +1248,114 @@ const SumberJayaApp = () => {
           </head>
           <body>
 
+              <!-- HEADER -->
+              <div class="report-header">
+                <div class="report-title">LAPORAN KAS KECIL</div>
+                <div class="report-subtitle">PT Sumber Jaya Grup</div>
+              </div>
+
               <!-- INFO SECTION -->
               <div class="info-section">
                 <div class="info-box">
                   <div class="info-row">
-                  <span class="info-label">Hari</span>
-                  <span class="info-value">${hari}</span>
+                    <span class="info-label">Periode</span>
+                    <span class="info-value">${tanggalOnly}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">PT</span>
+                    <span class="info-value">${ptInfo}</span>
+                  </div>
                 </div>
-                <div class="info-row">
-                  <span class="info-label">Tanggal</span>
-                  <span class="info-value">${tanggalOnly}</span>
+                <div class="info-box">
+                  <div class="info-row">
+                    <span class="info-label">Dicetak Oleh</span>
+                    <span class="info-value">${currentUserData?.name || 'User'}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Tanggal Cetak</span>
+                    <span class="info-value">${tanggalOnly}</span>
+                  </div>
                 </div>
               </div>
-              <div class="info-box">
-                <div class="info-row">
-                  <span class="info-label">Dicetak Oleh</span>
-                  <span class="info-value">${currentUserData?.name || 'User'}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">PT</span>
-                  <span class="info-value">${ptInfo}</span>
-                </div>
-              </div>
-            </div>
-      
-            <!-- TABLE -->
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="text-center" width="10%">Tanggal</th>
-                    <th class="text-center" width="8%">PT</th>
-                    <th class="text-center" width="12%">Kategori</th>
-                    <th width="25%">Keterangan</th>
-                    <th class="text-right" width="13%">Pemasukan</th>
-                    <th class="text-right" width="13%">Pengeluaran</th>
-                    <th class="text-center" width="10%">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${displayData && displayData.length > 0 ? displayData.map(item => `
-                    <tr>
-                      <td class="text-center">${new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                      <td class="text-center"><strong>${item.pt}</strong></td>
-                      <td class="text-center">
-                        <span class="category-badge">${item.kategori || '-'}</span>
-                      </td>
-                      <td>${item.keterangan}</td>
-                      <td class="text-right ${item.jenis === 'masuk' ? 'amount-positive' : ''}">
-                        ${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
-                      </td>
-                      <td class="text-right ${item.jenis === 'keluar' ? 'amount-negative' : ''}">
-                        ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
-                      </td>
-                      <td class="text-center">
-                        <span class="${item.status === 'approved' ? 'status-approved' : item.status === 'rejected' ? 'status-rejected' : 'status-pending'}">${item.status || 'N/A'}</span>
-                      </td>
-                    </tr>
-                  `).join('') : '<tr><td colspan="7" style="text-align:center; padding: 20px;">Tidak ada data</td></tr>'}
-            
-                  <!-- GRAND TOTAL -->
-                  <tr class="grand-total-row">
-                    <td colspan="4" class="text-center">
-                      <strong>TOTAL TRANSAKSI (APPROVED)</strong>
-                    </td>
-                    <td class="text-right">
-                      <strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
-                    </td>
-                    <td class="text-right">
-                      <strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
-                    </td>
-                    <td></td>
-                  </tr>
 
-                  <!-- BALANCE -->
-                  <tr class="balance-row">
-                    <td colspan="6" class="text-center">
-                      <strong>SALDO AKHIR KAS</strong>
-                          </td>
-                    <td class="text-right">
-                      <strong>Rp ${(
-                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) -
-                        displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
-                      ).toLocaleString('id-ID')}</strong>
-                    </td>
+              <!-- TABLE -->
+              <div class="table-container">
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
+                  <thead>
+                    <tr style="background: #f0f0f0; border: 1px solid #333;">
+                      <th style="border: 1px solid #333; padding: 8px; text-align: center;" width="5%">No</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: center;" width="12%">Tanggal</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: center;" width="8%">PT</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: left;" width="30%">Keterangan</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right;" width="15%">Pemasukan</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right;" width="15%">Pengeluaran</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right;" width="15%">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
+                      <tr style="border: 1px solid #333;">
+                        <td style="border: 1px solid #333; padding: 6px; text-align: center;">${item.no}</td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: center;">${new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: center;"><strong>${item.pt}</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px;">${item.keterangan}</td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: right;">
+                          ${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
+                        </td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: right;">
+                          ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
+                        </td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: right; font-weight: 600;">
+                          Rp ${item.saldo.toLocaleString('id-ID')}
+                        </td>
+                      </tr>
+                    `).join('') : '<tr><td colspan="7" style="text-align:center; padding: 20px; border: 1px solid #333;">Tidak ada data</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- SUMMARY TABLE -->
+            <div style="margin-top: 20px;">
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
+                <tbody>
+                  <tr style="background: #f0f0f0; border: 1px solid #333;">
+                    <td style="border: 1px solid #333; padding: 10px; font-weight: 600; text-align: right; width: 70%;">TOTAL PEMASUKAN</td>
+                    <td style="border: 1px solid #333; padding: 10px; text-align: right; width: 30%; font-weight: 600;">Rp ${totalMasuk.toLocaleString('id-ID')}</td>
+                  </tr>
+                  <tr style="border: 1px solid #333;">
+                    <td style="border: 1px solid #333; padding: 10px; font-weight: 600; text-align: right;">TOTAL PENGELUARAN</td>
+                    <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 600;">Rp ${totalKeluar.toLocaleString('id-ID')}</td>
+                  </tr>
+                  <tr style="background: #e0e0e0; border: 1px solid #333;">
+                    <td style="border: 1px solid #333; padding: 10px; font-weight: 700; text-align: right; font-size: 14px;">SALDO AKHIR</td>
+                    <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 700; font-size: 14px;">Rp ${saldoAkhir.toLocaleString('id-ID')}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-      
-            <!-- SUMMARY CARDS -->
-            <div class="summary-section">
-              <div class="summary-card total-in">
-                <div class="summary-label">Total Pemasukan</div>
-                <div class="summary-amount">
-                  Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}
-                </div>
-              </div>
-              <div class="summary-card total-out">
-                <div class="summary-label">Total Pengeluaran</div>
-                <div class="summary-amount">
-                  Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}
-                </div>
-              </div>
-              <div class="summary-card balance">
-                <div class="summary-label">Saldo Akhir</div>
-                <div class="summary-amount">
-                  Rp ${(
-                    displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - 
-                    displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
-                  ).toLocaleString('id-ID')}
-                </div>
-              </div>
-            </div>
 
             <!-- SIGNATURE SECTION -->
-            <div class="signature-section">
-              <div class="signature-box">
-                <div class="signature-title">Kasir</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">${currentUserData?.name || 'User'}</div>
-                <div class="signature-date">Tanggal: ${tanggalOnly}</div>
+            <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 20px;">
+              <div style="flex: 1; text-align: center;">
+                <div style="font-weight: 600; margin-bottom: 10px;">Kasir,</div>
+                <div style="height: 60px;"></div>
+                <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
+                  ${currentUserData?.name || 'User'}
+                </div>
               </div>
-              <div class="signature-box">
-                <div class="signature-title">Manager Keuangan</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">( _________________ )</div>
-                <div class="signature-date">Tanggal: ___________</div>
+              <div style="flex: 1; text-align: center;">
+                <div style="font-weight: 600; margin-bottom: 10px;">Manager Keuangan,</div>
+                <div style="height: 60px;"></div>
+                <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
+                  ( _________________ )
+                </div>
               </div>
-              <div class="signature-box">
-                <div class="signature-title">🏆 Direktur</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">( _________________ )</div>
-                <div class="signature-date">Tanggal: ___________</div>
+              <div style="flex: 1; text-align: center;">
+                <div style="font-weight: 600; margin-bottom: 10px;">Direktur,</div>
+                <div style="height: 60px;"></div>
+                <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
+                  ( _________________ )
+                </div>
               </div>
             </div>
       
