@@ -1776,22 +1776,80 @@ const SumberJayaApp = () => {
                 src="/images/logo.png" 
                 alt="Logo" 
                 className="h-20 w-20 object-contain"
-      
-      if (selectedPT.length > 0) {
-        ptInfo = selectedPT.join(' - ');
-      } else {
-        ptInfo = 'Semua PT';
-      }
-      
-      const selectedPTNames = selectedPT.length > 0 
-        ? selectedPT.map(code => {
-            const pt = ptList.find(p => p.code === code);
-            return pt ? pt.name : code;
-          }).join(' - ')
-        : ptList.map(p => p.name).join(' - ');
-      
-      headerSubtitle = selectedPTNames;
-    } else if (type === 'labarugi') {
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
+            
+            <h1 className="text-2xl font-bold mb-2">Sumber Jaya</h1>
+            <p className="text-gray-300 mb-6">Management System</p>
+            
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  required
+                />
+              </div>
+              
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 pr-12"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              
+              {loginError && (
+                <div className="text-red-400 text-sm text-center">
+                  {loginError}
+                </div>
+              )}
+              
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
+              >
+                Login
+              </button>
+            </form>
+            
+            <div className="mt-6 text-center text-gray-400 text-sm">
+              © 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main App Content
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen flex flex-col">
+        <header className="hidden md:block bg-white shadow-sm sticky top-0 z-30">
+          <div className="px-6 py-4">
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-4">
+                <img 
+                  src="/images/logo.png" 
+                  alt="Logo" 
+                  className="w-12 h-12 object-contain rounded-lg bg-white p-1"
       headerTitle = 'LAPORAN LABA RUGI';
       
       // Nama PT lengkap untuk laba rugi
