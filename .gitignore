@@ -39,3 +39,9 @@ coverage/
 *.seed
 *.pid.lock
 .vercel
+
+# Backup files
+*.bak
+*.backup
+*.old
+*~
