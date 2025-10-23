@@ -812,9 +812,21 @@ const SumberJayaApp = () => {
       ptInfo = 'Semua PT';
     }
 
-    // Get filtered data for PDF
-    const displayData = getFilteredKasKecilData();
-    
+    // Get filtered data for PDF (approved only)
+    const allData = getFilteredKasKecilData();
+    const displayData = allData.filter(item => item.status === 'approved');
+
+    console.log('=== PDF PRINT DEBUG ===');
+    console.log('Total all data:', allData.length);
+    console.log('Total approved:', displayData.length);
+    console.log('Sample approved data:', displayData.slice(0, 2));
+    console.log('PT Info:', ptInfo);
+
+    if (displayData.length === 0) {
+      alert('Tidak ada data Kas Kecil yang sudah di-approve untuk dicetak.\n\nTotal data: ' + allData.length + '\nData approved: 0\n\nPastikan transaksi sudah di-approve terlebih dahulu.');
+      return;
+    }
+
     const printWindow = window.open('', '_blank');
       
       printWindow.document.write(`
@@ -1259,10 +1271,10 @@ const SumberJayaApp = () => {
                       <strong>TOTAL TRANSAKSI (APPROVED)</strong>
                     </td>
                     <td class="text-right">
-                      <strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
+                      <strong>Rp ${displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
                     </td>
                     <td class="text-right">
-                      <strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
+                      <strong>Rp ${displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong>
                     </td>
                   </tr>
 
@@ -1273,8 +1285,8 @@ const SumberJayaApp = () => {
                           </td>
                     <td class="text-right">
                       <strong>Rp ${(
-                        displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) -
-                        displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
+                        displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0) -
+                        displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0)
                       ).toLocaleString('id-ID')}</strong>
                     </td>
                   </tr>
@@ -1287,21 +1299,21 @@ const SumberJayaApp = () => {
               <div class="summary-card total-in">
                 <div class="summary-label">Total Pemasukan</div>
                 <div class="summary-amount">
-                  Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}
+                  Rp ${displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}
                 </div>
               </div>
               <div class="summary-card total-out">
                 <div class="summary-label">Total Pengeluaran</div>
                 <div class="summary-amount">
-                  Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}
+                  Rp ${displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}
                 </div>
               </div>
               <div class="summary-card balance">
                 <div class="summary-label">Saldo Akhir</div>
                 <div class="summary-amount">
                   Rp ${(
-                    displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - 
-                    displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)
+                    displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0) -
+                    displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0)
                   ).toLocaleString('id-ID')}
                 </div>
               </div>
