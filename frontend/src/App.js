@@ -791,17 +791,17 @@ const SumberJayaApp = () => {
 
   // Handler: Print Kas Kecil
   const handlePrintKasKecil = () => {
-    const tanggal = new Date().toLocaleDateString('id-ID', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const tanggal = new Date().toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
-    
+
     const hari = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-    const tanggalOnly = new Date().toLocaleDateString('id-ID', { 
+    const tanggalOnly = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
-      month: 'long', 
+      month: 'long',
       year: 'numeric'
     });
 
@@ -812,8 +812,22 @@ const SumberJayaApp = () => {
       ptInfo = 'Semua PT';
     }
 
-    // Get filtered data for PDF
-    const displayData = getFilteredKasKecilData();
+    // Get filtered data for PDF (exclude pending status)
+    const allFilteredData = getFilteredKasKecilData();
+    const displayData = allFilteredData.filter(item => item.status !== 'pending');
+
+    console.log('DEBUG Print Kas Kecil:', {
+      allData: kasKecilData.length,
+      filteredData: allFilteredData.length,
+      displayData: displayData.length,
+      filterPT: filterKasKecil.pt
+    });
+
+    // Check if data is empty
+    if (displayData.length === 0) {
+      alert('Tidak ada data untuk dicetak. Pastikan ada transaksi yang sudah di-approve atau di-reject.');
+      return;
+    }
     
     const printWindow = window.open('', '_blank');
       
