@@ -1902,24 +1902,27 @@ const SumberJayaApp = () => {
 
   const handleExportPDF = (type = 'kas') => {
     const content = document.getElementById('content-to-export');
-    const tanggal = new Date().toLocaleDateString('id-ID', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const tanggal = new Date().toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
-    
+
     const hari = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-    const tanggalOnly = new Date().toLocaleDateString('id-ID', { 
+    const tanggalOnly = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
-      month: 'long', 
+      month: 'long',
       year: 'numeric'
     });
 
     const monthYear = selectedMonth.split('-');
     const bulanNama = new Date(selectedMonth + '-01').toLocaleDateString('id-ID', { month: 'long' });
     const tahun = monthYear[0];
-    
+
+    // Get filtered data for export
+    const displayData = getFilteredKasKecilData();
+
     let headerTitle = '';
     let headerSubtitle = '';
     let ptInfo = '';
