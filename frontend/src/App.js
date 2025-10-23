@@ -1235,23 +1235,23 @@ const SumberJayaApp = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  ${displayData.map((item, index) => `
-                    <tr>
-                      <td class="text-center">${index + 1}</td>
-                      <td class="text-center">${new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                      <td class="text-center"><strong>${item.pt}</strong></td>
-                      <td class="text-center">
-                        <span class="category-badge">${item.kategori || '-'}</span>
-                      </td>
-                      <td>${item.keterangan}</td>
-                      <td class="text-right ${item.jenis === 'masuk' ? 'amount-positive' : ''}">
-                        ${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
-                      </td>
-                      <td class="text-right ${item.jenis === 'keluar' ? 'amount-negative' : ''}">
-                        ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
-                      </td>
-                    </tr>
-                  `).join('')}
+                  ${displayData.map((item, index) =>
+                    '<tr>' +
+                      '<td class="text-center">' + (index + 1) + '</td>' +
+                      '<td class="text-center">' + new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + '</td>' +
+                      '<td class="text-center"><strong>' + item.pt + '</strong></td>' +
+                      '<td class="text-center">' +
+                        '<span class="category-badge">' + (item.kategori || '-') + '</span>' +
+                      '</td>' +
+                      '<td>' + item.keterangan + '</td>' +
+                      '<td class="text-right ' + (item.jenis === 'masuk' ? 'amount-positive' : '') + '">' +
+                        (item.jenis === 'masuk' ? 'Rp ' + (item.jumlah || 0).toLocaleString('id-ID') : '-') +
+                      '</td>' +
+                      '<td class="text-right ' + (item.jenis === 'keluar' ? 'amount-negative' : '') + '">' +
+                        (item.jenis === 'keluar' ? 'Rp ' + (item.jumlah || 0).toLocaleString('id-ID') : '-') +
+                      '</td>' +
+                    '</tr>'
+                  ).join('')}
             
                   <!-- GRAND TOTAL -->
                   <tr class="grand-total-row">
