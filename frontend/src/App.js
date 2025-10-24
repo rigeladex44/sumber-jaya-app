@@ -783,66 +783,108 @@ const SumberJayaApp = () => {
     return filtered;
   };
 
-  // Auto-filter: Get filtered data for Arus Kas (HANYA HARI INI + Saldo Awal)
+  // Auto-filter: Get filtered data for Arus Kas (By Tanggal + PT + Saldo Awal)
   const getFilteredArusKasData = () => {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const selectedDate = filterArusKas.tanggal; // Tanggal yang dipilih user
 
     console.log('DEBUG Arus Kas Filter:', {
       filterPT: filterArusKas.pt,
-      today: today,
-      arusKasData: arusKasData.slice(0, 3), // First 3 items for debugging
+      selectedDate: selectedDate,
+      arusKasDataCount: arusKasData.length,
+      sampleData: arusKasData.slice(0, 3),
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    // Calculate saldo awal (dari transaksi sebelum hari ini)
-    const yesterdayData = arusKasData.filter(item => {
+    // Calculate saldo awal (dari transaksi SEBELUM tanggal yang dipilih)
+    const beforeSelectedDate = arusKasData.filter(item => {
+      if (!item.tanggal) return false;
       const itemDate = item.tanggal.split('T')[0];
-      return itemDate < today;
+      return itemDate < selectedDate;
     });
 
     let saldoAwal = 0;
     if (filterArusKas.pt) {
-      // Calculate saldo awal for specific PT
-      const yesterdayPT = yesterdayData.filter(item => item.pt === filterArusKas.pt && item.status === 'approved');
-      const masuk = yesterdayPT.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      const keluar = yesterdayPT.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      // Saldo awal untuk PT tertentu
+      const beforePT = beforeSelectedDate.filter(item => item.pt === filterArusKas.pt && item.status === 'approved');
+      const masuk = beforePT.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      const keluar = beforePT.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
       saldoAwal = masuk - keluar;
     } else {
-      // Calculate saldo awal for all PT
-      const yesterdayApproved = yesterdayData.filter(item => item.status === 'approved');
-      const masuk = yesterdayApproved.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      const keluar = yesterdayApproved.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      // Saldo awal untuk semua PT
+      const beforeApproved = beforeSelectedDate.filter(item => item.status === 'approved');
+      const masuk = beforeApproved.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      const keluar = beforeApproved.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
       saldoAwal = masuk - keluar;
     }
 
-    // Filter transaksi hari ini saja
-    let todayData = arusKasData.filter(item => {
+    // Filter transaksi pada tanggal yang dipilih
+    let selectedDateData = arusKasData.filter(item => {
+      if (!item.tanggal) return false;
       const itemDate = item.tanggal.split('T')[0];
-      return itemDate === today;
+      return itemDate === selectedDate;
     });
 
     // Filter by PT if selected
     if (filterArusKas.pt) {
-      todayData = todayData.filter(item => item.pt === filterArusKas.pt);
+      selectedDateData = selectedDateData.filter(item => item.pt === filterArusKas.pt);
     }
 
+    // Calculate penjualan hari ini (dari selectedDateData)
+    const penjualanHariIni = selectedDateData
+      .filter(item => item.kategori === 'PENJUALAN' && item.jenis === 'masuk' && item.status === 'approved')
+      .reduce((sum, item) => sum + (item.jumlah || 0), 0);
+
+    // Saldo awal total = penjualan hari ini + sisa saldo kemarin
+    const saldoAwalTotal = penjualanHariIni + saldoAwal;
+
     // Add saldo awal as first row if > 0
-    if (saldoAwal > 0) {
-      todayData.unshift({
+    if (saldoAwalTotal > 0) {
+      selectedDateData.unshift({
         id: 'saldo-awal',
-        tanggal: today + 'T00:00:00',
+        tanggal: selectedDate + 'T00:00:00',
         pt: filterArusKas.pt || 'All',
         jenis: 'masuk',
-        jumlah: saldoAwal,
-        keterangan: 'Saldo Awal (dari hari sebelumnya)',
+        jumlah: saldoAwalTotal,
+        keterangan: `Saldo Awal (Penjualan: Rp ${penjualanHariIni.toLocaleString('id-ID')} + Sisa Kemarin: Rp ${saldoAwal.toLocaleString('id-ID')})`,
         status: 'approved',
+        kategori: 'SALDO AWAL',
         metode: 'saldo_awal',
-        created_at: today + 'T00:00:00'
+        created_at: selectedDate + 'T00:00:00'
       });
     }
 
-    console.log('DEBUG Filtered Arus Kas (today + saldo awal):', { saldoAwal, todayData });
-    return todayData;
+    // Sort by kategori (PEMASUKAN dulu, lalu PENGELUARAN)
+    const sorted = selectedDateData.sort((a, b) => {
+      // Saldo awal paling atas
+      if (a.kategori === 'SALDO AWAL') return -1;
+      if (b.kategori === 'SALDO AWAL') return 1;
+
+      // Urutkan berdasarkan jenis (masuk dulu, keluar kemudian)
+      if (a.jenis === 'masuk' && b.jenis === 'keluar') return -1;
+      if (a.jenis === 'keluar' && b.jenis === 'masuk') return 1;
+
+      // Dalam jenis yang sama, urutkan by kategori
+      const kategoriOrder = {
+        'PENJUALAN': 1,
+        'PEMASUKAN LAIN-LAIN': 2,
+        'PEMASUKAN': 3,
+        'BIAYA OPERASIONAL': 10,
+        'PENGELUARAN': 11
+      };
+      const orderA = kategoriOrder[a.kategori] || 99;
+      const orderB = kategoriOrder[b.kategori] || 99;
+      return orderA - orderB;
+    });
+
+    console.log('DEBUG Filtered Arus Kas:', {
+      selectedDate,
+      saldoAwal,
+      penjualanHariIni,
+      saldoAwalTotal,
+      resultCount: sorted.length
+    });
+
+    return sorted;
   };
 
   // Handler: Print Kas Kecil
