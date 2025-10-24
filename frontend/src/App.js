@@ -14,6 +14,15 @@ import {
   keepAliveService
 } from './services/api';
 
+// Helper: Get today's date in YYYY-MM-DD format (timezone-aware untuk WIB)
+const getLocalDateString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const SumberJayaApp = () => {
   // Cek sessionStorage saat pertama kali load (logout saat close tab)
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -241,7 +250,7 @@ const SumberJayaApp = () => {
   // Kas Kecil State (untuk pembukuan kasir tunai - Cash Only)
   const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
   const [formKasKecil, setFormKasKecil] = useState({
-    tanggal: new Date().toISOString().split('T')[0],
+    tanggal: getLocalDateString(),
     pt: '',
     jenis: 'keluar',
     jumlah: '',
@@ -291,7 +300,7 @@ const SumberJayaApp = () => {
           pt: item.pt,
           keterangan: item.keterangan
         })),
-        localDate: new Date().toISOString().split('T')[0]
+        localDate: getLocalDateString()
       });
       
       setKasKecilData(data);
@@ -341,15 +350,14 @@ const SumberJayaApp = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
   
-  // Helper: Get today's date in YYYY-MM-DD format
+  // Helper: Get today's date in YYYY-MM-DD format (Asia/Jakarta timezone)
   const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+    return getLocalDateString();
   };
   
   // Form State
   const [formKas, setFormKas] = useState({
-    tanggal: new Date().toISOString().split('T')[0],
+    tanggal: getLocalDateString(),
     pt: '',
     jenis: 'keluar',
     jumlah: '',
@@ -384,7 +392,7 @@ const SumberJayaApp = () => {
   });
   
   const [formPenjualan, setFormPenjualan] = useState({
-    tanggal: new Date().toISOString().split('T')[0],
+    tanggal: getLocalDateString(),
     pt: '',
     pangkalan: '',
     qty: '',
@@ -395,7 +403,7 @@ const SumberJayaApp = () => {
   });
 
   const [formArusKas, setFormArusKas] = useState({
-    tanggal: new Date().toISOString().split('T')[0],
+    tanggal: getLocalDateString(),
     pt: '',
     jenis: 'keluar',
     jumlah: '',
@@ -1823,7 +1831,7 @@ const SumberJayaApp = () => {
       
       // Reset form
       setFormArusKas({ 
-        tanggal: new Date().toISOString().split('T')[0], 
+        tanggal: getLocalDateString(), 
         pt: '', 
         jenis: 'keluar', 
         jumlah: '', 
@@ -1861,7 +1869,7 @@ const SumberJayaApp = () => {
 
       console.log('DEBUG Save Kas Kecil:', {
         tanggal: kasKecilData.tanggal,
-        localDate: new Date().toISOString().split('T')[0],
+        localDate: getLocalDateString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
       
@@ -1873,7 +1881,7 @@ const SumberJayaApp = () => {
 
       // Reset form
       setFormKasKecil({ 
-        tanggal: new Date().toISOString().split('T')[0], 
+        tanggal: getLocalDateString(), 
         pt: '', 
         jenis: 'keluar', 
         jumlah: '', 
@@ -1940,7 +1948,7 @@ const SumberJayaApp = () => {
       setShowEditKasKecilModal(false);
       setEditingKasKecil(null);
       setFormKasKecil({ 
-        tanggal: new Date().toISOString().split('T')[0], 
+        tanggal: getLocalDateString(), 
         pt: '', 
         jenis: 'keluar', 
         jumlah: '', 
@@ -2033,7 +2041,7 @@ const SumberJayaApp = () => {
       
       // Initialize forms
       setFormKasKecil({
-        tanggal: new Date().toISOString().split('T')[0],
+        tanggal: getLocalDateString(),
         pt: '',
         jenis: 'keluar',
         jumlah: '',
@@ -2951,7 +2959,7 @@ const SumberJayaApp = () => {
           </button>
           <button 
             onClick={() => setFormArusKas({ 
-              tanggal: new Date().toISOString().split('T')[0], 
+              tanggal: getLocalDateString(), 
               pt: '', 
               jenis: 'keluar', 
               jumlah: '', 
