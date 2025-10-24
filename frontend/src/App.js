@@ -1842,10 +1842,11 @@ const SumberJayaApp = () => {
       });
       
       await kasKecilService.create(kasKecilData);
-      
+
       // Refresh data
       await loadKasKecilData();
-      
+      await loadArusKasData(); // Refresh arus kas since kas kecil affects it
+
       // Reset form
       setFormKasKecil({ 
         tanggal: new Date().toISOString().split('T')[0], 
@@ -1874,6 +1875,7 @@ const SumberJayaApp = () => {
     try {
       await kasKecilService.delete(kasKecilId);
       await loadKasKecilData();
+      await loadArusKasData(); // Refresh arus kas since kas kecil affects it
       alert('Data kas kecil berhasil dihapus!');
     } catch (error) {
       console.error('Error deleting kas kecil:', error);
@@ -1905,10 +1907,11 @@ const SumberJayaApp = () => {
       };
       
       await kasKecilService.update(editingKasKecil.id, kasKecilData);
-      
+
       // Refresh data
       await loadKasKecilData();
-      
+      await loadArusKasData(); // Refresh arus kas since kas kecil affects it
+
       // Close modal and reset
       setShowEditKasKecilModal(false);
       setEditingKasKecil(null);
