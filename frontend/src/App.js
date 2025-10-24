@@ -4315,33 +4315,6 @@ const SumberJayaApp = () => {
 
   // Render Arus Kas Page (Comprehensive Cash Flow - Cash + Cashless)
   const renderArusKas = () => {
-    const handlePTChange = (ptCode) => {
-      setSelectedPT(prev => {
-        if (prev.includes(ptCode)) {
-          return prev.filter(p => p !== ptCode);
-        } else {
-          return [...prev, ptCode];
-        }
-      });
-    };
-
-    // Calculate totals from aggregated arus kas data
-    const hitungArusKas = (pts = []) => {
-      const filtered = pts.length > 0 ? arusKasData.filter(k => pts.includes(k.pt)) : arusKasData;
-      const masuk = filtered.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      const keluar = filtered.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      return { masuk, keluar, saldo: masuk - keluar };
-    };
-
-    // Use filtered data if filter is active
-    // Use auto-filtered data (real-time)
-    const displayData = getFilteredArusKasData();
-    
-    // Calculate totals based on display data
-    const masuk = displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const keluar = displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const saldo = masuk - keluar;
-
     return (
       <div id="arus-kas-content" className="space-y-6">
         {/* Header */}
@@ -4436,26 +4409,13 @@ const SumberJayaApp = () => {
           </div>
         </div>
 
-        {/* Filter & Print Section */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 no-print">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Filter Laporan</h3>
-            <button
-              onClick={handlePrintArusKas}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-              title="Print Laporan"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              Print
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-4">
-            {/* PT Filter - Multi Select (Toggle Buttons) */}
+        {/* Filter Section - Buat Baru */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-semibold mb-4">Filter & Print</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Filter PT */}
             <div>
-              <label className="block text-sm font-medium mb-2">Filter PT (Pilih Satu atau Lebih)</label>
+              <label className="block text-sm font-medium mb-2">Filter PT (Opsional)</label>
               <div className="flex flex-wrap gap-2">
                 {currentUserData?.accessPT?.map(ptCode => (
                   <button
@@ -4468,9 +4428,9 @@ const SumberJayaApp = () => {
                           : [...prev.pt, ptCode]
                       }));
                     }}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       filterArusKas.pt.includes(ptCode)
-                        ? 'bg-green-600 text-white'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
@@ -4479,11 +4439,11 @@ const SumberJayaApp = () => {
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {filterArusKas.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterArusKas.pt.length} PT dipilih`}
+                {filterArusKas.pt.length === 0 ? 'Semua PT' : `${filterArusKas.pt.length} PT dipilih`}
               </p>
             </div>
 
-            {/* Date Filter - Single Date */}
+            {/* Filter Tanggal */}
             <div>
               <label className="block text-sm font-medium mb-2">Filter Tanggal (Opsional)</label>
               <input
@@ -4493,58 +4453,28 @@ const SumberJayaApp = () => {
                 className="w-full px-4 py-2 border rounded-lg"
               />
               <p className="text-xs text-gray-500 mt-1">
-                {filterArusKas.tanggal ? `Data tanggal: ${filterArusKas.tanggal}` : 'Semua tanggal ditampilkan'}
+                {filterArusKas.tanggal ? `Tanggal: ${filterArusKas.tanggal}` : 'Semua tanggal'}
               </p>
             </div>
-          </div>
-        </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Masuk</p>
-                <p className="text-2xl font-bold text-green-600">Rp {masuk.toLocaleString('id-ID')}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Keluar</p>
-                <p className="text-2xl font-bold text-red-600">Rp {keluar.toLocaleString('id-ID')}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <TrendingDown className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Saldo Akhir</p>
-                <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  Rp {saldo.toLocaleString('id-ID')}
-                </p>
-              </div>
-              <div className={`p-3 rounded-full ${saldo >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
-                <DollarSign className={`w-6 h-6 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
-              </div>
+            {/* Button Print */}
+            <div className="flex items-end">
+              <button
+                onClick={handlePrintArusKas}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+              >
+                <Download size={18} />
+                Print Laporan
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Transaction Table */}
+        {/* Riwayat Transaksi */}
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="p-4 border-b">
-            <h3 className="text-lg font-semibold">Riwayat Transaksi Arus Kas</h3>
-            <p className="text-sm text-gray-600">Data gabungan dari Penjualan, Kas Kecil (Cash), dan Manual Entry (Cashless)</p>
+            <h3 className="text-lg font-semibold">Riwayat Transaksi</h3>
+            <p className="text-sm text-gray-600">Data dari: Penjualan + Kas Kecil + Manual Entry</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -4553,7 +4483,6 @@ const SumberJayaApp = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PT</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sumber</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metode</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
@@ -4561,63 +4490,100 @@ const SumberJayaApp = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {displayData.map((item, index) => (
-                  <tr key={`${item.sumber}-${item.id}-${index}`} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.sumber === 'penjualan' ? 'bg-purple-100 text-purple-800' :
-                        item.sumber === 'kas-kecil' ? 'bg-green-100 text-green-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {item.sumber === 'penjualan' ? 'Penjualan' : 
-                         item.sumber === 'kas-kecil' ? 'Kas Kecil' : 'Manual Entry'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.metode === 'cash' ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'
-                      }`}>
-                        {item.metode === 'cash' ? 'Cash' : 'Cashless'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {item.jenis === 'masuk' ? (
-                        <span className="text-green-600 font-medium">
-                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
-                        </span>
+                {(() => {
+                  // Filter data by PT (jika dipilih)
+                  let filtered = [...arusKasData];
+
+                  if (filterArusKas.pt.length > 0) {
+                    filtered = filtered.filter(item => filterArusKas.pt.includes(item.pt));
+                  }
+
+                  // Filter data by Tanggal (jika dipilih)
+                  if (filterArusKas.tanggal) {
+                    filtered = filtered.filter(item => {
+                      const itemDate = getLocalDateFromISO(item.tanggal);
+                      return itemDate === filterArusKas.tanggal;
+                    });
+                  }
+
+                  // Sort by tanggal (terbaru dulu)
+                  filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+                  // Calculate totals
+                  const totalMasuk = filtered.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+                  const totalKeluar = filtered.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+
+                  return (
+                    <>
+                      {filtered.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                            Tidak ada data transaksi
+                          </td>
+                        </tr>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <>
+                          {filtered.map((item, index) => (
+                            <tr key={`${item.source || 'unknown'}-${item.id}-${index}`} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm">
+                                {getLocalDateFromISO(item.tanggal)}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-medium">{item.pt}</td>
+                              <td className="px-4 py-3 text-sm">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  item.source === 'penjualan' ? 'bg-purple-100 text-purple-800' :
+                                  item.source === 'kas_kecil' ? 'bg-green-100 text-green-800' :
+                                  'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {item.source === 'penjualan' ? 'Penjualan' :
+                                   item.source === 'kas_kecil' ? 'Kas Kecil' : 'Manual'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm">{item.kategori || '-'}</td>
+                              <td className="px-4 py-3 text-sm">{item.keterangan}</td>
+                              <td className="px-4 py-3 text-sm text-right">
+                                {item.jenis === 'masuk' ? (
+                                  <span className="text-green-600 font-medium">
+                                    Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-right">
+                                {item.jenis === 'keluar' ? (
+                                  <span className="text-red-600 font-medium">
+                                    Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Total Row */}
+                          <tr className="bg-gray-50 font-bold">
+                            <td colSpan="5" className="px-4 py-3 text-right">TOTAL</td>
+                            <td className="px-4 py-3 text-right text-green-600">
+                              Rp {totalMasuk.toLocaleString('id-ID')}
+                            </td>
+                            <td className="px-4 py-3 text-right text-red-600">
+                              Rp {totalKeluar.toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                          {/* Saldo Row */}
+                          <tr className="bg-blue-50 font-bold">
+                            <td colSpan="5" className="px-4 py-3 text-right">SALDO</td>
+                            <td colSpan="2" className="px-4 py-3 text-right text-blue-600 text-lg">
+                              Rp {(totalMasuk - totalKeluar).toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                        </>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      {item.jenis === 'keluar' ? (
-                        <span className="text-red-600 font-medium">
-                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                    </>
+                  );
+                })()}
               </tbody>
-              <tfoot className="bg-gray-100 font-bold">
-                <tr>
-                  <td colSpan="6" className="px-4 py-3 text-right">Total</td>
-                  <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
-                  <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
-                </tr>
-                <tr className="bg-blue-50">
-                  <td colSpan="6" className="px-4 py-3 text-right">Saldo Akhir</td>
-                  <td colSpan="2" className="px-4 py-3 text-right text-blue-600 text-lg">
-                    Rp {saldo.toLocaleString('id-ID')}
-                  </td>
-                </tr>
-              </tfoot>
             </table>
           </div>
         </div>
