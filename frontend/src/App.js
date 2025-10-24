@@ -370,7 +370,7 @@ const SumberJayaApp = () => {
   });
 
   const [filterArusKas, setFilterArusKas] = useState({
-    pt: '',
+    pt: [], // Multi-select for Arus Kas (same as Kas Kecil)
     tanggal: new Date().toISOString().split('T')[0] // Default to today
   });
 
@@ -803,9 +803,9 @@ const SumberJayaApp = () => {
     });
 
     let saldoAwal = 0;
-    if (filterArusKas.pt) {
-      // Saldo awal untuk PT tertentu
-      const beforePT = beforeSelectedDate.filter(item => item.pt === filterArusKas.pt && item.status === 'approved');
+    if (filterArusKas.pt.length > 0) {
+      // Saldo awal untuk PT yang dipilih (multiple PT)
+      const beforePT = beforeSelectedDate.filter(item => filterArusKas.pt.includes(item.pt) && item.status === 'approved');
       const masuk = beforePT.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
       const keluar = beforePT.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
       saldoAwal = masuk - keluar;
@@ -824,9 +824,9 @@ const SumberJayaApp = () => {
       return itemDate === selectedDate;
     });
 
-    // Filter by PT if selected
-    if (filterArusKas.pt) {
-      selectedDateData = selectedDateData.filter(item => item.pt === filterArusKas.pt);
+    // Filter by PT if selected (multiple PT support)
+    if (filterArusKas.pt.length > 0) {
+      selectedDateData = selectedDateData.filter(item => filterArusKas.pt.includes(item.pt));
     }
 
     // Calculate penjualan hari ini (dari selectedDateData)
@@ -842,7 +842,7 @@ const SumberJayaApp = () => {
       selectedDateData.unshift({
         id: 'saldo-awal',
         tanggal: selectedDate + 'T00:00:00',
-        pt: filterArusKas.pt || 'All',
+        pt: filterArusKas.pt.length > 0 ? filterArusKas.pt.join(', ') : 'All',
         jenis: 'masuk',
         jumlah: saldoAwalTotal,
         keterangan: `Saldo Awal (Penjualan: Rp ${penjualanHariIni.toLocaleString('id-ID')} + Sisa Kemarin: Rp ${saldoAwal.toLocaleString('id-ID')})`,
@@ -1468,8 +1468,8 @@ const SumberJayaApp = () => {
     });
 
     let ptInfo = '';
-    if (filterArusKas.pt) {
-      ptInfo = filterArusKas.pt;
+    if (filterArusKas.pt.length > 0) {
+      ptInfo = filterArusKas.pt.join(', ');
     } else {
       ptInfo = 'Semua PT';
     }
@@ -4386,27 +4386,42 @@ const SumberJayaApp = () => {
             </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* PT Filter - Single Select */}
+          <div className="grid grid-cols-1 gap-4">
+            {/* PT Filter - Multi Select (Toggle Buttons) */}
             <div>
-              <label className="block text-sm font-medium mb-2">Filter PT</label>
-              <select 
-                value={filterArusKas.pt}
-                onChange={(e) => setFilterArusKas({...filterArusKas, pt: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="">Semua PT</option>
-                {currentUserData?.accessPT?.map(code => (
-                  <option key={code} value={code}>{code}</option>
+              <label className="block text-sm font-medium mb-2">Filter PT (Pilih Satu atau Lebih)</label>
+              <div className="flex flex-wrap gap-2">
+                {currentUserData?.accessPT?.map(ptCode => (
+                  <button
+                    key={ptCode}
+                    onClick={() => {
+                      setFilterArusKas(prev => ({
+                        ...prev,
+                        pt: prev.pt.includes(ptCode)
+                          ? prev.pt.filter(p => p !== ptCode)
+                          : [...prev.pt, ptCode]
+                      }));
+                    }}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      filterArusKas.pt.includes(ptCode)
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {ptCode}
+                  </button>
                 ))}
-              </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {filterArusKas.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterArusKas.pt.length} PT dipilih`}
+              </p>
             </div>
 
             {/* Date Filter - Single Date */}
             <div>
               <label className="block text-sm font-medium mb-2">Filter Tanggal (Default: Hari Ini)</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={filterArusKas.tanggal}
                 onChange={(e) => setFilterArusKas({...filterArusKas, tanggal: e.target.value})}
                 className="w-full px-4 py-2 border rounded-lg"
