@@ -1369,9 +1369,10 @@ const SumberJayaApp = () => {
               
               .info-section {
                 display: flex;
-                justify-content: space-between;
-                margin-bottom: 10px;
-                font-size: 12px;
+                justify-content: flex-start;
+                gap: 40px;
+                margin-bottom: 15px;
+                font-size: 11px;
               }
               .info-left, .info-right {
                 width: 48%;
@@ -1991,22 +1992,18 @@ const SumberJayaApp = () => {
     let ptInfo = '';
 
     if (type === 'kas') {
-      headerTitle = 'LAPORAN ARUS KAS KECIL';
-      
-      if (selectedPT.length > 0) {
-        ptInfo = selectedPT.join(' - ');
-      } else {
-        ptInfo = 'Semua PT';
-      }
-      
-      const selectedPTNames = selectedPT.length > 0 
+      headerTitle = 'LAPORAN KAS KECIL';
+
+      // Get full PT names for subtitle
+      const selectedPTNames = selectedPT.length > 0
         ? selectedPT.map(code => {
             const pt = ptList.find(p => p.code === code);
             return pt ? pt.name : code;
           }).join(' - ')
         : ptList.map(p => p.name).join(' - ');
-      
-      headerSubtitle = selectedPTNames;
+
+      headerSubtitle = selectedPTNames; // PT names for display below title
+      ptInfo = selectedPT.length > 0 ? selectedPT.join(' - ') : 'Semua PT'; // PT codes
     } else if (type === 'labarugi') {
       headerTitle = 'LAPORAN LABA RUGI';
       
@@ -2088,16 +2085,16 @@ const SumberJayaApp = () => {
                 line-height: 1.2;
               }
               .report-subtitle {
-                font-size: ${type === 'labarugi' ? '12px' : '12px'};
-                color: #333;
-                margin-bottom: ${type === 'labarugi' ? '2px' : '3px'};
+                font-size: ${type === 'labarugi' ? '12px' : '14px'};
+                color: #000;
+                margin-bottom: ${type === 'labarugi' ? '2px' : '10px'};
                 font-weight: bold;
                 line-height: 1.3;
               }
               .report-period {
-                font-size: 10px;
-                color: #666;
-                margin-top: 0px;
+                font-size: 11px;
+                color: #000;
+                margin-top: 5px;
                 font-weight: normal;
                 line-height: 1.3;
               }
@@ -2109,9 +2106,10 @@ const SumberJayaApp = () => {
               
               .info-section {
                 display: flex;
-                justify-content: space-between;
-                margin-bottom: 10px;
-                font-size: 12px;
+                justify-content: flex-start;
+                gap: 40px;
+                margin-bottom: 15px;
+                font-size: 11px;
               }
               .info-left, .info-right {
                 width: 48%;
@@ -2325,75 +2323,54 @@ const SumberJayaApp = () => {
             <div class="report-header">
               <div class="report-title">${headerTitle}</div>
               <div class="report-subtitle">${headerSubtitle}</div>
-              ${type === 'labarugi' ? `<div class="report-period">Periode ${bulanNama} ${tahun}</div>` : '<div class="report-company">Sistem Sumber Jaya Grup Official</div>'}
+              ${type === 'labarugi' ? `<div class="report-period">Periode ${bulanNama} ${tahun}</div>` : ''}
             </div>
-            
+
             ${type === 'kas' ? `
             <div class="info-section">
-              <div class="info-left">
-                <div class="info-row">
-                  <span class="info-label">Hari</span>
-                  <span class="info-value">: ${hari}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">Tanggal</span>
-                  <span class="info-value">: ${tanggalOnly}</span>
-                </div>
+              <div class="info-row">
+                <span class="info-label">Periode</span>
+                <span class="info-value">: ${bulanNama} ${tahun}</span>
               </div>
-              <div class="info-right">
-                <div class="info-row">
-                  <span class="info-label">Dicetak Oleh</span>
-                  <span class="info-value">: ${currentUserData?.name || 'User'}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">PT</span>
-                  <span class="info-value">: ${ptInfo}</span>
-                </div>
+              <div class="info-row">
+                <span class="info-label">Dicetak Oleh</span>
+                <span class="info-value">: ${currentUserData?.name || 'User'}</span>
               </div>
             </div>
             ` : ''}
-            
+
             <table>
               <thead>
                 <tr>
-                  <th class="text-center">Tanggal</th>
-                  <th class="text-center">PT</th>
-                  <th class="text-center">Kategori</th>
-                  <th class="text-center">Keterangan</th>
-                  <th class="text-right">Masuk</th>
-                  <th class="text-right">Keluar</th>
+                  <th class="text-center" style="color: #000; font-weight: bold;">No</th>
+                  <th style="color: #000; font-weight: bold;">Keterangan</th>
+                  <th class="text-right" style="color: #000; font-weight: bold;">Masuk</th>
+                  <th class="text-right" style="color: #000; font-weight: bold;">Keluar</th>
+                  <th class="text-right" style="color: #000; font-weight: bold;">Saldo</th>
                 </tr>
               </thead>
               <tbody>
-                ${displayData.map(item => `
-                  <tr>
-                    <td>${new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                    <td>${item.pt}</td>
-                    <td>${item.kategori || '-'}</td>
-                    <td>${item.keterangan}</td>
-                    <td class="text-right">${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
-                    <td class="text-right">${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
-                  </tr>
-                `).join('')}
-                <tr class="grand-total-row">
-                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
-                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
-                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
-                </tr>
-                <tr class="grand-total-row">
-                  <td colspan="5" class="text-center"><strong>Saldo Akhir</strong></td>
-                  <td class="text-right"><strong>Rp ${(displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)).toLocaleString('id-ID')}</strong></td>
-                </tr>
+                ${(() => {
+                  let saldo = 0;
+                  return displayData.map((item, index) => {
+                    const masuk = item.jenis === 'masuk' && item.status === 'approved' ? (item.jumlah || 0) : 0;
+                    const keluar = item.jenis === 'keluar' && item.status === 'approved' ? (item.jumlah || 0) : 0;
+                    saldo = saldo + masuk - keluar;
+                    return `
+                      <tr>
+                        <td class="text-center">${index + 1}</td>
+                        <td>${item.keterangan}</td>
+                        <td class="text-right">${masuk > 0 ? `Rp ${masuk.toLocaleString('id-ID')}` : '-'}</td>
+                        <td class="text-right">${keluar > 0 ? `Rp ${keluar.toLocaleString('id-ID')}` : '-'}</td>
+                        <td class="text-right">Rp ${saldo.toLocaleString('id-ID')}</td>
+                      </tr>
+                    `;
+                  }).join('');
+                })()}
               </tbody>
             </table>
-            
+
             ${signatureSection}
-            
-            <div class="report-footer">
-              <p><strong>© 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click</strong></p>
-              <p>Dicetak pada: ${tanggal} oleh ${currentUserData?.name || 'User'} (${currentUserData?.role || 'Role'})</p>
-              <p>Dokumen ini adalah salinan resmi dan sah untuk keperluan administrasi</p>
-            </div>
           </body>
         </html>
       `);
