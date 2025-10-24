@@ -371,7 +371,7 @@ const SumberJayaApp = () => {
 
   const [filterArusKas, setFilterArusKas] = useState({
     pt: [], // Multi-select for Arus Kas (same as Kas Kecil)
-    tanggal: new Date().toISOString().split('T')[0] // Default to today
+    tanggal: '' // Default kosong - tampilkan semua data (sama seperti Kas Kecil)
   });
 
   const [formUser, setFormUser] = useState({
@@ -799,6 +799,25 @@ const SumberJayaApp = () => {
       sampleData: arusKasData.slice(0, 3),
       currentUserAccessPT: currentUserData?.accessPT
     });
+
+    // Jika tidak ada tanggal dipilih, tampilkan semua data (seperti Kas Kecil)
+    if (!selectedDate) {
+      let allData = [...arusKasData];
+
+      // Filter by PT if selected
+      if (filterArusKas.pt.length > 0) {
+        allData = allData.filter(item => filterArusKas.pt.includes(item.pt));
+      }
+
+      // Sort by tanggal (terbaru dulu)
+      allData.sort((a, b) => {
+        const dateA = new Date(a.tanggal || 0);
+        const dateB = new Date(b.tanggal || 0);
+        return dateB - dateA;
+      });
+
+      return allData;
+    }
 
     // Calculate saldo awal (dari transaksi SEBELUM tanggal yang dipilih)
     const beforeSelectedDate = arusKasData.filter(item => {
@@ -4424,13 +4443,16 @@ const SumberJayaApp = () => {
 
             {/* Date Filter - Single Date */}
             <div>
-              <label className="block text-sm font-medium mb-2">Filter Tanggal (Default: Hari Ini)</label>
+              <label className="block text-sm font-medium mb-2">Filter Tanggal (Opsional)</label>
               <input
                 type="date"
                 value={filterArusKas.tanggal}
                 onChange={(e) => setFilterArusKas({...filterArusKas, tanggal: e.target.value})}
                 className="w-full px-4 py-2 border rounded-lg"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {filterArusKas.tanggal ? `Data tanggal: ${filterArusKas.tanggal}` : 'Semua tanggal ditampilkan'}
+              </p>
             </div>
           </div>
         </div>
