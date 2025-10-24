@@ -35,6 +35,7 @@ const SumberJayaApp = () => {
   const [loginError, setLoginError] = useState('');
   const [activeMenu, setActiveMenu] = useState('beranda');
   const [selectedPT, setSelectedPT] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(''); // Filter tanggal untuk Arus Kas Komprehensif
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('2025-10');
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -2803,9 +2804,25 @@ const SumberJayaApp = () => {
       });
     };
 
-    // Filter arus kas data based on selected PT
+    // Filter arus kas data based on selected PT and Date
     const getFilteredArusKasData = (pts = []) => {
-      return pts.length > 0 ? arusKasData.filter(k => pts.includes(k.pt)) : arusKasData;
+      let filtered = arusKasData;
+
+      // Filter by PT
+      if (pts.length > 0) {
+        filtered = filtered.filter(k => pts.includes(k.pt));
+      }
+
+      // Filter by Date
+      if (selectedDate) {
+        filtered = filtered.filter(k => {
+          if (!k.tanggal) return false;
+          const itemDate = k.tanggal.split('T')[0];
+          return itemDate === selectedDate;
+        });
+      }
+
+      return filtered;
     };
 
     // Calculate totals from aggregated arus kas data
@@ -2845,7 +2862,13 @@ const SumberJayaApp = () => {
               ))}
             </div>
           </div>
-          <input type="date" className="px-4 py-2 border rounded-lg" />
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-4 py-2 border rounded-lg"
+            placeholder="Pilih tanggal (opsional)"
+          />
           <button 
             onClick={() => handleExportPDF('kas')}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center gap-2"
