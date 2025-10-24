@@ -242,12 +242,24 @@ const verifyToken = (req, res, next) => {
   });
 };
 
-// Helper function to get local date in Asia/Jakarta timezone
+// Helper function to get local date in YYYY-MM-DD format (timezone-aware)
 const getLocalDate = () => {
   const now = new Date();
-  // Convert to Asia/Jakarta timezone (UTC+7)
-  const localTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-  return localTime.toISOString().split('T')[0];
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to convert Date object to local YYYY-MM-DD (no timezone conversion)
+const formatLocalDate = (date) => {
+  if (!date) return null;
+  if (typeof date === 'string') return date.split('T')[0];
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 // Helper function to process tanggal (remove timezone info)
@@ -470,7 +482,7 @@ app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
   const today = getLocalDate();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterdayStr = formatLocalDate(yesterday);
   
   // Step 1: Check apakah hari ini sudah ada transfer saldo
   const checkQuery = `
@@ -645,7 +657,7 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
     }
     
     const kasData = kasResults[0];
-    const kasTanggal = new Date(kasData.tanggal).toISOString().split('T')[0];
+    const kasTanggal = formatLocalDate(kasData.tanggal);
     
     // Step 2: Validasi - hanya bisa edit transaksi hari ini
     if (kasTanggal !== today) {
@@ -885,12 +897,25 @@ app.get('/api/arus-kas', verifyToken, (req, res) => {
       return a.id - b.id;
     });
     
-    // Format results
-    const formatted = sorted.map(item => ({
-      ...item,
-      jumlah: parseFloat(item.jumlah),
-      tanggal: item.tanggal.toISOString().split('T')[0]
-    }));
+    // Format results - Convert tanggal to local YYYY-MM-DD format
+    const formatted = sorted.map(item => {
+      // Extract local date components (avoid timezone conversion)
+      let tanggalStr;
+      if (item.tanggal instanceof Date) {
+        const year = item.tanggal.getFullYear();
+        const month = String(item.tanggal.getMonth() + 1).padStart(2, '0');
+        const day = String(item.tanggal.getDate()).padStart(2, '0');
+        tanggalStr = `${year}-${month}-${day}`;
+      } else {
+        tanggalStr = item.tanggal; // Already string
+      }
+
+      return {
+        ...item,
+        jumlah: parseFloat(item.jumlah),
+        tanggal: tanggalStr
+      };
+    });
     
     res.json(formatted);
   })
@@ -944,7 +969,7 @@ app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
     }
     
     const entry = results[0];
-    const entryDate = new Date(entry.tanggal).toISOString().split('T')[0];
+    const entryDate = formatLocalDate(entry.tanggal);
     
     // Validate: only today's entries
     if (entryDate !== today) {
@@ -989,7 +1014,7 @@ app.delete('/api/arus-kas/:id', verifyToken, (req, res) => {
     }
     
     const entry = results[0];
-    const entryDate = new Date(entry.tanggal).toISOString().split('T')[0];
+    const entryDate = formatLocalDate(entry.tanggal);
     
     // Validate: only today's entries
     if (entryDate !== today) {
@@ -1111,12 +1136,12 @@ app.get('/api/pangkalan', verifyToken, (req, res) => {
 
 app.get('/api/dashboard/stats', verifyToken, (req, res) => {
   const { pt } = req.query;
-  const today = new Date().toISOString().split('T')[0];
-  
+  const today = getLocalDate();
+
   // Hitung tanggal 7 hari yang lalu
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+  const sevenDaysAgoStr = formatLocalDate(sevenDaysAgo);
   
   // Query untuk stats
   const queries = {
