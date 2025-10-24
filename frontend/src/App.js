@@ -460,10 +460,11 @@ const SumberJayaApp = () => {
       };
       
       await kasKecilService.create(kasData);
-      
+
       // Refresh data
       await loadKasKecilData();
-      
+      await loadArusKasData(); // Sync ke Arus Kas
+
       // Reset form
       setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
       
@@ -611,6 +612,7 @@ const SumberJayaApp = () => {
       try {
         await kasKecilService.updateStatus(kasId, 'approved');
         await loadKasKecilData(); // Refresh data
+        await loadArusKasData(); // Sync ke Arus Kas
         alert('Transaksi berhasil di-approve!');
       } catch (error) {
         console.error('Error approving kas:', error);
@@ -625,6 +627,7 @@ const SumberJayaApp = () => {
       try {
         await kasKecilService.updateStatus(kasId, 'rejected');
         await loadKasKecilData(); // Refresh data
+        await loadArusKasData(); // Sync ke Arus Kas
         alert('Transaksi berhasil di-reject!');
       } catch (error) {
         console.error('Error rejecting kas:', error);
@@ -663,10 +666,11 @@ const SumberJayaApp = () => {
       };
       
       await kasKecilService.update(editingKas.id, kasData);
-      
+
       // Refresh data
       await loadKasKecilData();
-      
+      await loadArusKasData(); // Sync ke Arus Kas
+
       // Close modal & reset
       setShowEditKasModal(false);
       setEditingKas(null);
@@ -686,6 +690,7 @@ const SumberJayaApp = () => {
       try {
         await kasKecilService.delete(kasId);
         await loadKasKecilData(); // Refresh data
+        await loadArusKasData(); // Sync ke Arus Kas
         alert('Transaksi berhasil dihapus!');
       } catch (error) {
         console.error('Error deleting kas:', error);
