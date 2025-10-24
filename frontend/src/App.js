@@ -23,6 +23,17 @@ const getLocalDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
+// Helper: Convert ISO date string to local YYYY-MM-DD format
+// Handles timezone properly - parses ISO string and extracts local date
+const getLocalDateFromISO = (isoString) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const SumberJayaApp = () => {
   // Cek sessionStorage saat pertama kali load (logout saat close tab)
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -297,7 +308,7 @@ const SumberJayaApp = () => {
         sampleData: data.slice(0, 2).map(item => ({
           id: item.id,
           tanggal: item.tanggal,
-          tanggalSplit: item.tanggal?.split('T')[0],
+          tanggalLocal: getLocalDateFromISO(item.tanggal),
           pt: item.pt,
           keterangan: item.keterangan
         })),
@@ -648,7 +659,7 @@ const SumberJayaApp = () => {
   const handleOpenEditKas = (kas) => {
     setEditingKas(kas);
     setFormKas({
-      tanggal: kas.tanggal.split('T')[0],
+      tanggal: getLocalDateFromISO(kas.tanggal),
       pt: kas.pt,
       jenis: kas.jenis,
       jumlah: kas.jumlah,
@@ -750,12 +761,12 @@ const SumberJayaApp = () => {
 
     console.log('DEBUG Kas Kecil Filter:', {
       filterPT: filterKasKecil.pt,
-      today: today.toISOString().split('T')[0],
+      today: getLocalDateString(),
       kasKecilDataCount: kasKecilData.length,
       sampleData: kasKecilData.slice(0, 3).map(item => ({
         id: item.id,
         tanggal: item.tanggal,
-        tanggalParsed: new Date(item.tanggal).toISOString().split('T')[0],
+        tanggalParsed: getLocalDateFromISO(item.tanggal),
         pt: item.pt,
         keterangan: item.keterangan.substring(0, 30)
       })),
@@ -831,7 +842,7 @@ const SumberJayaApp = () => {
     // Calculate saldo awal (dari transaksi SEBELUM tanggal yang dipilih)
     const beforeSelectedDate = arusKasData.filter(item => {
       if (!item.tanggal) return false;
-      const itemDate = item.tanggal.split('T')[0];
+      const itemDate = getLocalDateFromISO(item.tanggal);
       return itemDate < selectedDate;
     });
 
@@ -853,7 +864,7 @@ const SumberJayaApp = () => {
     // Filter transaksi pada tanggal yang dipilih
     let selectedDateData = arusKasData.filter(item => {
       if (!item.tanggal) return false;
-      const itemDate = item.tanggal.split('T')[0];
+      const itemDate = getLocalDateFromISO(item.tanggal);
       return itemDate === selectedDate;
     });
 
@@ -2817,7 +2828,7 @@ const SumberJayaApp = () => {
       if (selectedDate) {
         filtered = filtered.filter(k => {
           if (!k.tanggal) return false;
-          const itemDate = k.tanggal.split('T')[0];
+          const itemDate = getLocalDateFromISO(k.tanggal);
           return itemDate === selectedDate;
         });
       }
@@ -4240,7 +4251,7 @@ const SumberJayaApp = () => {
                             onClick={() => {
                               setEditingKasKecil(item);
                               setFormKasKecil({
-                                tanggal: item.tanggal.split('T')[0], // Keep original date format
+                                tanggal: getLocalDateFromISO(item.tanggal),
                                 pt: item.pt,
                                 jenis: item.jenis,
                                 jumlah: item.jumlah.toString(),
