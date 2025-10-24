@@ -730,70 +730,103 @@ const SumberJayaApp = () => {
 
   // Auto-filter: Get filtered data for Kas Kecil (PT only, no date filter)
   const getFilteredKasKecilData = () => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
     console.log('DEBUG Kas Kecil Filter:', {
       filterPT: filterKasKecil.pt,
+      today: today,
       kasKecilData: kasKecilData.slice(0, 3), // First 3 items for debugging
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    // If no PT selected, show all data
+    // Filter hanya hari ini
+    const todayData = kasKecilData.filter(item => {
+      const itemDate = item.tanggal.split('T')[0]; // Get YYYY-MM-DD
+      return itemDate === today;
+    });
+
+    // If no PT selected, show all data hari ini
     if (filterKasKecil.pt.length === 0) {
-      return kasKecilData;
+      console.log('DEBUG Filtered Kas Kecil (today, all PT):', todayData);
+      return todayData;
     }
 
-    // If PT selected, filter by PT only
-    const filtered = kasKecilData.filter(item => 
+    // If PT selected, filter by PT only (hari ini)
+    const filtered = todayData.filter(item =>
       filterKasKecil.pt.includes(item.pt)
     );
 
-    console.log('DEBUG Filtered Kas Kecil:', filtered);
+    console.log('DEBUG Filtered Kas Kecil (today, filtered PT):', filtered);
     return filtered;
   };
 
-  // Auto-filter: Get filtered data for Arus Kas (real-time)
+  // Auto-filter: Get filtered data for Arus Kas (HANYA HARI INI + Saldo Awal)
   const getFilteredArusKasData = () => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
     console.log('DEBUG Arus Kas Filter:', {
       filterPT: filterArusKas.pt,
-      filterTanggal: filterArusKas.tanggal,
+      today: today,
       arusKasData: arusKasData.slice(0, 3), // First 3 items for debugging
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    // If no PT selected, show all data for selected date
-    if (!filterArusKas.pt) {
-      return arusKasData.filter(item => {
-        const itemDate = item.tanggal.split('T')[0];
-        const filterDate = filterArusKas.tanggal;
-        return itemDate === filterDate;
+    // Calculate saldo awal (dari transaksi sebelum hari ini)
+    const yesterdayData = arusKasData.filter(item => {
+      const itemDate = item.tanggal.split('T')[0];
+      return itemDate < today;
+    });
+
+    let saldoAwal = 0;
+    if (filterArusKas.pt) {
+      // Calculate saldo awal for specific PT
+      const yesterdayPT = yesterdayData.filter(item => item.pt === filterArusKas.pt && item.status === 'approved');
+      const masuk = yesterdayPT.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      const keluar = yesterdayPT.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      saldoAwal = masuk - keluar;
+    } else {
+      // Calculate saldo awal for all PT
+      const yesterdayApproved = yesterdayData.filter(item => item.status === 'approved');
+      const masuk = yesterdayApproved.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      const keluar = yesterdayApproved.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      saldoAwal = masuk - keluar;
+    }
+
+    // Filter transaksi hari ini saja
+    let todayData = arusKasData.filter(item => {
+      const itemDate = item.tanggal.split('T')[0];
+      return itemDate === today;
+    });
+
+    // Filter by PT if selected
+    if (filterArusKas.pt) {
+      todayData = todayData.filter(item => item.pt === filterArusKas.pt);
+    }
+
+    // Add saldo awal as first row if > 0
+    if (saldoAwal > 0) {
+      todayData.unshift({
+        id: 'saldo-awal',
+        tanggal: today + 'T00:00:00',
+        pt: filterArusKas.pt || 'All',
+        jenis: 'masuk',
+        jumlah: saldoAwal,
+        keterangan: 'Saldo Awal (dari hari sebelumnya)',
+        status: 'approved',
+        metode: 'saldo_awal',
+        created_at: today + 'T00:00:00'
       });
     }
 
-    // If PT selected, filter by PT and date
-    const filtered = arusKasData.filter(item => {
-      const itemDate = item.tanggal.split('T')[0]; // Get YYYY-MM-DD from ISO string
-      const filterDate = filterArusKas.tanggal; // Already in YYYY-MM-DD format
-      
-      console.log('DEBUG Arus Kas Date Comparison:', {
-        itemDate,
-        filterDate,
-        match: itemDate === filterDate,
-        itemPT: item.pt,
-        filterPT: filterArusKas.pt,
-        ptMatch: item.pt === filterArusKas.pt
-      });
-      
-      return item.pt === filterArusKas.pt && itemDate === filterDate;
-    });
-
-    console.log('DEBUG Filtered Arus Kas:', filtered);
-    return filtered;
+    console.log('DEBUG Filtered Arus Kas (today + saldo awal):', { saldoAwal, todayData });
+    return todayData;
   };
 
   // Handler: Print Kas Kecil
   const handlePrintKasKecil = () => {
     console.log('🖨️ TOMBOL PRINT DIKLIK! Starting print process...');
 
-    // Get filtered data for PDF (TAMPILKAN SEMUA DATA TERMASUK PENDING)
+    // Get filtered data for PDF
     const displayData = getFilteredKasKecilData();
 
     console.log('DEBUG Print Kas Kecil - FULL DETAILS:', {
@@ -804,25 +837,22 @@ const SumberJayaApp = () => {
       allStatuses: displayData.map(d => d.status)
     });
 
-    const tanggal = new Date().toLocaleDateString('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    const hari = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
     const tanggalOnly = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
 
-    let ptInfo = '';
+    // Generate PT Names with separator
+    let ptNames = '';
     if (filterKasKecil.pt.length > 0) {
-      ptInfo = filterKasKecil.pt.join(' - ');
+      // Use PT codes directly if no ptList available
+      ptNames = filterKasKecil.pt.map(code => {
+        const pt = ptList?.find(p => p.code === code);
+        return pt ? pt.name : code;
+      }).join(' - ');
     } else {
-      ptInfo = 'Semua PT';
+      ptNames = 'Semua PT';
     }
 
     // Check if data is empty
@@ -1246,55 +1276,33 @@ const SumberJayaApp = () => {
           <body>
 
               <!-- HEADER -->
-              <div class="report-header">
-                <div class="report-title">LAPORAN KAS KECIL</div>
-                <div class="report-subtitle">${ptName}</div>
+              <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 18px; font-weight: 700; margin-bottom: 5px;">LAPORAN KAS KECIL</div>
+                <div style="font-size: 14px; font-weight: 700; color: #000;">${ptNames}</div>
               </div>
 
               <!-- INFO SECTION -->
-              <div class="info-section">
-                <div class="info-box">
-                  <div class="info-row">
-                    <span class="info-label">Periode</span>
-                    <span class="info-value">${tanggalOnly}</span>
-                  </div>
-                  <div class="info-row">
-                    <span class="info-label">PT</span>
-                    <span class="info-value">${ptInfo}</span>
-                  </div>
-                </div>
-                <div class="info-box">
-                  <div class="info-row">
-                    <span class="info-label">Dicetak Oleh</span>
-                    <span class="info-value">${currentUserData?.name || 'User'}</span>
-                  </div>
-                  <div class="info-row">
-                    <span class="info-label">Tanggal Cetak</span>
-                    <span class="info-value">${tanggalOnly}</span>
-                  </div>
-                </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px;">
+                <div><strong>Periode:</strong> ${tanggalOnly}</div>
+                <div><strong>Dicetak Oleh:</strong> ${currentUserData?.name || 'User'}</div>
               </div>
 
               <!-- TABLE -->
               <div class="table-container">
                 <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
                   <thead>
-                    <tr style="background: #f0f0f0; border: 1px solid #333;">
-                      <th style="border: 1px solid #333; padding: 8px; text-align: center;" width="5%">No</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: center;" width="12%">Tanggal</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: center;" width="8%">PT</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: left;" width="30%">Keterangan</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right;" width="15%">Pemasukan</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right;" width="15%">Pengeluaran</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right;" width="15%">Saldo</th>
+                    <tr style="background: #fff; border: 1px solid #333;">
+                      <th style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: 700; color: #000;" width="5%">No</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: left; font-weight: 700; color: #000;" width="45%">Keterangan</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="18%">Masuk</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="18%">Keluar</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="14%">Saldo</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
                       <tr style="border: 1px solid #333;">
                         <td style="border: 1px solid #333; padding: 6px; text-align: center;">${item.no}</td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: center;">${new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: center;"><strong>${item.pt}</strong></td>
                         <td style="border: 1px solid #333; padding: 6px;">${item.keterangan}</td>
                         <td style="border: 1px solid #333; padding: 6px; text-align: right;">
                           ${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
@@ -1306,7 +1314,7 @@ const SumberJayaApp = () => {
                           Rp ${item.saldo.toLocaleString('id-ID')}
                         </td>
                       </tr>
-                    `).join('') : '<tr><td colspan="7" style="text-align:center; padding: 20px; border: 1px solid #333;">Tidak ada data</td></tr>'}
+                    `).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px; border: 1px solid #333;">Tidak ada data</td></tr>'}
                 </tbody>
               </table>
             </div>
@@ -1354,19 +1362,6 @@ const SumberJayaApp = () => {
                   ( _________________ )
                 </div>
               </div>
-            </div>
-      
-            <!-- FOOTER -->
-            <div class="report-footer">
-              <p>Laporan ini dicetak secara otomatis dari sistem • Dokumen ini sesuai dengan data yang diinput</p>
-              <p>Dicetak pada: ${new Date().toLocaleString('id-ID', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}</p>
             </div>
           </body>
         </html>
