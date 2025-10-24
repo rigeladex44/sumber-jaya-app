@@ -728,35 +728,58 @@ const SumberJayaApp = () => {
     setSearchDate('');
   };
 
-  // Auto-filter: Get filtered data for Kas Kecil (PT only, no date filter)
+  // Auto-filter: Get filtered data for Kas Kecil (Harian - tampilkan hari ini saja)
   const getFilteredKasKecilData = () => {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    // Get today's date in local timezone (YYYY-MM-DD)
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     console.log('DEBUG Kas Kecil Filter:', {
       filterPT: filterKasKecil.pt,
-      today: today,
-      kasKecilData: kasKecilData.slice(0, 3), // First 3 items for debugging
+      today: today.toISOString().split('T')[0],
+      kasKecilDataCount: kasKecilData.length,
+      sampleData: kasKecilData.slice(0, 3).map(item => ({
+        id: item.id,
+        tanggal: item.tanggal,
+        tanggalParsed: new Date(item.tanggal).toISOString().split('T')[0],
+        pt: item.pt,
+        keterangan: item.keterangan.substring(0, 30)
+      })),
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    // Filter hanya hari ini
+    // Filter data hari ini (berdasarkan tanggal item, bukan created_at)
     const todayData = kasKecilData.filter(item => {
-      const itemDate = item.tanggal.split('T')[0]; // Get YYYY-MM-DD
-      return itemDate === today;
+      if (!item.tanggal) return false;
+
+      // Parse tanggal item (handle both ISO string and date object)
+      const itemDate = new Date(item.tanggal);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+
+      // Compare date only (ignore time)
+      return itemDateOnly.getTime() === today.getTime();
+    });
+
+    console.log('DEBUG Today Data:', {
+      count: todayData.length,
+      data: todayData.map(d => ({ pt: d.pt, keterangan: d.keterangan.substring(0, 30) }))
     });
 
     // If no PT selected, show all data hari ini
     if (filterKasKecil.pt.length === 0) {
-      console.log('DEBUG Filtered Kas Kecil (today, all PT):', todayData);
       return todayData;
     }
 
-    // If PT selected, filter by PT only (hari ini)
+    // If PT selected, filter by PT
     const filtered = todayData.filter(item =>
       filterKasKecil.pt.includes(item.pt)
     );
 
-    console.log('DEBUG Filtered Kas Kecil (today, filtered PT):', filtered);
+    console.log('DEBUG Filtered Kas Kecil:', {
+      filteredCount: filtered.length,
+      filteredPT: filterKasKecil.pt
+    });
+
     return filtered;
   };
 
