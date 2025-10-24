@@ -896,13 +896,11 @@ const SumberJayaApp = () => {
               
               /* ========== HEADER SECTION ========== */
               .report-header { 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 text-align: center;
                 margin-bottom: 25px;
                 padding: 20px;
                 border-radius: 12px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                color: white;
+                color: black;
               }
 
               .report-title {
@@ -911,7 +909,6 @@ const SumberJayaApp = () => {
                 letter-spacing: 2px;
                 margin-bottom: 8px;
                 text-transform: uppercase;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
               }
               .report-subtitle {
                 font-size: 13px;
@@ -922,7 +919,7 @@ const SumberJayaApp = () => {
                 
               .report-company {
                 font-size: 11px;
-                margin-top: 8px;
+                margin-top: 4px;
                 opacity: 0.85;
                 font-style: italic;
               }
@@ -964,7 +961,7 @@ const SumberJayaApp = () => {
               
               thead {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
+                color: black;
               }
               
               th { 
@@ -1048,8 +1045,8 @@ const SumberJayaApp = () => {
               }
         
               .summary-amount {
-                font-size: 18px;
-                font-weight: 700;
+                font-size: 15px;
+                font-weight: 500;
                 font-family: 'Courier New', monospace;
               }
         
@@ -1251,7 +1248,7 @@ const SumberJayaApp = () => {
               <!-- HEADER -->
               <div class="report-header">
                 <div class="report-title">LAPORAN KAS KECIL</div>
-                <div class="report-subtitle">PT Sumber Jaya Grup</div>
+                <div class="report-subtitle">${ptName}</div>
               </div>
 
               <!-- INFO SECTION -->
@@ -1361,8 +1358,7 @@ const SumberJayaApp = () => {
       
             <!-- FOOTER -->
             <div class="report-footer">
-              <p><strong>© 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click</strong></p>
-              <p>Laporan ini dicetak secara otomatis dari sistem • Dokumen ini sah tanpa tanda tangan basah</p>
+              <p>Laporan ini dicetak secara otomatis dari sistem • Dokumen ini sesuai dengan data yang diinput</p>
               <p>Dicetak pada: ${new Date().toLocaleString('id-ID', { 
                 weekday: 'long', 
                 year: 'numeric', 
