@@ -215,12 +215,10 @@ const SumberJayaApp = () => {
     console.log('🔄 Arus Kas auto-refresh: ACTIVATED (30s interval)');
 
     // Refresh immediately when entering menu
-    loadArusKasData();
 
     // Then refresh every 30 seconds for real-time collaboration
     const refreshInterval = setInterval(() => {
       console.log('🔄 Auto-refreshing Arus Kas data...');
-      loadArusKasData();
     }, 30000); // 30 seconds
 
     return () => {
@@ -450,7 +448,6 @@ const SumberJayaApp = () => {
 
       // Refresh data
       await loadKasKecilData();
-      await loadArusKasData(); // Sync ke Arus Kas
 
       // Reset form
       setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
@@ -599,7 +596,6 @@ const SumberJayaApp = () => {
       try {
         await kasKecilService.updateStatus(kasId, 'approved');
         await loadKasKecilData(); // Refresh data
-        await loadArusKasData(); // Sync ke Arus Kas
         alert('Transaksi berhasil di-approve!');
       } catch (error) {
         console.error('Error approving kas:', error);
@@ -614,7 +610,6 @@ const SumberJayaApp = () => {
       try {
         await kasKecilService.updateStatus(kasId, 'rejected');
         await loadKasKecilData(); // Refresh data
-        await loadArusKasData(); // Sync ke Arus Kas
         alert('Transaksi berhasil di-reject!');
       } catch (error) {
         console.error('Error rejecting kas:', error);
@@ -656,7 +651,6 @@ const SumberJayaApp = () => {
 
       // Refresh data
       await loadKasKecilData();
-      await loadArusKasData(); // Sync ke Arus Kas
 
       // Close modal & reset
       setShowEditKasModal(false);
@@ -677,7 +671,6 @@ const SumberJayaApp = () => {
       try {
         await kasKecilService.delete(kasId);
         await loadKasKecilData(); // Refresh data
-        await loadArusKasData(); // Sync ke Arus Kas
         alert('Transaksi berhasil dihapus!');
       } catch (error) {
         console.error('Error deleting kas:', error);
@@ -775,7 +768,248 @@ const SumberJayaApp = () => {
     return filtered;
   };
 
-  // Auto-filter: Get filtered data for Arus Kas (By Tanggal + PT + Saldo Awal)
+
+  // Handler: Print Kas Kecil
+  const handlePrintKasKecil = () => {
+    console.log('🖨️ TOMBOL PRINT DIKLIK! Starting print process...');
+
+    // Get filtered data for PDF
+    const displayData = getFilteredKasKecilData();
+
+    console.log('DEBUG Print Kas Kecil - FULL DETAILS:', {
+      totalKasKecilData: kasKecilData.length,
+      displayDataLength: displayData.length,
+      filterPT: filterKasKecil.pt,
+      sampleData: displayData.slice(0, 3),
+      allStatuses: displayData.map(d => d.status)
+    });
+
+    const tanggalOnly = new Date().toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    // Generate PT Names with separator
+    let ptNames = '';
+    if (filterKasKecil.pt.length > 0) {
+      // Use PT codes directly if no ptList available
+      ptNames = filterKasKecil.pt.map(code => {
+        const pt = ptList?.find(p => p.code === code);
+        return pt ? pt.name : code;
+      }).join(' - ');
+    } else {
+      ptNames = 'Semua PT';
+    }
+
+    // Check if data is empty
+    if (!displayData || displayData.length === 0) {
+      console.error('ERROR: No data to print!', {
+        kasKecilData: kasKecilData,
+        filterKasKecil: filterKasKecil
+      });
+      alert('Tidak ada data untuk dicetak. Total data: ' + kasKecilData.length + ', Filter PT: ' + filterKasKecil.pt.join(', '));
+      return;
+    }
+
+    // Calculate running balance
+    let runningBalance = 0;
+    const dataWithBalance = displayData.map((item, index) => {
+      // Only count approved transactions for balance
+      if (item.status === 'approved') {
+        if (item.jenis === 'masuk') {
+          runningBalance += item.jumlah || 0;
+        } else if (item.jenis === 'keluar') {
+          runningBalance -= item.jumlah || 0;
+        }
+      }
+      return {
+        ...item,
+        no: index + 1,
+        saldo: runningBalance
+      };
+    });
+
+    // Calculate totals
+    const totalMasuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const totalKeluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const saldoAkhir = totalMasuk - totalKeluar;
+
+    // DEBUG: Alert untuk konfirmasi data sebelum print
+    console.log('✅ PRINT START - Data Count:', displayData.length);
+
+    try {
+      const printWindow = window.open('', '_blank');
+
+      if (!printWindow) {
+        alert('Gagal membuka window baru. Mohon izinkan popup di browser Anda.');
+        return;
+      }
+
+      // Generate HTML content
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>LAPORAN KAS KECIL - Sumber Jaya Grup</title>
+            <meta charset="UTF-8">
+            <style>
+              @page {
+                size: A4;
+                margin: 15mm;
+              }
+              * { 
+                margin: 0; 
+                padding: 0; 
+                box-sizing: border-box; 
+              }
+              body { 
+                font-family: 'Segoe UI', 'Arial', sans-serif; 
+                padding: 20px;
+                color: #1a1a1a;
+                line-height: 1.5;
+                background: white;
+              }
+              
+              /* ========== HEADER SECTION ========== */
+              .report-header { 
+                text-align: center;
+                margin-bottom: 25px;
+                padding: 20px;
+                border-radius: 12px;
+                color: black;
+              }
+
+              .report-title {
+                font-size: 24px;
+                font-weight: 700;
+                letter-spacing: 2px;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+              }
+              .report-subtitle {
+                font-size: 13px;
+                margin-bottom: 5px;
+                font-weight: 400;
+                opacity: 0.95;
+              }
+                
+              .report-company {
+                font-size: 11px;
+                margin-top: 4px;
+                opacity: 0.85;
+                font-style: italic;
+              }
+
+              /* ========== INFO SECTION ========== */
+              .info-section {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 20px;
+                gap: 20px;
+              }
+              
+              .info-row {
+                display: flex;
+                padding: 5px 0;
+                font-size: 12px;
+                align-items: center;
+              }
+              
+              .info-label {
+                width: 120px;
+                font-weight: 500;
+                color: #666;
+              }
+              .info-value {
+                flex: 1;
+                font-weight: 600;
+                color: #1a1a1a;
+              }
+
+
+              /* ========== TABLE SECTION ========== */   
+              .table-container {
+                margin: 20px 0;
+                border-radius: 8px;
+                overflow: hidden;
+               box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+              }
+              
+              thead {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: black;
+              }
+              
+              th { 
+                padding: 12px 8px;
+                text-align: left;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 10px;
+                letter-spacing: 0.5px;
+                border: none;
+              }
+              
+              th.text-center { text-align: center; }
+              th.text-right { text-align: right; }
+              
+              tbody tr:hover {
+                background-color: #f8f9fa;
+              }
+        
+              tbody tr:nth-child(even) {
+                background-color: #fafbfc;
+              }
+        
+              td { 
+                padding: 10px 8px;
+                border: none;
+                color: #2d3748;
+              }
+        
+              .text-right { 
+                text-align: right;
+                font-family: 'Courier New', monospace;
+                font-weight: 500;
+              }
+        
+              .text-center { text-align: center; }
+
+              /* ========== AMOUNT STYLING ========== */
+              .amount-positive {
+                color: #059669;
+                font-weight: 600;
+              }
+              /* ========== SUMMARY SECTION ========== */
+              .summary-section {
+                margin-top: 25px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+              }
+        
+              .summary-card {
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                border: 2px solid #e9ecef;
+                text-align: center;
+              }
+        
+              .summary-card.total-in {
+                border-color: #10b981;
+                background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+              }
+        
+              .summary-card.total-out {
+                border-color: #ef4444;
+                background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+              }
+        
+              .summary-card.balance {
+                border-color: #667eea;
+                background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
               }
         
               .summary-label {
@@ -1099,7 +1333,6 @@ const SumberJayaApp = () => {
     }
   };
 
-  // Handler: Print Arus Kas
 
   const handleSavePenjualan = async () => {
     if (!formPenjualan.pt || !formPenjualan.pangkalan || !formPenjualan.qty) {
@@ -1125,7 +1358,6 @@ const SumberJayaApp = () => {
     
       // Refresh data
       await loadPenjualanData();
-      await loadArusKasData(); // Refresh arus kas since penjualan affects it
       
       // If cash payment, kas kecil will be auto-created by backend
     if (formPenjualan.metodeBayar === 'cash') {
@@ -1174,7 +1406,6 @@ const SumberJayaApp = () => {
 
       // Refresh data
       await loadKasKecilData();
-      await loadArusKasData(); // Refresh arus kas since kas kecil affects it
 
       // Reset form
       setFormKasKecil({ 
@@ -1204,7 +1435,6 @@ const SumberJayaApp = () => {
     try {
       await kasKecilService.delete(kasKecilId);
       await loadKasKecilData();
-      await loadArusKasData(); // Refresh arus kas since kas kecil affects it
       alert('Data kas kecil berhasil dihapus!');
     } catch (error) {
       console.error('Error deleting kas kecil:', error);
@@ -1239,7 +1469,6 @@ const SumberJayaApp = () => {
 
       // Refresh data
       await loadKasKecilData();
-      await loadArusKasData(); // Refresh arus kas since kas kecil affects it
 
       // Close modal and reset
       setShowEditKasKecilModal(false);
@@ -1252,7 +1481,7 @@ const SumberJayaApp = () => {
         keterangan: '', 
         kategori: ''
       });
-      
+
       alert('Data kas kecil berhasil diupdate!');
     } catch (error) {
       console.error('Error updating kas kecil:', error);
@@ -1270,7 +1499,7 @@ const SumberJayaApp = () => {
     { code: 'SJS', name: 'PT SRI JOYO SHAKTI' }
   ];
 
-  // Kategori Pengeluaran untuk Kas Kecil (cashless)
+  // Kategori Pengeluaran untuk Kas Kecil
   const kategoriPengeluaran = [
     'BIAYA OPERASIONAL',
     'BIAYA LAIN-LAIN',
@@ -2429,7 +2658,8 @@ const SumberJayaApp = () => {
         if (!selectedPT.includes(item.pt)) return false;
         const itemDate = new Date(item.tanggal);
         return itemDate.getFullYear() === parseInt(year) &&
-               (itemDate.getMonth() + 1) === parseInt(month);
+               (itemDate.getMonth() + 1) === parseInt(month) &&
+               item.status === 'approved';
       });
 
       // Hitung pendapatan lain dari kas kecil (pemasukan)
@@ -3000,7 +3230,7 @@ const SumberJayaApp = () => {
                 required
               >
                 <option value="">Pilih Kategori</option>
-                {kategoriList.map(kategori => (
+                {kategoriPengeluaran.map(kategori => (
                   <option key={kategori} value={kategori}>{kategori}</option>
                 ))}
               </select>
@@ -3250,6 +3480,7 @@ const SumberJayaApp = () => {
     );
   };
 
+  // Render Arus Kas Page (Comprehensive Cash Flow - Cash + Cashless)
 
   const renderDetailKas = () => {
     const handlePTChange = (ptCode) => {
@@ -4017,7 +4248,7 @@ const SumberJayaApp = () => {
                       required
                     >
                       <option value="">Pilih Kategori</option>
-                      {kategoriList.map(kategori => (
+                      {kategoriPengeluaran.map(kategori => (
                         <option key={kategori} value={kategori}>{kategori}</option>
                       ))}
                     </select>
