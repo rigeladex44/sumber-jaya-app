@@ -379,31 +379,41 @@ app.get('/api/pt', verifyToken, (req, res) => {
 // Get Kas Kecil (Cash Only)
 app.get('/api/kas-kecil', verifyToken, (req, res) => {
   const { pt, tanggal_dari, tanggal_sampai, status } = req.query;
-  
-  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, kategori, status, created_by, approved_by, created_at, updated_at FROM kas_kecil WHERE 1=1';
+
+  let query = `
+    SELECT
+      kk.id, kk.tanggal, kk.pt_code AS pt, kk.jenis, kk.jumlah, kk.keterangan,
+      kk.kategori, kk.status, kk.created_by, kk.approved_by, kk.created_at, kk.updated_at,
+      kk.sub_kategori_id,
+      sk.nama AS sub_kategori_nama,
+      sk.jenis AS sub_kategori_jenis
+    FROM kas_kecil kk
+    LEFT JOIN sub_kategori sk ON kk.sub_kategori_id = sk.id
+    WHERE 1=1
+  `;
   let params = [];
-  
+
   if (pt) {
-    query += ' AND pt_code = ?';
+    query += ' AND kk.pt_code = ?';
     params.push(pt);
   }
-  
+
   if (tanggal_dari) {
-    query += ' AND tanggal >= ?';
+    query += ' AND kk.tanggal >= ?';
     params.push(tanggal_dari);
   }
-  
+
   if (tanggal_sampai) {
-    query += ' AND tanggal <= ?';
+    query += ' AND kk.tanggal <= ?';
     params.push(tanggal_sampai);
   }
-  
+
   if (status) {
-    query += ' AND status = ?';
+    query += ' AND kk.status = ?';
     params.push(status);
   }
-  
-  query += ' ORDER BY tanggal ASC, id ASC';
+
+  query += ' ORDER BY kk.tanggal ASC, kk.id ASC';
   
   db.query(query, params, (err, results) => {
     if (err) {
@@ -813,25 +823,35 @@ app.get('/api/kas-kecil/saldo', verifyToken, (req, res) => {
 app.get('/api/arus-kas', verifyToken, (req, res) => {
   const { pt, tanggal_dari, tanggal_sampai } = req.query;
 
-  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, kategori, metode_bayar, created_by, created_at, updated_at FROM arus_kas WHERE 1=1';
+  let query = `
+    SELECT
+      ak.id, ak.tanggal, ak.pt_code AS pt, ak.jenis, ak.jumlah, ak.keterangan,
+      ak.kategori, ak.metode_bayar, ak.created_by, ak.created_at, ak.updated_at,
+      ak.sub_kategori_id,
+      sk.nama AS sub_kategori_nama,
+      sk.jenis AS sub_kategori_jenis
+    FROM arus_kas ak
+    LEFT JOIN sub_kategori sk ON ak.sub_kategori_id = sk.id
+    WHERE 1=1
+  `;
   let params = [];
 
   if (pt) {
-    query += ' AND pt_code = ?';
+    query += ' AND ak.pt_code = ?';
     params.push(pt);
   }
 
   if (tanggal_dari) {
-    query += ' AND tanggal >= ?';
+    query += ' AND ak.tanggal >= ?';
     params.push(tanggal_dari);
   }
 
   if (tanggal_sampai) {
-    query += ' AND tanggal <= ?';
+    query += ' AND ak.tanggal <= ?';
     params.push(tanggal_sampai);
   }
 
-  query += ' ORDER BY tanggal DESC, id DESC';
+  query += ' ORDER BY ak.tanggal DESC, ak.id DESC';
 
   console.log('DEBUG Arus Kas Query:', { query, params });
 
@@ -1158,6 +1178,144 @@ app.get('/api/migrate/add-updated-at', (req, res) => {
           newStructure: structure
         });
       });
+    });
+  });
+});
+
+
+// ==================== SUB KATEGORI ROUTES ====================
+
+// Get all sub kategori
+app.get('/api/sub-kategori', verifyToken, (req, res) => {
+  const { jenis } = req.query; // Filter by jenis: 'pemasukan' or 'pengeluaran'
+
+  let query = 'SELECT id, jenis, nama, urutan, created_at, updated_at FROM sub_kategori';
+  const params = [];
+
+  if (jenis) {
+    query += ' WHERE jenis = ?';
+    params.push(jenis);
+  }
+
+  query += ' ORDER BY jenis ASC, urutan ASC, nama ASC';
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error('Error loading sub kategori:', err);
+      return res.status(500).json({ message: 'Server error loading sub kategori', error: err.message });
+    }
+
+    res.json(results);
+  });
+});
+
+// Create new sub kategori
+app.post('/api/sub-kategori', verifyToken, (req, res) => {
+  const { jenis, nama, urutan } = req.body;
+
+  // Validation
+  if (!jenis || !nama) {
+    return res.status(400).json({ message: 'Jenis dan nama sub kategori wajib diisi' });
+  }
+
+  if (!['pemasukan', 'pengeluaran'].includes(jenis)) {
+    return res.status(400).json({ message: 'Jenis harus pemasukan atau pengeluaran' });
+  }
+
+  const insertQuery = `
+    INSERT INTO sub_kategori (jenis, nama, urutan)
+    VALUES (?, ?, ?)
+  `;
+
+  db.query(insertQuery, [jenis, nama, urutan || 0], (err, result) => {
+    if (err) {
+      console.error('Error creating sub kategori:', err);
+      return res.status(500).json({ message: 'Server error creating sub kategori', error: err.message });
+    }
+
+    res.status(201).json({
+      message: 'Sub kategori berhasil ditambahkan',
+      id: result.insertId
+    });
+  });
+});
+
+// Update sub kategori
+app.put('/api/sub-kategori/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+  const { jenis, nama, urutan } = req.body;
+
+  // Validation
+  if (!jenis || !nama) {
+    return res.status(400).json({ message: 'Jenis dan nama sub kategori wajib diisi' });
+  }
+
+  if (!['pemasukan', 'pengeluaran'].includes(jenis)) {
+    return res.status(400).json({ message: 'Jenis harus pemasukan atau pengeluaran' });
+  }
+
+  const updateQuery = `
+    UPDATE sub_kategori
+    SET jenis = ?, nama = ?, urutan = ?
+    WHERE id = ?
+  `;
+
+  db.query(updateQuery, [jenis, nama, urutan || 0, id], (err, result) => {
+    if (err) {
+      console.error('Error updating sub kategori:', err);
+      return res.status(500).json({ message: 'Server error updating sub kategori', error: err.message });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Sub kategori tidak ditemukan' });
+    }
+
+    res.json({ message: 'Sub kategori berhasil diupdate' });
+  });
+});
+
+// Delete sub kategori
+app.delete('/api/sub-kategori/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  // Check if sub kategori is being used in kas_kecil or arus_kas
+  const checkUsageQuery = `
+    SELECT
+      (SELECT COUNT(*) FROM kas_kecil WHERE sub_kategori_id = ?) as kas_kecil_count,
+      (SELECT COUNT(*) FROM arus_kas WHERE sub_kategori_id = ?) as arus_kas_count
+  `;
+
+  db.query(checkUsageQuery, [id, id], (err, result) => {
+    if (err) {
+      console.error('Error checking sub kategori usage:', err);
+      return res.status(500).json({ message: 'Server error checking usage', error: err.message });
+    }
+
+    const kasKecilCount = result[0].kas_kecil_count;
+    const arusKasCount = result[0].arus_kas_count;
+    const totalUsage = kasKecilCount + arusKasCount;
+
+    if (totalUsage > 0) {
+      return res.status(400).json({
+        message: `Sub kategori tidak dapat dihapus karena masih digunakan di ${kasKecilCount} transaksi Kas Kecil dan ${arusKasCount} transaksi Arus Kas`,
+        usage: { kas_kecil: kasKecilCount, arus_kas: arusKasCount }
+      });
+    }
+
+    // Safe to delete
+    const deleteQuery = 'DELETE FROM sub_kategori WHERE id = ?';
+
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) {
+        console.error('Error deleting sub kategori:', err);
+        return res.status(500).json({ message: 'Server error deleting sub kategori', error: err.message });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Sub kategori tidak ditemukan' });
+      }
+
+      res.json({ message: 'Sub kategori berhasil dihapus' });
     });
   });
 });
