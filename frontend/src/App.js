@@ -6,6 +6,7 @@ import {
 import {
   authService,
   kasKecilService,
+  arusKasService,
   penjualanService,
   dashboardService,
   userService,
@@ -266,7 +267,27 @@ const SumberJayaApp = () => {
   });
   const [showEditKasKecilModal, setShowEditKasKecilModal] = useState(false);
   const [editingKasKecil, setEditingKasKecil] = useState(null);
-  
+
+  // Arus Kas State (Manual Cash Flow - Cash & Cashless)
+  const [arusKasData, setArusKasData] = useState([]);
+  const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
+  const [filterArusKas, setFilterArusKas] = useState({
+    pt: '',
+    tanggal_dari: '',
+    tanggal_sampai: ''
+  });
+  const [formArusKas, setFormArusKas] = useState({
+    tanggal: getLocalDateString(),
+    pt: '',
+    jenis: 'keluar',
+    jumlah: '',
+    keterangan: '',
+    kategori: '',
+    metodeBayar: 'cashless'
+  });
+  const [showEditArusKasModal, setShowEditArusKasModal] = useState(false);
+  const [editingArusKas, setEditingArusKas] = useState(null);
+
   // Load Users from API
   const loadUsers = async () => {
     if (!isLoggedIn) return;
@@ -322,7 +343,7 @@ const SumberJayaApp = () => {
   // Load Penjualan Data from API
   const loadPenjualanData = async (filters = {}) => {
     if (!isLoggedIn) return;
-    
+
     try {
       const data = await penjualanService.getAll(filters);
       setPenjualanData(data);
@@ -331,10 +352,38 @@ const SumberJayaApp = () => {
     }
   };
 
+  // Load Arus Kas Data from API (Manual Cash Flow - No Approval)
+  const loadArusKasData = async (filters = {}) => {
+    if (!isLoggedIn) return;
+
+    setIsLoadingArusKas(true);
+    try {
+      const data = await arusKasService.getAll(filters);
+
+      console.log('DEBUG Load Arus Kas Data:', {
+        dataCount: data.length,
+        sampleData: data.slice(0, 2).map(item => ({
+          id: item.id,
+          tanggal: item.tanggal,
+          pt: item.pt,
+          kategori: item.kategori,
+          metode_bayar: item.metode_bayar
+        }))
+      });
+
+      setArusKasData(data);
+    } catch (error) {
+      console.error('Error loading arus kas:', error);
+    } finally {
+      setIsLoadingArusKas(false);
+    }
+  };
+
   // Load data when logged in
   useEffect(() => {
     if (isLoggedIn) {
       loadKasKecilData();
+      loadArusKasData();
       loadPenjualanData();
       loadUsers();
     }
@@ -1491,6 +1540,370 @@ const SumberJayaApp = () => {
     }
   };
 
+  // ==================== ARUS KAS HANDLERS ====================
+
+  // Handler Save Arus Kas (No Approval)
+  const handleSaveArusKas = async () => {
+    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.kategori) {
+      alert('Mohon lengkapi semua field!');
+      return;
+    }
+
+    setIsLoadingArusKas(true);
+
+    try {
+      const arusKasData = {
+        tanggal: formArusKas.tanggal,
+        pt: formArusKas.pt,
+        jenis: formArusKas.jenis,
+        jumlah: parseFloat(formArusKas.jumlah),
+        keterangan: formArusKas.keterangan,
+        kategori: formArusKas.kategori,
+        metodeBayar: formArusKas.metodeBayar || 'cashless'
+      };
+
+      console.log('DEBUG Save Arus Kas:', arusKasData);
+
+      await arusKasService.create(arusKasData);
+
+      // Refresh data with current filters
+      await loadArusKasData(filterArusKas);
+
+      // Reset form
+      setFormArusKas({
+        tanggal: getLocalDateString(),
+        pt: '',
+        jenis: 'keluar',
+        jumlah: '',
+        keterangan: '',
+        kategori: '',
+        metodeBayar: 'cashless'
+      });
+
+      alert('Data arus kas berhasil disimpan!');
+    } catch (error) {
+      console.error('Error saving arus kas:', error);
+      alert('Gagal menyimpan data arus kas: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoadingArusKas(false);
+    }
+  };
+
+  // Handler Delete Arus Kas (No Date Restriction)
+  const handleDeleteArusKas = async (arusKasId, keterangan) => {
+    if (!window.confirm(`Yakin ingin menghapus transaksi "${keterangan}"?`)) return;
+
+    setIsLoadingArusKas(true);
+
+    try {
+      await arusKasService.delete(arusKasId);
+      await loadArusKasData(filterArusKas);
+      alert('Data arus kas berhasil dihapus!');
+    } catch (error) {
+      console.error('Error deleting arus kas:', error);
+      alert('Gagal menghapus data arus kas: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoadingArusKas(false);
+    }
+  };
+
+  // Handler Update Arus Kas (No Date Restriction)
+  const handleUpdateArusKas = async () => {
+    if (!editingArusKas) return;
+
+    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.kategori) {
+      alert('Mohon lengkapi semua field!');
+      return;
+    }
+
+    setIsLoadingArusKas(true);
+
+    try {
+      const arusKasData = {
+        tanggal: formArusKas.tanggal,
+        pt: formArusKas.pt,
+        jenis: formArusKas.jenis,
+        jumlah: parseFloat(formArusKas.jumlah),
+        keterangan: formArusKas.keterangan,
+        kategori: formArusKas.kategori,
+        metodeBayar: formArusKas.metodeBayar || 'cashless'
+      };
+
+      await arusKasService.update(editingArusKas.id, arusKasData);
+
+      // Refresh data
+      await loadArusKasData(filterArusKas);
+
+      // Close modal and reset
+      setShowEditArusKasModal(false);
+      setEditingArusKas(null);
+      setFormArusKas({
+        tanggal: getLocalDateString(),
+        pt: '',
+        jenis: 'keluar',
+        jumlah: '',
+        keterangan: '',
+        kategori: '',
+        metodeBayar: 'cashless'
+      });
+
+      alert('Data arus kas berhasil diupdate!');
+    } catch (error) {
+      console.error('Error updating arus kas:', error);
+      alert('Gagal mengupdate data arus kas: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoadingArusKas(false);
+    }
+  };
+
+  // Get Filtered Arus Kas Data
+  const getFilteredArusKasData = () => {
+    return arusKasData.filter(item => {
+      const matchesPT = !filterArusKas.pt || item.pt === filterArusKas.pt;
+      const matchesFromDate = !filterArusKas.tanggal_dari || getLocalDateFromISO(item.tanggal) >= filterArusKas.tanggal_dari;
+      const matchesToDate = !filterArusKas.tanggal_sampai || getLocalDateFromISO(item.tanggal) <= filterArusKas.tanggal_sampai;
+
+      return matchesPT && matchesFromDate && matchesToDate;
+    });
+  };
+
+  // Print Arus Kas with Category Grouping
+  const handlePrintArusKas = () => {
+    const displayData = getFilteredArusKasData();
+
+    if (!displayData || displayData.length === 0) {
+      alert('Tidak ada data untuk dicetak. Mohon gunakan filter terlebih dahulu.');
+      return;
+    }
+
+    // Get PT name
+    const ptCode = filterArusKas.pt || (displayData.length > 0 ? displayData[0].pt : 'Semua PT');
+    const pt = ptList?.find(p => p.code === ptCode);
+    const ptName = pt ? pt.name : ptCode;
+
+    // Get date range
+    const dateRange = filterArusKas.tanggal_dari || filterArusKas.tanggal_sampai
+      ? `${filterArusKas.tanggal_dari || 'Awal'} s/d ${filterArusKas.tanggal_sampai || 'Akhir'}`
+      : 'Semua Periode';
+
+    // Group data by kategori and jenis
+    const groupByKategori = (data, jenis) => {
+      const grouped = {};
+      data.filter(item => item.jenis === jenis).forEach(item => {
+        const kategori = item.kategori || 'LAINNYA';
+        if (!grouped[kategori]) {
+          grouped[kategori] = [];
+        }
+        grouped[kategori].push(item);
+      });
+      return grouped;
+    };
+
+    const pemasukanByKategori = groupByKategori(displayData, 'masuk');
+    const pengeluaranByKategori = groupByKategori(displayData, 'keluar');
+
+    const totalPemasukan = displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const totalPengeluaran = displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const hasilAkhir = totalPemasukan - totalPengeluaran;
+
+    try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('Gagal membuka window baru. Mohon izinkan popup di browser Anda.');
+        return;
+      }
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>LAPORAN ARUS KAS - ${ptName}</title>
+            <meta charset="UTF-8">
+            <style>
+              @page { size: A4; margin: 15mm; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: 'Segoe UI', Arial, sans-serif;
+                padding: 20px;
+                color: #1a1a1a;
+                line-height: 1.5;
+              }
+              .report-header {
+                text-align: center;
+                margin-bottom: 25px;
+                padding: 20px;
+                border-bottom: 2px solid #667eea;
+              }
+              .report-title {
+                font-size: 24px;
+                font-weight: 700;
+                letter-spacing: 2px;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+              }
+              .report-subtitle {
+                font-size: 14px;
+                margin: 5px 0;
+                font-weight: 600;
+              }
+              .report-period {
+                font-size: 12px;
+                color: #666;
+                margin-top: 8px;
+              }
+
+              .section {
+                margin: 20px 0;
+                page-break-inside: avoid;
+              }
+              .section-title {
+                font-size: 16px;
+                font-weight: 700;
+                margin: 15px 0 10px 0;
+                padding: 10px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 5px;
+              }
+              .kategori-group {
+                margin: 10px 0;
+                border-left: 3px solid #667eea;
+                padding-left: 10px;
+              }
+              .kategori-title {
+                font-size: 14px;
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: #667eea;
+              }
+              .transaction-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 0;
+                border-bottom: 1px solid #eee;
+                font-size: 12px;
+              }
+              .transaction-desc {
+                flex: 1;
+                color: #444;
+              }
+              .transaction-amount {
+                font-weight: 600;
+                color: #2d3748;
+                min-width: 120px;
+                text-align: right;
+              }
+
+              .total-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 12px;
+                margin: 10px 0;
+                background: #f7fafc;
+                border-left: 4px solid #667eea;
+                font-weight: 700;
+                font-size: 14px;
+              }
+              .total-pemasukan { border-left-color: #48bb78; background: #f0fff4; color: #22543d; }
+              .total-pengeluaran { border-left-color: #f56565; background: #fff5f5; color: #742a2a; }
+              .total-hasil { border-left-color: #4299e1; background: #ebf8ff; color: #2c5282; font-size: 16px; }
+
+              .footer {
+                margin-top: 40px;
+                text-align: right;
+                font-size: 11px;
+                color: #999;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="report-header">
+              <div class="report-title">LAPORAN ARUS KAS</div>
+              <div class="report-subtitle">${ptName}</div>
+              <div class="report-period">Periode: ${dateRange}</div>
+            </div>
+
+            <!-- PEMASUKAN SECTION -->
+            <div class="section">
+              <div class="section-title">PEMASUKAN</div>
+              ${Object.keys(pemasukanByKategori).map(kategori => `
+                <div class="kategori-group">
+                  <div class="kategori-title">${kategori}</div>
+                  ${pemasukanByKategori[kategori].map(item => `
+                    <div class="transaction-item">
+                      <div class="transaction-desc">
+                        ${new Date(item.tanggal).toLocaleDateString('id-ID')} - ${item.keterangan}
+                        ${item.metode_bayar ? `<span style="color:#666; font-size:10px;"> (${item.metode_bayar})</span>` : ''}
+                      </div>
+                      <div class="transaction-amount">Rp ${(item.jumlah || 0).toLocaleString('id-ID')}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              `).join('')}
+              ${Object.keys(pemasukanByKategori).length === 0 ? '<div style="padding:10px;color:#999;">Tidak ada pemasukan</div>' : ''}
+              <div class="total-row total-pemasukan">
+                <span>TOTAL PEMASUKAN</span>
+                <span>Rp ${totalPemasukan.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+
+            <!-- PENGELUARAN SECTION -->
+            <div class="section">
+              <div class="section-title">PENGELUARAN</div>
+              ${Object.keys(pengeluaranByKategori).map(kategori => `
+                <div class="kategori-group">
+                  <div class="kategori-title">${kategori}</div>
+                  ${pengeluaranByKategori[kategori].map(item => `
+                    <div class="transaction-item">
+                      <div class="transaction-desc">
+                        ${new Date(item.tanggal).toLocaleDateString('id-ID')} - ${item.keterangan}
+                        ${item.metode_bayar ? `<span style="color:#666; font-size:10px;"> (${item.metode_bayar})</span>` : ''}
+                      </div>
+                      <div class="transaction-amount">Rp ${(item.jumlah || 0).toLocaleString('id-ID')}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              `).join('')}
+              ${Object.keys(pengeluaranByKategori).length === 0 ? '<div style="padding:10px;color:#999;">Tidak ada pengeluaran</div>' : ''}
+              <div class="total-row total-pengeluaran">
+                <span>TOTAL PENGELUARAN</span>
+                <span>Rp ${totalPengeluaran.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+
+            <!-- HASIL AKHIR -->
+            <div class="total-row total-hasil">
+              <span>HASIL AKHIR</span>
+              <span>Rp ${hasilAkhir.toLocaleString('id-ID')}</span>
+            </div>
+
+            <div class="footer">
+              Dicetak pada: ${new Date().toLocaleString('id-ID')}<br>
+              Sumber Jaya Grup
+            </div>
+
+            <script>
+              window.onload = () => {
+                setTimeout(() => {
+                  window.print();
+                  setTimeout(() => window.close(), 500);
+                }, 500);
+              };
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch (error) {
+      console.error('Error creating print window:', error);
+      alert('Gagal membuat window print: ' + error.message);
+    }
+  };
+
+  // ==================== DATA LISTS ====================
+
   const ptList = [
     { code: 'KSS', name: 'PT KHALISA SALMA SEJAHTERA' },
     { code: 'SJE', name: 'PT SUMBER JAYA ELPIJI' },
@@ -1518,6 +1931,7 @@ const SumberJayaApp = () => {
   const mainMenuItems = [
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'kas-kecil', label: 'Kas Kecil', icon: DollarSign },
+    { id: 'arus-kas', label: 'Arus Kas', icon: TrendingUp },
     { id: 'detail-kas', label: 'Detail Kas', icon: AlertCircle },
     { id: 'penjualan', label: 'Penjualan', icon: ShoppingCart },
     { id: 'laporan', label: 'Laporan', icon: BarChart3 },
@@ -3637,10 +4051,464 @@ const SumberJayaApp = () => {
     );
   };
 
+  // ==================== RENDER ARUS KAS ====================
+  const renderArusKas = () => {
+    // Calculate totals from filtered data
+    const displayData = getFilteredArusKasData();
+    const masuk = displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const keluar = displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const saldo = masuk - keluar;
+
+    return (
+      <div id="arus-kas-content" className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Arus Kas</h2>
+            <p className="text-sm text-gray-600">Pencatatan manual arus kas (Cash & Cashless) - Tanpa Approval</p>
+          </div>
+        </div>
+
+        {/* Input Form */}
+        <div className="bg-white rounded-lg p-6 shadow-md no-print">
+          <h3 className="text-lg font-bold mb-4">Input Transaksi Arus Kas</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal *</label>
+              <input
+                type="date"
+                value={formArusKas.tanggal}
+                onChange={(e) => setFormArusKas({...formArusKas, tanggal: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">PT *</label>
+              <select
+                value={formArusKas.pt}
+                onChange={(e) => setFormArusKas({...formArusKas, pt: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="">Pilih PT</option>
+                {currentUserData?.accessPT?.map(code => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Jenis *</label>
+              <select
+                value={formArusKas.jenis}
+                onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="keluar">Pengeluaran</option>
+                <option value="masuk">Pemasukan</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Metode Bayar *</label>
+              <select
+                value={formArusKas.metodeBayar}
+                onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="cashless">Cashless (Transfer/Non-Tunai)</option>
+                <option value="cash">Cash (Tunai)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
+              <input
+                type="number"
+                value={formArusKas.jumlah}
+                onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
+                placeholder="0"
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Kategori *</label>
+              <select
+                value={formArusKas.kategori}
+                onChange={(e) => setFormArusKas({...formArusKas, kategori: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+                required
+              >
+                <option value="">Pilih Kategori</option>
+                {kategoriPengeluaran.map(kategori => (
+                  <option key={kategori} value={kategori}>{kategori}</option>
+                ))}
+                <option value="PEMASUKAN LAIN">PEMASUKAN LAIN</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Keterangan *</label>
+              <textarea
+                value={formArusKas.keterangan}
+                onChange={(e) => setFormArusKas({...formArusKas, keterangan: e.target.value})}
+                placeholder="Masukkan keterangan transaksi"
+                className="w-full px-4 py-2 border rounded-lg"
+                rows={2}
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <button
+              onClick={handleSaveArusKas}
+              disabled={isLoadingArusKas}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            >
+              {isLoadingArusKas ? 'Menyimpan...' : 'Simpan Transaksi'}
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Section */}
+        <div className="bg-white rounded-lg shadow-sm border p-6 no-print">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Filter Data</h3>
+            <button
+              onClick={handlePrintArusKas}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Print Laporan
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">PT</label>
+              <select
+                value={filterArusKas.pt}
+                onChange={(e) => {
+                  const newFilter = {...filterArusKas, pt: e.target.value};
+                  setFilterArusKas(newFilter);
+                  loadArusKasData(newFilter);
+                }}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="">Semua PT</option>
+                {currentUserData?.accessPT?.map(code => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal Dari</label>
+              <input
+                type="date"
+                value={filterArusKas.tanggal_dari}
+                onChange={(e) => {
+                  const newFilter = {...filterArusKas, tanggal_dari: e.target.value};
+                  setFilterArusKas(newFilter);
+                  loadArusKasData(newFilter);
+                }}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Tanggal Sampai</label>
+              <input
+                type="date"
+                value={filterArusKas.tanggal_sampai}
+                onChange={(e) => {
+                  const newFilter = {...filterArusKas, tanggal_sampai: e.target.value};
+                  setFilterArusKas(newFilter);
+                  loadArusKasData(newFilter);
+                }}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Pemasukan</p>
+                <p className="text-2xl font-bold text-green-600">Rp {masuk.toLocaleString('id-ID')}</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Pengeluaran</p>
+                <p className="text-2xl font-bold text-red-600">Rp {keluar.toLocaleString('id-ID')}</p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <TrendingDown className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Hasil Akhir</p>
+                <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                  Rp {saldo.toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div className={`p-3 rounded-full ${saldo >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
+                <DollarSign className={`w-6 h-6 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Transaction Table */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-4 border-b">
+            <h3 className="text-lg font-semibold">Riwayat Transaksi Arus Kas</h3>
+            <p className="text-sm text-gray-600">{displayData.length} transaksi ditampilkan</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PT</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Metode</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Keluar</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase no-print">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {displayData.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.metode_bayar === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {item.jenis === 'masuk' ? (
+                        <span className="text-green-600 font-medium">
+                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      {item.jenis === 'keluar' ? (
+                        <span className="text-red-600 font-medium">
+                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center no-print">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingArusKas(item);
+                            setFormArusKas({
+                              tanggal: getLocalDateFromISO(item.tanggal),
+                              pt: item.pt,
+                              jenis: item.jenis,
+                              jumlah: item.jumlah.toString(),
+                              keterangan: item.keterangan,
+                              kategori: item.kategori || '',
+                              metodeBayar: item.metode_bayar
+                            });
+                            setShowEditArusKasModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          title="Edit"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteArusKas(item.id, item.keterangan)}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          title="Hapus"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {displayData.length === 0 && (
+                  <tr>
+                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                      Tidak ada data transaksi
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Edit Modal */}
+        {showEditArusKasModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold">Edit Transaksi Arus Kas</h3>
+                  <button
+                    onClick={() => {
+                      setShowEditArusKasModal(false);
+                      setEditingArusKas(null);
+                      setFormArusKas({
+                        tanggal: getLocalDateString(),
+                        pt: '',
+                        jenis: 'keluar',
+                        jumlah: '',
+                        keterangan: '',
+                        kategori: '',
+                        metodeBayar: 'cashless'
+                      });
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tanggal *</label>
+                    <input
+                      type="date"
+                      value={formArusKas.tanggal}
+                      onChange={(e) => setFormArusKas({...formArusKas, tanggal: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">PT *</label>
+                    <select
+                      value={formArusKas.pt}
+                      onChange={(e) => setFormArusKas({...formArusKas, pt: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="">Pilih PT</option>
+                      {currentUserData?.accessPT?.map(code => (
+                        <option key={code} value={code}>{code}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jenis *</label>
+                    <select
+                      value={formArusKas.jenis}
+                      onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="keluar">Pengeluaran</option>
+                      <option value="masuk">Pemasukan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Metode Bayar *</label>
+                    <select
+                      value={formArusKas.metodeBayar}
+                      onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="cashless">Cashless</option>
+                      <option value="cash">Cash</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
+                    <input
+                      type="number"
+                      value={formArusKas.jumlah}
+                      onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
+                      placeholder="0"
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Kategori *</label>
+                    <select
+                      value={formArusKas.kategori}
+                      onChange={(e) => setFormArusKas({...formArusKas, kategori: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="">Pilih Kategori</option>
+                      {kategoriPengeluaran.map(kategori => (
+                        <option key={kategori} value={kategori}>{kategori}</option>
+                      ))}
+                      <option value="PEMASUKAN LAIN">PEMASUKAN LAIN</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-2">Keterangan *</label>
+                    <textarea
+                      value={formArusKas.keterangan}
+                      onChange={(e) => setFormArusKas({...formArusKas, keterangan: e.target.value})}
+                      placeholder="Masukkan keterangan transaksi"
+                      className="w-full px-4 py-2 border rounded-lg"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                  <button
+                    onClick={handleUpdateArusKas}
+                    disabled={isLoadingArusKas}
+                    className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {isLoadingArusKas ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowEditArusKasModal(false);
+                      setEditingArusKas(null);
+                      setFormArusKas({
+                        tanggal: getLocalDateString(),
+                        pt: '',
+                        jenis: 'keluar',
+                        jumlah: '',
+                        keterangan: '',
+                        kategori: '',
+                        metodeBayar: 'cashless'
+                      });
+                    }}
+                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeMenu) {
       case 'beranda': return renderBeranda();
       case 'kas-kecil': return renderKasKecil();
+      case 'arus-kas': return renderArusKas();
       case 'detail-kas': return renderDetailKas();
       case 'penjualan': return renderPenjualan();
       case 'laporan': return renderLaporan();

@@ -135,6 +135,7 @@ db.getConnection((err, connection) => {
         (1, 'dashboard'),
         (1, 'beranda'),
         (1, 'kas-kecil'),
+        (1, 'arus-kas'),
         (1, 'detail-kas'),
         (1, 'penjualan'),
         (1, 'laporan'),
@@ -191,7 +192,34 @@ db.getConnection((err, connection) => {
       console.log('✅ Kategori column already exists in kas_kecil table');
     }
   });
-  
+
+  // Auto-migration: Create arus_kas table if not exists
+  const createArusKasTable = `
+    CREATE TABLE IF NOT EXISTS arus_kas (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tanggal DATE NOT NULL,
+      pt_code VARCHAR(10) NOT NULL,
+      jenis ENUM('masuk', 'keluar') NOT NULL,
+      jumlah DECIMAL(15,2) NOT NULL,
+      keterangan TEXT,
+      kategori VARCHAR(100),
+      metode_bayar ENUM('cash', 'cashless') DEFAULT 'cashless',
+      created_by INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (pt_code) REFERENCES pt_list(code)
+    )
+  `;
+
+  db.query(createArusKasTable, (err) => {
+    if (err) {
+      console.error('⚠️ Error creating arus_kas table:', err.message);
+    } else {
+      console.log('✅ Arus Kas table ready');
+    }
+  });
+
   console.log('✅ Database tables initialized');
 });
 
@@ -775,6 +803,206 @@ app.get('/api/kas-kecil/saldo', verifyToken, (req, res) => {
     const saldo = masuk - keluar;
     
     res.json({ masuk, keluar, saldo });
+  });
+});
+
+
+// ==================== ARUS KAS ROUTES ====================
+
+// Get Arus Kas (Manual Cash Flow - No Approval)
+app.get('/api/arus-kas', verifyToken, (req, res) => {
+  const { pt, tanggal_dari, tanggal_sampai } = req.query;
+
+  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, kategori, metode_bayar, created_by, created_at, updated_at FROM arus_kas WHERE 1=1';
+  let params = [];
+
+  if (pt) {
+    query += ' AND pt_code = ?';
+    params.push(pt);
+  }
+
+  if (tanggal_dari) {
+    query += ' AND tanggal >= ?';
+    params.push(tanggal_dari);
+  }
+
+  if (tanggal_sampai) {
+    query += ' AND tanggal <= ?';
+    params.push(tanggal_sampai);
+  }
+
+  query += ' ORDER BY tanggal DESC, id DESC';
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+
+    // Convert jumlah string to number for correct calculations
+    const formattedResults = results.map(item => ({
+      ...item,
+      jumlah: parseFloat(item.jumlah)
+    }));
+
+    console.log('DEBUG Backend Arus Kas Load:', {
+      resultCount: formattedResults.length,
+      sampleData: formattedResults.slice(0, 2).map(item => ({
+        id: item.id,
+        tanggal: item.tanggal,
+        pt: item.pt,
+        kategori: item.kategori,
+        metode_bayar: item.metode_bayar
+      }))
+    });
+
+    res.json(formattedResults);
+  });
+});
+
+// Create Arus Kas (No Approval Needed)
+app.post('/api/arus-kas', verifyToken, (req, res) => {
+  const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
+
+  console.log('DEBUG Backend Arus Kas Save:', {
+    tanggal: tanggal,
+    pt: pt,
+    jenis: jenis,
+    kategori: kategori,
+    metodeBayar: metodeBayar
+  });
+
+  // Force tanggal to be treated as local date (no timezone conversion)
+  const localTanggal = processTanggal(tanggal);
+
+  const query = 'INSERT INTO arus_kas (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+
+  db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', req.userId], (err, result) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+
+    res.status(201).json({
+      message: 'Arus kas berhasil ditambahkan',
+      id: result.insertId
+    });
+  });
+});
+
+// Update Arus Kas (No Date Restriction - Can Edit Anytime)
+app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+  const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
+
+  // Step 1: Get existing arus kas data to check ownership
+  const getQuery = 'SELECT created_by FROM arus_kas WHERE id = ?';
+
+  db.query(getQuery, [id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Data arus kas tidak ditemukan' });
+    }
+
+    const arusKasData = results[0];
+
+    // Step 2: Validasi - only Master User or creator can edit
+    if (arusKasData.created_by !== req.userId) {
+      // Check if user is Master User
+      const checkUserQuery = 'SELECT role FROM users WHERE id = ?';
+      db.query(checkUserQuery, [req.userId], (err, userResults) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+
+        if (userResults.length === 0 || userResults[0].role !== 'Master User') {
+          return res.status(403).json({ message: 'Anda tidak memiliki akses untuk mengedit transaksi ini' });
+        }
+
+        // Master User can edit
+        updateTransaction();
+      });
+    } else {
+      // Creator can edit
+      updateTransaction();
+    }
+
+    function updateTransaction() {
+      // Force tanggal to be treated as local date (no timezone conversion)
+      const localTanggal = processTanggal(tanggal);
+
+      const updateQuery = `
+        UPDATE arus_kas
+        SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, metode_bayar = ?
+        WHERE id = ?
+      `;
+
+      db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', id], (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+
+        res.json({
+          message: 'Data arus kas berhasil diupdate'
+        });
+      });
+    }
+  });
+});
+
+// Delete Arus Kas (No Date Restriction - Can Delete Anytime)
+app.delete('/api/arus-kas/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  // Step 1: Get existing arus kas data to check ownership
+  const getQuery = 'SELECT created_by FROM arus_kas WHERE id = ?';
+
+  db.query(getQuery, [id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Data arus kas tidak ditemukan' });
+    }
+
+    const arusKasData = results[0];
+
+    // Step 2: Validasi - only Master User or creator can delete
+    if (arusKasData.created_by !== req.userId) {
+      // Check if user is Master User
+      const checkUserQuery = 'SELECT role FROM users WHERE id = ?';
+      db.query(checkUserQuery, [req.userId], (err, userResults) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+
+        if (userResults.length === 0 || userResults[0].role !== 'Master User') {
+          return res.status(403).json({ message: 'Anda tidak memiliki akses untuk menghapus transaksi ini' });
+        }
+
+        // Master User can delete
+        deleteTransaction();
+      });
+    } else {
+      // Creator can delete
+      deleteTransaction();
+    }
+
+    function deleteTransaction() {
+      const deleteQuery = 'DELETE FROM arus_kas WHERE id = ?';
+
+      db.query(deleteQuery, [id], (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+
+        res.json({
+          message: 'Data arus kas berhasil dihapus'
+        });
+      });
+    }
   });
 });
 

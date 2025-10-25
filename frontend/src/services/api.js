@@ -127,6 +127,30 @@ export const kasKecilService = {
   },
 };
 
+// ==================== ARUS KAS SERVICES ====================
+
+export const arusKasService = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/arus-kas', { params });
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/arus-kas', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/arus-kas/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/arus-kas/${id}`);
+    return response.data;
+  },
+};
+
 // ==================== PENJUALAN SERVICES ====================
 
 export const penjualanService = {
