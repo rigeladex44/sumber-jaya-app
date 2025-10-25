@@ -44,22 +44,6 @@ CREATE TABLE kas_kecil (
   FOREIGN KEY (approved_by) REFERENCES users(id)
 );
 
--- Tabel: arus_kas (Cash + Cashless - Comprehensive Cash Flow)
-CREATE TABLE arus_kas (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  tanggal DATE NOT NULL,
-  pt_code VARCHAR(10) NOT NULL,
-  jenis ENUM('masuk', 'keluar') NOT NULL,
-  jumlah DECIMAL(15, 2) NOT NULL,
-  keterangan TEXT NOT NULL,
-  kategori VARCHAR(100) NOT NULL,
-  metode_bayar VARCHAR(20) DEFAULT 'cashless',
-  created_by INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (created_by) REFERENCES users(id)
-);
-
 -- Tabel: penjualan
 CREATE TABLE penjualan (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -121,12 +105,6 @@ INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, status, crea
 ('2025-10-10', 'KSS', 'masuk', 3500000, 'Penjualan Tunai Pangkalan Sejahtera', 'approved', 1, 1),
 ('2025-10-10', 'KSS', 'keluar', 150000, 'Pembelian ATK Tunai', 'approved', 1, 1);
 
--- Insert Data Arus Kas Contoh (Cashless Transactions)
-INSERT INTO arus_kas (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, created_by) VALUES
-('2025-10-11', 'SJE', 'keluar', 250000, 'Pembelian ATK Kantor Transfer', 'BIAYA OPERASIONAL', 'cashless', 1),
-('2025-10-11', 'KSS', 'keluar', 3000000, 'Gaji Staff Bulanan', 'BEBAN GAJI', 'cashless', 1),
-('2025-10-10', 'SJE', 'keluar', 500000, 'Biaya Transportasi', 'BIAYA TRANSPORTASI', 'cashless', 1);
-
 -- Insert Data Penjualan Contoh
 INSERT INTO penjualan (tanggal, pt_code, pangkalan, qty, harga, total, ppn, ppn_percent, metode_bayar, created_by) VALUES
 ('2025-10-11', 'SJE', 'Pangkalan Jaya', 300, 16000, 4800000, 528000, 11, 'cash', 1),
@@ -137,9 +115,5 @@ INSERT INTO penjualan (tanggal, pt_code, pangkalan, qty, harga, total, ppn, ppn_
 CREATE INDEX idx_kas_tanggal ON kas_kecil(tanggal);
 CREATE INDEX idx_kas_pt ON kas_kecil(pt_code);
 CREATE INDEX idx_kas_status ON kas_kecil(status);
-CREATE INDEX idx_arus_kas_tanggal ON arus_kas(tanggal);
-CREATE INDEX idx_arus_kas_pt ON arus_kas(pt_code);
-CREATE INDEX idx_arus_kas_kategori ON arus_kas(kategori);
-CREATE INDEX idx_arus_kas_metode ON arus_kas(metode_bayar);
 CREATE INDEX idx_penjualan_tanggal ON penjualan(tanggal);
 CREATE INDEX idx_penjualan_pt ON penjualan(pt_code);
