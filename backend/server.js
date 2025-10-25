@@ -1087,6 +1087,81 @@ app.get('/api/debug/arus-kas', (req, res) => {
   });
 });
 
+// Auto-migration endpoint: Add updated_at column to arus_kas (NO AUTH - TEMPORARY)
+app.get('/api/migrate/add-updated-at', (req, res) => {
+  console.log('🔧 MIGRATION: Adding updated_at column to arus_kas...');
+
+  // First check if column already exists
+  const checkColumnQuery = `
+    SELECT COUNT(*) as columnExists
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+    AND table_name = 'arus_kas'
+    AND column_name = 'updated_at'
+  `;
+
+  db.query(checkColumnQuery, (err, checkResult) => {
+    if (err) {
+      console.error('❌ Error checking column:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to check column existence',
+        details: err.message
+      });
+    }
+
+    const columnExists = checkResult[0].columnExists > 0;
+
+    if (columnExists) {
+      console.log('✅ Column updated_at already exists');
+      return res.json({
+        success: true,
+        message: 'Column updated_at already exists',
+        alreadyExists: true
+      });
+    }
+
+    // Column doesn't exist, add it
+    const addColumnQuery = `
+      ALTER TABLE arus_kas
+      ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    `;
+
+    db.query(addColumnQuery, (err, result) => {
+      if (err) {
+        console.error('❌ Error adding column:', err);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to add column',
+          details: err.message
+        });
+      }
+
+      console.log('✅ Column updated_at added successfully');
+
+      // Verify the change
+      const verifyQuery = 'DESCRIBE arus_kas';
+      db.query(verifyQuery, (err, structure) => {
+        if (err) {
+          console.error('❌ Error verifying structure:', err);
+          return res.json({
+            success: true,
+            message: 'Column added but verification failed',
+            changes: 'Added column: updated_at'
+          });
+        }
+
+        res.json({
+          success: true,
+          message: 'Migration completed successfully',
+          changes: 'Added column: updated_at',
+          newStructure: structure
+        });
+      });
+    });
+  });
+});
+
 
 // ==================== PENJUALAN ROUTES ====================
 
