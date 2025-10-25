@@ -272,9 +272,8 @@ const SumberJayaApp = () => {
   const [arusKasData, setArusKasData] = useState([]);
   const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
   const [filterArusKas, setFilterArusKas] = useState({
-    pt: [],  // Changed to array for multi-select
-    tanggal_dari: '',
-    tanggal_sampai: ''
+    pt: [],  // Array for multi-select
+    tanggal: ''  // Single date for daily report
   });
   const [formArusKas, setFormArusKas] = useState({
     tanggal: getLocalDateString(),
@@ -1661,10 +1660,11 @@ const SumberJayaApp = () => {
     return arusKasData.filter(item => {
       // Multi-select PT filter (array-based)
       const matchesPT = !filterArusKas.pt || filterArusKas.pt.length === 0 || filterArusKas.pt.includes(item.pt);
-      const matchesFromDate = !filterArusKas.tanggal_dari || getLocalDateFromISO(item.tanggal) >= filterArusKas.tanggal_dari;
-      const matchesToDate = !filterArusKas.tanggal_sampai || getLocalDateFromISO(item.tanggal) <= filterArusKas.tanggal_sampai;
 
-      return matchesPT && matchesFromDate && matchesToDate;
+      // Daily date filter (exact match)
+      const matchesDate = !filterArusKas.tanggal || getLocalDateFromISO(item.tanggal) === filterArusKas.tanggal;
+
+      return matchesPT && matchesDate;
     });
   };
 
@@ -4305,36 +4305,65 @@ const SumberJayaApp = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* PT Filter - Multi Select */}
+          <div className="space-y-4">
+            {/* Date Filter - Single Date for Daily Report */}
             <div>
-              <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
-              <div className="flex flex-wrap gap-2">
-                {currentUserData?.accessPT?.map(ptCode => (
+              <label className="block text-sm font-medium mb-2">Filter Tanggal (Laporan Harian)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={filterArusKas.tanggal}
+                  onChange={(e) => setFilterArusKas({...filterArusKas, tanggal: e.target.value})}
+                  className="px-4 py-2 border rounded-lg"
+                />
+                {filterArusKas.tanggal && (
                   <button
-                    key={ptCode}
-                    onClick={() => handlePTChange(ptCode)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      filterArusKas.pt && filterArusKas.pt.includes(ptCode)
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
+                    onClick={() => setFilterArusKas({...filterArusKas, tanggal: ''})}
+                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
                   >
-                    {ptCode}
+                    Reset
                   </button>
-                ))}
+                )}
+                <p className="text-xs text-gray-500">
+                  {filterArusKas.tanggal
+                    ? `Menampilkan data tanggal: ${new Date(filterArusKas.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                    : 'Semua tanggal ditampilkan'
+                  }
+                </p>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {!filterArusKas.pt || filterArusKas.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterArusKas.pt.length} PT dipilih`}
-              </p>
             </div>
 
-            {/* Info Text */}
-            <div className="flex items-center">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full">
-                <p className="text-sm text-blue-800">
-                  <strong>Info:</strong> Arus Kas menampilkan transaksi tunai & non-tunai untuk laporan keuangan lengkap.
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* PT Filter - Multi Select */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
+                <div className="flex flex-wrap gap-2">
+                  {currentUserData?.accessPT?.map(ptCode => (
+                    <button
+                      key={ptCode}
+                      onClick={() => handlePTChange(ptCode)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        filterArusKas.pt && filterArusKas.pt.includes(ptCode)
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {ptCode}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {!filterArusKas.pt || filterArusKas.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterArusKas.pt.length} PT dipilih`}
                 </p>
+              </div>
+
+              {/* Info Text */}
+              <div className="flex items-center">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full">
+                  <p className="text-sm text-blue-800">
+                    <strong>Info:</strong> Arus Kas menampilkan transaksi tunai & non-tunai untuk laporan keuangan lengkap.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
