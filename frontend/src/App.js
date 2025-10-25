@@ -272,7 +272,7 @@ const SumberJayaApp = () => {
   const [arusKasData, setArusKasData] = useState([]);
   const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
   const [filterArusKas, setFilterArusKas] = useState({
-    pt: '',
+    pt: [],  // Changed to array for multi-select
     tanggal_dari: '',
     tanggal_sampai: ''
   });
@@ -1659,7 +1659,8 @@ const SumberJayaApp = () => {
   // Get Filtered Arus Kas Data
   const getFilteredArusKasData = () => {
     return arusKasData.filter(item => {
-      const matchesPT = !filterArusKas.pt || item.pt === filterArusKas.pt;
+      // Multi-select PT filter (array-based)
+      const matchesPT = !filterArusKas.pt || filterArusKas.pt.length === 0 || filterArusKas.pt.includes(item.pt);
       const matchesFromDate = !filterArusKas.tanggal_dari || getLocalDateFromISO(item.tanggal) >= filterArusKas.tanggal_dari;
       const matchesToDate = !filterArusKas.tanggal_sampai || getLocalDateFromISO(item.tanggal) <= filterArusKas.tanggal_sampai;
 
@@ -1667,73 +1668,113 @@ const SumberJayaApp = () => {
     });
   };
 
-  // Print Arus Kas with Category Grouping
+  // Print Arus Kas with Table Format (Like Kas Kecil)
   const handlePrintArusKas = () => {
+    console.log('🖨️ TOMBOL PRINT DIKLIK! Starting print process...');
+
+    // Get filtered data for PDF
     const displayData = getFilteredArusKasData();
 
+    console.log('DEBUG Print Arus Kas - FULL DETAILS:', {
+      totalArusKasData: arusKasData.length,
+      displayDataLength: displayData.length,
+      filterPT: filterArusKas.pt,
+      sampleData: displayData.slice(0, 3)
+    });
+
+    const tanggalOnly = new Date().toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    // Generate PT Names with separator
+    let ptNames = '';
+    if (filterArusKas.pt && filterArusKas.pt.length > 0) {
+      // Use PT codes directly if no ptList available
+      ptNames = filterArusKas.pt.map(code => {
+        const pt = ptList?.find(p => p.code === code);
+        return pt ? pt.name : code;
+      }).join(' - ');
+    } else {
+      ptNames = 'Semua PT';
+    }
+
+    // Check if data is empty
     if (!displayData || displayData.length === 0) {
-      alert('Tidak ada data untuk dicetak. Mohon gunakan filter terlebih dahulu.');
+      console.error('ERROR: No data to print!', {
+        arusKasData: arusKasData,
+        filterArusKas: filterArusKas
+      });
+      alert('Tidak ada data untuk dicetak. Total data: ' + arusKasData.length + ', Filter PT: ' + (filterArusKas.pt ? filterArusKas.pt.join(', ') : 'Semua'));
       return;
     }
 
-    // Get PT name
-    const ptCode = filterArusKas.pt || (displayData.length > 0 ? displayData[0].pt : 'Semua PT');
-    const pt = ptList?.find(p => p.code === ptCode);
-    const ptName = pt ? pt.name : ptCode;
+    // Calculate running balance
+    let runningBalance = 0;
+    const dataWithBalance = displayData.map((item, index) => {
+      if (item.jenis === 'masuk') {
+        runningBalance += item.jumlah || 0;
+      } else if (item.jenis === 'keluar') {
+        runningBalance -= item.jumlah || 0;
+      }
+      return {
+        ...item,
+        no: index + 1,
+        saldo: runningBalance
+      };
+    });
 
-    // Get date range
-    const dateRange = filterArusKas.tanggal_dari || filterArusKas.tanggal_sampai
-      ? `${filterArusKas.tanggal_dari || 'Awal'} s/d ${filterArusKas.tanggal_sampai || 'Akhir'}`
-      : 'Semua Periode';
+    // Calculate totals
+    const totalMasuk = displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const totalKeluar = displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const saldoAkhir = totalMasuk - totalKeluar;
 
-    // Group data by kategori and jenis
-    const groupByKategori = (data, jenis) => {
-      const grouped = {};
-      data.filter(item => item.jenis === jenis).forEach(item => {
-        const kategori = item.kategori || 'LAINNYA';
-        if (!grouped[kategori]) {
-          grouped[kategori] = [];
-        }
-        grouped[kategori].push(item);
-      });
-      return grouped;
-    };
-
-    const pemasukanByKategori = groupByKategori(displayData, 'masuk');
-    const pengeluaranByKategori = groupByKategori(displayData, 'keluar');
-
-    const totalPemasukan = displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const totalPengeluaran = displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const hasilAkhir = totalPemasukan - totalPengeluaran;
+    // DEBUG: Alert untuk konfirmasi data sebelum print
+    console.log('✅ PRINT START - Data Count:', displayData.length);
 
     try {
       const printWindow = window.open('', '_blank');
+
       if (!printWindow) {
         alert('Gagal membuka window baru. Mohon izinkan popup di browser Anda.');
         return;
       }
 
+      // Generate HTML content
       const htmlContent = `
         <!DOCTYPE html>
         <html>
           <head>
-            <title>LAPORAN ARUS KAS - ${ptName}</title>
+            <title>LAPORAN ARUS KAS - Sumber Jaya Grup</title>
             <meta charset="UTF-8">
             <style>
-              @page { size: A4; margin: 15mm; }
-              * { margin: 0; padding: 0; box-sizing: border-box; }
+              @page {
+                size: A4;
+                margin: 15mm;
+              }
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
               body {
-                font-family: 'Segoe UI', Arial, sans-serif;
+                font-family: 'Segoe UI', 'Arial', sans-serif;
                 padding: 20px;
                 color: #1a1a1a;
                 line-height: 1.5;
+                background: white;
               }
+
+              /* ========== HEADER SECTION ========== */
               .report-header {
                 text-align: center;
                 margin-bottom: 25px;
                 padding: 20px;
-                border-bottom: 2px solid #667eea;
+                border-radius: 12px;
+                color: black;
               }
+
               .report-title {
                 font-size: 24px;
                 font-weight: 700;
@@ -1742,163 +1783,237 @@ const SumberJayaApp = () => {
                 text-transform: uppercase;
               }
               .report-subtitle {
-                font-size: 14px;
-                margin: 5px 0;
-                font-weight: 600;
-              }
-              .report-period {
-                font-size: 12px;
-                color: #666;
-                margin-top: 8px;
+                font-size: 13px;
+                margin-bottom: 5px;
+                font-weight: 400;
+                opacity: 0.95;
               }
 
-              .section {
-                margin: 20px 0;
-                page-break-inside: avoid;
+              .report-company {
+                font-size: 11px;
+                margin-top: 4px;
+                opacity: 0.85;
+                font-style: italic;
               }
-              .section-title {
-                font-size: 16px;
-                font-weight: 700;
-                margin: 15px 0 10px 0;
-                padding: 10px;
+
+              /* ========== TABLE SECTION ========== */
+              .table-container {
+                margin: 20px 0;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+              }
+
+              thead {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: black;
+              }
+
+              th {
+                padding: 12px 8px;
+                text-align: left;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 10px;
+                letter-spacing: 0.5px;
+                border: none;
+              }
+
+              th.text-center { text-align: center; }
+              th.text-right { text-align: right; }
+
+              tbody tr:hover {
+                background-color: #f8f9fa;
+              }
+
+              tbody tr:nth-child(even) {
+                background-color: #fafbfc;
+              }
+
+              td {
+                padding: 10px 8px;
+                border: none;
+                color: #2d3748;
+              }
+
+              .text-right {
+                text-align: right;
+                font-family: 'Courier New', monospace;
+                font-weight: 500;
+              }
+
+              .text-center { text-align: center; }
+
+              /* ========== AMOUNT STYLING ========== */
+              .amount-positive {
+                color: #059669;
+                font-weight: 600;
+              }
+
+              .amount-negative {
+                color: #dc2626;
+                font-weight: 600;
+              }
+
+              /* ========== SIGNATURE SECTION ========== */
+              .signature-section {
+                margin-top: 50px;
+                display: flex;
+                justify-content: space-between;
+                gap: 20px;
+              }
+
+              .signature-box {
+                flex: 1;
+                text-align: center;
+                padding: 15px;
+                background: white;
+                border-radius: 8px;
+                border: 2px solid #e9ecef;
+              }
+
+              .signature-title {
+                font-weight: 600;
+                margin-bottom: 10px;
+                padding: 8px;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
-                border-radius: 5px;
-              }
-              .kategori-group {
-                margin: 10px 0;
-                border-left: 3px solid #667eea;
-                padding-left: 10px;
-              }
-              .kategori-title {
-                font-size: 14px;
-                font-weight: 600;
-                margin-bottom: 5px;
-                color: #667eea;
-              }
-              .transaction-item {
-                display: flex;
-                justify-content: space-between;
-                padding: 5px 0;
-                border-bottom: 1px solid #eee;
-                font-size: 12px;
-              }
-              .transaction-desc {
-                flex: 1;
-                color: #444;
-              }
-              .transaction-amount {
-                font-weight: 600;
-                color: #2d3748;
-                min-width: 120px;
-                text-align: right;
-              }
-
-              .total-row {
-                display: flex;
-                justify-content: space-between;
-                padding: 12px;
-                margin: 10px 0;
-                background: #f7fafc;
-                border-left: 4px solid #667eea;
-                font-weight: 700;
-                font-size: 14px;
-              }
-              .total-pemasukan { border-left-color: #48bb78; background: #f0fff4; color: #22543d; }
-              .total-pengeluaran { border-left-color: #f56565; background: #fff5f5; color: #742a2a; }
-              .total-hasil { border-left-color: #4299e1; background: #ebf8ff; color: #2c5282; font-size: 16px; }
-
-              .footer {
-                margin-top: 40px;
-                text-align: right;
+                border-radius: 6px;
                 font-size: 11px;
-                color: #999;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+
+              .signature-space {
+                height: 70px;
+                border: 2px dashed #cbd5e0;
+                margin: 15px 0;
+                border-radius: 6px;
+                background: white;
+              }
+
+              .signature-name {
+                font-weight: 600;
+                padding-top: 5px;
+                font-size: 11px;
+                color: #2d3748;
               }
             </style>
           </head>
           <body>
-            <div class="report-header">
-              <div class="report-title">LAPORAN ARUS KAS</div>
-              <div class="report-subtitle">${ptName}</div>
-              <div class="report-period">Periode: ${dateRange}</div>
-            </div>
 
-            <!-- PEMASUKAN SECTION -->
-            <div class="section">
-              <div class="section-title">PEMASUKAN</div>
-              ${Object.keys(pemasukanByKategori).map(kategori => `
-                <div class="kategori-group">
-                  <div class="kategori-title">${kategori}</div>
-                  ${pemasukanByKategori[kategori].map(item => `
-                    <div class="transaction-item">
-                      <div class="transaction-desc">
-                        ${new Date(item.tanggal).toLocaleDateString('id-ID')} - ${item.keterangan}
-                        ${item.metode_bayar ? `<span style="color:#666; font-size:10px;"> (${item.metode_bayar})</span>` : ''}
-                      </div>
-                      <div class="transaction-amount">Rp ${(item.jumlah || 0).toLocaleString('id-ID')}</div>
-                    </div>
-                  `).join('')}
-                </div>
-              `).join('')}
-              ${Object.keys(pemasukanByKategori).length === 0 ? '<div style="padding:10px;color:#999;">Tidak ada pemasukan</div>' : ''}
-              <div class="total-row total-pemasukan">
-                <span>TOTAL PEMASUKAN</span>
-                <span>Rp ${totalPemasukan.toLocaleString('id-ID')}</span>
+              <!-- HEADER -->
+              <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 18px; font-weight: 700; margin-bottom: 5px;">LAPORAN ARUS KAS</div>
+                <div style="font-size: 14px; font-weight: 700; color: #000;">${ptNames}</div>
               </div>
-            </div>
 
-            <!-- PENGELUARAN SECTION -->
-            <div class="section">
-              <div class="section-title">PENGELUARAN</div>
-              ${Object.keys(pengeluaranByKategori).map(kategori => `
-                <div class="kategori-group">
-                  <div class="kategori-title">${kategori}</div>
-                  ${pengeluaranByKategori[kategori].map(item => `
-                    <div class="transaction-item">
-                      <div class="transaction-desc">
-                        ${new Date(item.tanggal).toLocaleDateString('id-ID')} - ${item.keterangan}
-                        ${item.metode_bayar ? `<span style="color:#666; font-size:10px;"> (${item.metode_bayar})</span>` : ''}
-                      </div>
-                      <div class="transaction-amount">Rp ${(item.jumlah || 0).toLocaleString('id-ID')}</div>
-                    </div>
-                  `).join('')}
-                </div>
-              `).join('')}
-              ${Object.keys(pengeluaranByKategori).length === 0 ? '<div style="padding:10px;color:#999;">Tidak ada pengeluaran</div>' : ''}
-              <div class="total-row total-pengeluaran">
-                <span>TOTAL PENGELUARAN</span>
-                <span>Rp ${totalPengeluaran.toLocaleString('id-ID')}</span>
+              <!-- INFO SECTION -->
+              <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px;">
+                <div><strong>Periode:</strong> ${tanggalOnly}</div>
+                <div><strong>Dicetak Oleh:</strong> ${currentUserData?.name || 'User'}</div>
               </div>
-            </div>
 
-            <!-- HASIL AKHIR -->
-            <div class="total-row total-hasil">
-              <span>HASIL AKHIR</span>
-              <span>Rp ${hasilAkhir.toLocaleString('id-ID')}</span>
-            </div>
+              <!-- TABLE -->
+              <div class="table-container">
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
+                  <thead>
+                    <tr style="background: #fff; border: 1px solid #333;">
+                      <th style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: 700; color: #000;" width="5%">No</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: left; font-weight: 700; color: #000;" width="40%">Keterangan</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: 700; color: #000;" width="10%">Metode</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="16%">Masuk</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="16%">Keluar</th>
+                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="13%">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
+                      <tr style="border: 1px solid #333;">
+                        <td style="border: 1px solid #333; padding: 6px; text-align: center;">${item.no}</td>
+                        <td style="border: 1px solid #333; padding: 6px;">${item.keterangan}</td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: center; font-size: 9px;">
+                          ${item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
+                        </td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: right;">
+                          ${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
+                        </td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: right;">
+                          ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
+                        </td>
+                        <td style="border: 1px solid #333; padding: 6px; text-align: right; font-weight: 600;">
+                          Rp ${item.saldo.toLocaleString('id-ID')}
+                        </td>
+                      </tr>
+                    `).join('') : '<tr><td colspan="6" style="text-align:center; padding: 20px; border: 1px solid #333;">Tidak ada data</td></tr>'}
+                  </tbody>
+                </table>
+              </div>
 
-            <div class="footer">
-              Dicetak pada: ${new Date().toLocaleString('id-ID')}<br>
-              Sumber Jaya Grup
-            </div>
+              <!-- SUMMARY TABLE -->
+              <div style="margin-top: 20px;">
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
+                  <tbody>
+                    <tr style="background: #f0f0f0; border: 1px solid #333;">
+                      <td style="border: 1px solid #333; padding: 10px; font-weight: 600; text-align: right; width: 70%;">TOTAL PEMASUKAN</td>
+                      <td style="border: 1px solid #333; padding: 10px; text-align: right; width: 30%; font-weight: 600;">Rp ${totalMasuk.toLocaleString('id-ID')}</td>
+                    </tr>
+                    <tr style="border: 1px solid #333;">
+                      <td style="border: 1px solid #333; padding: 10px; font-weight: 600; text-align: right;">TOTAL PENGELUARAN</td>
+                      <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 600;">Rp ${totalKeluar.toLocaleString('id-ID')}</td>
+                    </tr>
+                    <tr style="background: #e0e0e0; border: 1px solid #333;">
+                      <td style="border: 1px solid #333; padding: 10px; font-weight: 700; text-align: right; font-size: 14px;">SALDO AKHIR</td>
+                      <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 700; font-size: 14px;">Rp ${saldoAkhir.toLocaleString('id-ID')}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
-            <script>
-              window.onload = () => {
-                setTimeout(() => {
-                  window.print();
-                  setTimeout(() => window.close(), 500);
-                }, 500);
-              };
-            </script>
+              <!-- SIGNATURE SECTION -->
+              <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 20px;">
+                <div style="flex: 1; text-align: center;">
+                  <div style="font-weight: 600; margin-bottom: 10px;">Kasir,</div>
+                  <div style="height: 60px;"></div>
+                  <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
+                    ${currentUserData?.name || 'User'}
+                  </div>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                  <div style="font-weight: 600; margin-bottom: 10px;">Manager Keuangan,</div>
+                  <div style="height: 60px;"></div>
+                  <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
+                    ( _________________ )
+                  </div>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                  <div style="font-weight: 600; margin-bottom: 10px;">Direktur,</div>
+                  <div style="height: 60px;"></div>
+                  <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
+                    ( _________________ )
+                  </div>
+                </div>
+              </div>
           </body>
         </html>
       `;
 
+      // Write HTML to new window
+      console.log('✅ HTML Content generated, length:', htmlContent.length);
       printWindow.document.write(htmlContent);
       printWindow.document.close();
+
+      console.log('✅ Document written and closed');
+
+      // Wait for content to load before printing
+      setTimeout(() => {
+        console.log('✅ Triggering print dialog');
+        printWindow.print();
+      }, 500);
+
     } catch (error) {
-      console.error('Error creating print window:', error);
-      alert('Gagal membuat window print: ' + error.message);
+      console.error('❌ ERROR in handlePrintArusKas:', error);
+      alert('Error saat generate PDF: ' + error.message + '\n\nSilakan cek console untuk detail.');
     }
   };
 
@@ -4053,7 +4168,16 @@ const SumberJayaApp = () => {
 
   // ==================== RENDER ARUS KAS ====================
   const renderArusKas = () => {
-    // Calculate totals from filtered data
+    const handlePTChange = (ptCode) => {
+      setFilterArusKas(prev => ({
+        ...prev,
+        pt: prev.pt.includes(ptCode)
+          ? prev.pt.filter(p => p !== ptCode)
+          : [...prev.pt, ptCode]
+      }));
+    };
+
+    // Calculate totals from arus kas data
     const displayData = getFilteredArusKasData();
     const masuk = displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const keluar = displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
@@ -4065,9 +4189,10 @@ const SumberJayaApp = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Arus Kas</h2>
-            <p className="text-sm text-gray-600">Pencatatan manual arus kas (Cash & Cashless) - Tanpa Approval</p>
+            <p className="text-sm text-gray-600">Pencatatan manual arus kas (Cash & Cashless)</p>
           </div>
         </div>
+
 
         {/* Input Form */}
         <div className="bg-white rounded-lg p-6 shadow-md no-print">
@@ -4164,62 +4289,53 @@ const SumberJayaApp = () => {
           </div>
         </div>
 
-        {/* Filter Section */}
+        {/* Filter & Print Section */}
         <div className="bg-white rounded-lg shadow-sm border p-6 no-print">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Filter Data</h3>
+            <h3 className="text-lg font-semibold">Filter Laporan</h3>
             <button
               onClick={handlePrintArusKas}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              title="Print Laporan"
             >
-              <Download className="w-4 h-4" />
-              Print Laporan
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* PT Filter - Multi Select */}
             <div>
-              <label className="block text-sm font-medium mb-2">PT</label>
-              <select
-                value={filterArusKas.pt}
-                onChange={(e) => {
-                  const newFilter = {...filterArusKas, pt: e.target.value};
-                  setFilterArusKas(newFilter);
-                  loadArusKasData(newFilter);
-                }}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="">Semua PT</option>
-                {currentUserData?.accessPT?.map(code => (
-                  <option key={code} value={code}>{code}</option>
+              <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
+              <div className="flex flex-wrap gap-2">
+                {currentUserData?.accessPT?.map(ptCode => (
+                  <button
+                    key={ptCode}
+                    onClick={() => handlePTChange(ptCode)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filterArusKas.pt && filterArusKas.pt.includes(ptCode)
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {ptCode}
+                  </button>
                 ))}
-              </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {!filterArusKas.pt || filterArusKas.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterArusKas.pt.length} PT dipilih`}
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Tanggal Dari</label>
-              <input
-                type="date"
-                value={filterArusKas.tanggal_dari}
-                onChange={(e) => {
-                  const newFilter = {...filterArusKas, tanggal_dari: e.target.value};
-                  setFilterArusKas(newFilter);
-                  loadArusKasData(newFilter);
-                }}
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Tanggal Sampai</label>
-              <input
-                type="date"
-                value={filterArusKas.tanggal_sampai}
-                onChange={(e) => {
-                  const newFilter = {...filterArusKas, tanggal_sampai: e.target.value};
-                  setFilterArusKas(newFilter);
-                  loadArusKasData(newFilter);
-                }}
-                className="w-full px-4 py-2 border rounded-lg"
-              />
+
+            {/* Info Text */}
+            <div className="flex items-center">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full">
+                <p className="text-sm text-blue-800">
+                  <strong>Info:</strong> Arus Kas menampilkan transaksi tunai & non-tunai untuk laporan keuangan lengkap.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -4229,7 +4345,7 @@ const SumberJayaApp = () => {
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Pemasukan</p>
+                <p className="text-sm text-gray-600">Total Masuk</p>
                 <p className="text-2xl font-bold text-green-600">Rp {masuk.toLocaleString('id-ID')}</p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
@@ -4241,7 +4357,7 @@ const SumberJayaApp = () => {
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Pengeluaran</p>
+                <p className="text-sm text-gray-600">Total Keluar</p>
                 <p className="text-2xl font-bold text-red-600">Rp {keluar.toLocaleString('id-ID')}</p>
               </div>
               <div className="p-3 bg-red-100 rounded-full">
@@ -4253,7 +4369,7 @@ const SumberJayaApp = () => {
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Hasil Akhir</p>
+                <p className="text-sm text-gray-600">Saldo Akhir</p>
                 <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                   Rp {saldo.toLocaleString('id-ID')}
                 </p>
@@ -4269,7 +4385,7 @@ const SumberJayaApp = () => {
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="p-4 border-b">
             <h3 className="text-lg font-semibold">Riwayat Transaksi Arus Kas</h3>
-            <p className="text-sm text-gray-600">{displayData.length} transaksi ditampilkan</p>
+            <p className="text-sm text-gray-600">Transaksi cash & cashless</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -4329,41 +4445,52 @@ const SumberJayaApp = () => {
                               jumlah: item.jumlah.toString(),
                               keterangan: item.keterangan,
                               kategori: item.kategori || '',
-                              metodeBayar: item.metode_bayar
+                              metodeBayar: item.metode_bayar || 'cashless'
                             });
                             setShowEditArusKasModal(true);
                           }}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          className="text-blue-600 hover:text-blue-800"
                           title="Edit"
                         >
-                          Edit
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                         </button>
                         <button
                           onClick={() => handleDeleteArusKas(item.id, item.keterangan)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          className="text-red-600 hover:text-red-800"
                           title="Hapus"
                         >
-                          Hapus
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </button>
                       </div>
                     </td>
                   </tr>
                 ))}
-                {displayData.length === 0 && (
-                  <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
-                      Tidak ada data transaksi
-                    </td>
-                  </tr>
-                )}
               </tbody>
+              <tfoot className="bg-gray-100 font-bold">
+                <tr>
+                  <td colSpan="5" className="px-4 py-3 text-right">Total</td>
+                  <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
+                  <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
+                  <td className="px-4 py-3"></td>
+                </tr>
+                <tr className="bg-blue-50">
+                  <td colSpan="5" className="px-4 py-3 text-right">Saldo Akhir</td>
+                  <td colSpan="3" className="px-4 py-3 text-right text-blue-600 text-lg">
+                    Rp {saldo.toLocaleString('id-ID')}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
 
         {/* Edit Modal */}
         {showEditArusKasModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 no-print">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -4497,6 +4624,16 @@ const SumberJayaApp = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoadingArusKas && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+              <span>Memuat data arus kas...</span>
             </div>
           </div>
         )}
