@@ -1182,6 +1182,184 @@ app.get('/api/migrate/add-updated-at', (req, res) => {
   });
 });
 
+// Auto-migration endpoint: Create sub_kategori table and migrate data (NO AUTH - TEMPORARY)
+app.get('/api/migrate/create-sub-kategori', (req, res) => {
+  console.log('🔧 MIGRATION: Creating sub_kategori table and migrating data...');
+
+  // Step 1: Check if table already exists
+  const checkTableQuery = `
+    SELECT COUNT(*) as tableExists
+    FROM information_schema.tables
+    WHERE table_schema = DATABASE()
+    AND table_name = 'sub_kategori'
+  `;
+
+  db.query(checkTableQuery, (err, tableCheck) => {
+    if (err) {
+      console.error('❌ Error checking table:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to check table existence',
+        details: err.message
+      });
+    }
+
+    const tableExists = tableCheck[0].tableExists > 0;
+
+    if (tableExists) {
+      console.log('✅ Table sub_kategori already exists');
+      return res.json({
+        success: true,
+        message: 'Table sub_kategori already exists',
+        alreadyExists: true
+      });
+    }
+
+    // Step 2: Create sub_kategori table
+    const createTableQuery = `
+      CREATE TABLE sub_kategori (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        jenis ENUM('pemasukan', 'pengeluaran') NOT NULL,
+        nama VARCHAR(100) NOT NULL,
+        urutan INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_jenis (jenis),
+        INDEX idx_urutan (urutan)
+      )
+    `;
+
+    db.query(createTableQuery, (err) => {
+      if (err) {
+        console.error('❌ Error creating table:', err);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create sub_kategori table',
+          details: err.message
+        });
+      }
+
+      console.log('✅ Table sub_kategori created successfully');
+
+      // Step 3: Seed initial data
+      const seedQuery = `
+        INSERT INTO sub_kategori (jenis, nama, urutan) VALUES
+        ('pengeluaran', 'BIAYA OPERASIONAL', 1),
+        ('pengeluaran', 'BIAYA LAIN-LAIN', 2),
+        ('pengeluaran', 'TRANSPORT FEE', 3),
+        ('pengeluaran', 'BEBAN GAJI KARYAWAN', 4),
+        ('pengeluaran', 'BEBAN DIMUKA', 5),
+        ('pengeluaran', 'BIAYA PAJAK & KONSULTAN', 6),
+        ('pengeluaran', 'BIAYA ANGSURAN', 7),
+        ('pengeluaran', 'BIAYA SEWA', 8),
+        ('pengeluaran', 'KASBON KARYAWAN', 9),
+        ('pengeluaran', 'PEMBELIAN BARANG', 10),
+        ('pengeluaran', 'MAINTENANCE', 11),
+        ('pengeluaran', 'KOMUNIKASI', 12),
+        ('pemasukan', 'PEMASUKAN LAIN', 1)
+      `;
+
+      db.query(seedQuery, (err) => {
+        if (err) {
+          console.error('❌ Error seeding data:', err);
+          return res.status(500).json({
+            success: false,
+            error: 'Table created but failed to seed initial data',
+            details: err.message
+          });
+        }
+
+        console.log('✅ Initial data seeded successfully');
+
+        // Step 4: Add sub_kategori_id column to kas_kecil
+        const alterKasKecilQuery = `
+          ALTER TABLE kas_kecil
+          ADD COLUMN sub_kategori_id INT NULL AFTER kategori,
+          ADD FOREIGN KEY (sub_kategori_id) REFERENCES sub_kategori(id)
+        `;
+
+        db.query(alterKasKecilQuery, (err) => {
+          if (err) {
+            console.error('❌ Error altering kas_kecil:', err);
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to add sub_kategori_id to kas_kecil',
+              details: err.message
+            });
+          }
+
+          console.log('✅ Column sub_kategori_id added to kas_kecil');
+
+          // Step 5: Add sub_kategori_id column to arus_kas
+          const alterArusKasQuery = `
+            ALTER TABLE arus_kas
+            ADD COLUMN sub_kategori_id INT NULL AFTER kategori,
+            ADD FOREIGN KEY (sub_kategori_id) REFERENCES sub_kategori(id)
+          `;
+
+          db.query(alterArusKasQuery, (err) => {
+            if (err) {
+              console.error('❌ Error altering arus_kas:', err);
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to add sub_kategori_id to arus_kas',
+                details: err.message
+              });
+            }
+
+            console.log('✅ Column sub_kategori_id added to arus_kas');
+
+            // Step 6: Migrate existing data from kas_kecil
+            const migrateKasKecilQuery = `
+              UPDATE kas_kecil kk
+              JOIN sub_kategori sk ON kk.kategori = sk.nama
+              SET kk.sub_kategori_id = sk.id
+              WHERE kk.kategori IS NOT NULL
+            `;
+
+            db.query(migrateKasKecilQuery, (err, result) => {
+              if (err) {
+                console.error('❌ Error migrating kas_kecil data:', err);
+              } else {
+                console.log(\`✅ Migrated \${result.affectedRows} rows in kas_kecil\`);
+              }
+
+              // Step 7: Migrate existing data from arus_kas
+              const migrateArusKasQuery = `
+                UPDATE arus_kas ak
+                JOIN sub_kategori sk ON ak.kategori = sk.nama
+                SET ak.sub_kategori_id = sk.id
+                WHERE ak.kategori IS NOT NULL
+              `;
+
+              db.query(migrateArusKasQuery, (err, result2) => {
+                if (err) {
+                  console.error('❌ Error migrating arus_kas data:', err);
+                } else {
+                  console.log(\`✅ Migrated \${result2.affectedRows} rows in arus_kas\`);
+                }
+
+                res.json({
+                  success: true,
+                  message: 'Migration completed successfully',
+                  changes: [
+                    'Created table: sub_kategori',
+                    'Seeded 13 initial sub kategori',
+                    'Added column: kas_kecil.sub_kategori_id',
+                    'Added column: arus_kas.sub_kategori_id',
+                    \`Migrated \${result?.affectedRows || 0} kas_kecil records\`,
+                    \`Migrated \${result2?.affectedRows || 0} arus_kas records\`
+                  ]
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+});
+
 
 // ==================== SUB KATEGORI ROUTES ====================
 
