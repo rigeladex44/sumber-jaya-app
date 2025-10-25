@@ -1020,8 +1020,8 @@ app.delete('/api/arus-kas/:id', verifyToken, (req, res) => {
   });
 });
 
-// Test endpoint to debug arus_kas table structure
-app.get('/api/debug/arus-kas', verifyToken, (req, res) => {
+// Test endpoint to debug arus_kas table structure (NO AUTH - TEMPORARY)
+app.get('/api/debug/arus-kas', (req, res) => {
   console.log('🔍 DEBUG: Checking arus_kas table...');
 
   // Check if table exists
