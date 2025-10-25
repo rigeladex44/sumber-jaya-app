@@ -1566,8 +1566,15 @@ const SumberJayaApp = () => {
 
       await arusKasService.create(arusKasData);
 
-      // Refresh data with current filters
-      await loadArusKasData(filterArusKas);
+      // Refresh ALL data (without filters) to show newly added transaction
+      await loadArusKasData({});
+
+      // Reset filter to show all data
+      setFilterArusKas({
+        pt: '',
+        tanggal_dari: '',
+        tanggal_sampai: ''
+      });
 
       // Reset form
       setFormArusKas({
@@ -1597,7 +1604,8 @@ const SumberJayaApp = () => {
 
     try {
       await arusKasService.delete(arusKasId);
-      await loadArusKasData(filterArusKas);
+      // Refresh ALL data to show updated list
+      await loadArusKasData({});
       alert('Data arus kas berhasil dihapus!');
     } catch (error) {
       console.error('Error deleting arus kas:', error);
@@ -1631,8 +1639,15 @@ const SumberJayaApp = () => {
 
       await arusKasService.update(editingArusKas.id, arusKasData);
 
-      // Refresh data
-      await loadArusKasData(filterArusKas);
+      // Refresh ALL data to show updated transaction
+      await loadArusKasData({});
+
+      // Reset filter to show all data
+      setFilterArusKas({
+        pt: '',
+        tanggal_dari: '',
+        tanggal_sampai: ''
+      });
 
       // Close modal and reset
       setShowEditArusKasModal(false);
