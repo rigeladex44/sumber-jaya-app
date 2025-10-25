@@ -833,9 +833,23 @@ app.get('/api/arus-kas', verifyToken, (req, res) => {
 
   query += ' ORDER BY tanggal DESC, id DESC';
 
+  console.log('DEBUG Arus Kas Query:', { query, params });
+
   db.query(query, params, (err, results) => {
     if (err) {
-      return res.status(500).json({ message: 'Server error', error: err });
+      console.error('❌ ERROR loading arus kas:', {
+        error: err.message,
+        code: err.code,
+        sqlState: err.sqlState,
+        sql: err.sql,
+        query: query,
+        params: params
+      });
+      return res.status(500).json({
+        message: 'Server error loading arus kas',
+        error: err.message,
+        code: err.code
+      });
     }
 
     // Convert jumlah string to number for correct calculations
@@ -844,7 +858,7 @@ app.get('/api/arus-kas', verifyToken, (req, res) => {
       jumlah: parseFloat(item.jumlah)
     }));
 
-    console.log('DEBUG Backend Arus Kas Load:', {
+    console.log('✅ DEBUG Backend Arus Kas Load:', {
       resultCount: formattedResults.length,
       sampleData: formattedResults.slice(0, 2).map(item => ({
         id: item.id,
@@ -1003,6 +1017,73 @@ app.delete('/api/arus-kas/:id', verifyToken, (req, res) => {
         });
       });
     }
+  });
+});
+
+// Test endpoint to debug arus_kas table structure
+app.get('/api/debug/arus-kas', verifyToken, (req, res) => {
+  console.log('🔍 DEBUG: Checking arus_kas table...');
+
+  // Check if table exists
+  const checkTableQuery = `
+    SELECT COUNT(*) as tableExists
+    FROM information_schema.tables
+    WHERE table_schema = DATABASE()
+    AND table_name = 'arus_kas'
+  `;
+
+  db.query(checkTableQuery, (err, tableCheck) => {
+    if (err) {
+      console.error('❌ Error checking table existence:', err);
+      return res.status(500).json({ error: 'Failed to check table', details: err.message });
+    }
+
+    const tableExists = tableCheck[0].tableExists > 0;
+    console.log('Table exists:', tableExists);
+
+    if (!tableExists) {
+      return res.json({
+        status: 'error',
+        message: 'Table arus_kas does not exist',
+        tableExists: false
+      });
+    }
+
+    // Get table structure
+    const describeQuery = 'DESCRIBE arus_kas';
+    db.query(describeQuery, (err, structure) => {
+      if (err) {
+        console.error('❌ Error getting table structure:', err);
+        return res.status(500).json({ error: 'Failed to describe table', details: err.message });
+      }
+
+      // Count rows
+      const countQuery = 'SELECT COUNT(*) as rowCount FROM arus_kas';
+      db.query(countQuery, (err, countResult) => {
+        if (err) {
+          console.error('❌ Error counting rows:', err);
+          return res.status(500).json({ error: 'Failed to count rows', details: err.message });
+        }
+
+        // Get sample data
+        const sampleQuery = 'SELECT * FROM arus_kas LIMIT 3';
+        db.query(sampleQuery, (err, sampleData) => {
+          if (err) {
+            console.error('❌ Error getting sample data:', err);
+            return res.status(500).json({ error: 'Failed to get sample data', details: err.message });
+          }
+
+          console.log('✅ Debug info collected successfully');
+          res.json({
+            status: 'success',
+            tableExists: true,
+            structure: structure,
+            rowCount: countResult[0].rowCount,
+            sampleData: sampleData
+          });
+        });
+      });
+    });
   });
 });
 
