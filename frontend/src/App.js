@@ -6,7 +6,6 @@ import {
 import {
   authService,
   kasKecilService,
-  arusKasService,
   penjualanService,
   dashboardService,
   userService,
@@ -254,10 +253,8 @@ const SumberJayaApp = () => {
 
   // Data Management State
   const [kasKecilData, setKasKecilData] = useState([]);
-  const [arusKasData, setArusKasData] = useState([]);
   const [userList, setUserList] = useState([]);
   const [penjualanData, setPenjualanData] = useState([]);
-  const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
   
   // Kas Kecil State (untuk pembukuan kasir tunai - Cash Only)
   const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
@@ -336,27 +333,11 @@ const SumberJayaApp = () => {
     }
   };
 
-  // Load Arus Kas Data from API (Aggregated: Penjualan + Kas Kecil + Manual Arus Kas)
-  const loadArusKasData = async (filters = {}) => {
-    if (!isLoggedIn) return;
-    
-    setIsLoadingArusKas(true);
-    try {
-      const data = await arusKasService.getAll(filters);
-      setArusKasData(data);
-    } catch (error) {
-      console.error('Error loading arus kas:', error);
-    } finally {
-      setIsLoadingArusKas(false);
-    }
-  };
-  
   // Load data when logged in
   useEffect(() => {
     if (isLoggedIn) {
       loadKasKecilData();
       loadPenjualanData();
-      loadArusKasData();
       loadUsers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -389,11 +370,6 @@ const SumberJayaApp = () => {
     pt: [] // Multi-select for Kas Kecil, no date filter
   });
 
-  const [filterArusKas, setFilterArusKas] = useState({
-    pt: [], // Multi-select for Arus Kas (same as Kas Kecil)
-    tanggal: '' // Default kosong - tampilkan semua data (sama seperti Kas Kecil)
-  });
-
   const [formUser, setFormUser] = useState({
     nama: '',
     username: '',
@@ -402,7 +378,7 @@ const SumberJayaApp = () => {
     fiturAkses: [],
     aksesPT: []
   });
-  
+
   const [formPenjualan, setFormPenjualan] = useState({
     tanggal: getLocalDateString(),
     pt: '',
@@ -412,15 +388,6 @@ const SumberJayaApp = () => {
     ppnPercent: 11,
     ppnType: 'include', // 'include' atau 'exclude'
     metodeBayar: 'cash'
-  });
-
-  const [formArusKas, setFormArusKas] = useState({
-    tanggal: getLocalDateString(),
-    pt: '',
-    jenis: 'keluar',
-    jumlah: '',
-    keterangan: '',
-    kategori: ''
   });
 
   // Hitung Total
@@ -809,369 +776,6 @@ const SumberJayaApp = () => {
   };
 
   // Auto-filter: Get filtered data for Arus Kas (By Tanggal + PT + Saldo Awal)
-  const getFilteredArusKasData = () => {
-    const selectedDate = filterArusKas.tanggal; // Tanggal yang dipilih user
-
-    console.log('DEBUG Arus Kas Filter:', {
-      filterPT: filterArusKas.pt,
-      selectedDate: selectedDate,
-      arusKasDataCount: arusKasData.length,
-      sampleData: arusKasData.slice(0, 3),
-      currentUserAccessPT: currentUserData?.accessPT
-    });
-
-    // Jika tidak ada tanggal dipilih, tampilkan semua data (seperti Kas Kecil)
-    if (!selectedDate) {
-      let allData = [...arusKasData];
-
-      // Filter by PT if selected
-      if (filterArusKas.pt.length > 0) {
-        allData = allData.filter(item => filterArusKas.pt.includes(item.pt));
-      }
-
-      // Sort by tanggal (terbaru dulu)
-      allData.sort((a, b) => {
-        const dateA = new Date(a.tanggal || 0);
-        const dateB = new Date(b.tanggal || 0);
-        return dateB - dateA;
-      });
-
-      return allData;
-    }
-
-    // Calculate saldo awal (dari transaksi SEBELUM tanggal yang dipilih)
-    const beforeSelectedDate = arusKasData.filter(item => {
-      if (!item.tanggal) return false;
-      const itemDate = getLocalDateFromISO(item.tanggal);
-      return itemDate < selectedDate;
-    });
-
-    let saldoAwal = 0;
-    if (filterArusKas.pt.length > 0) {
-      // Saldo awal untuk PT yang dipilih (multiple PT)
-      const beforePT = beforeSelectedDate.filter(item => filterArusKas.pt.includes(item.pt) && item.status === 'approved');
-      const masuk = beforePT.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      const keluar = beforePT.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      saldoAwal = masuk - keluar;
-    } else {
-      // Saldo awal untuk semua PT
-      const beforeApproved = beforeSelectedDate.filter(item => item.status === 'approved');
-      const masuk = beforeApproved.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      const keluar = beforeApproved.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      saldoAwal = masuk - keluar;
-    }
-
-    // Filter transaksi pada tanggal yang dipilih
-    let selectedDateData = arusKasData.filter(item => {
-      if (!item.tanggal) return false;
-      const itemDate = getLocalDateFromISO(item.tanggal);
-      return itemDate === selectedDate;
-    });
-
-    // Filter by PT if selected (multiple PT support)
-    if (filterArusKas.pt.length > 0) {
-      selectedDateData = selectedDateData.filter(item => filterArusKas.pt.includes(item.pt));
-    }
-
-    // Calculate penjualan hari ini (dari selectedDateData)
-    const penjualanHariIni = selectedDateData
-      .filter(item => item.kategori === 'PENJUALAN' && item.jenis === 'masuk' && item.status === 'approved')
-      .reduce((sum, item) => sum + (item.jumlah || 0), 0);
-
-    // Saldo awal total = penjualan hari ini + sisa saldo kemarin
-    const saldoAwalTotal = penjualanHariIni + saldoAwal;
-
-    // Add saldo awal as first row if > 0
-    if (saldoAwalTotal > 0) {
-      selectedDateData.unshift({
-        id: 'saldo-awal',
-        tanggal: selectedDate + 'T00:00:00',
-        pt: filterArusKas.pt.length > 0 ? filterArusKas.pt.join(', ') : 'All',
-        jenis: 'masuk',
-        jumlah: saldoAwalTotal,
-        keterangan: `Saldo Awal (Penjualan: Rp ${penjualanHariIni.toLocaleString('id-ID')} + Sisa Kemarin: Rp ${saldoAwal.toLocaleString('id-ID')})`,
-        status: 'approved',
-        kategori: 'SALDO AWAL',
-        metode: 'saldo_awal',
-        created_at: selectedDate + 'T00:00:00'
-      });
-    }
-
-    // Sort by kategori (PEMASUKAN dulu, lalu PENGELUARAN)
-    const sorted = selectedDateData.sort((a, b) => {
-      // Saldo awal paling atas
-      if (a.kategori === 'SALDO AWAL') return -1;
-      if (b.kategori === 'SALDO AWAL') return 1;
-
-      // Urutkan berdasarkan jenis (masuk dulu, keluar kemudian)
-      if (a.jenis === 'masuk' && b.jenis === 'keluar') return -1;
-      if (a.jenis === 'keluar' && b.jenis === 'masuk') return 1;
-
-      // Dalam jenis yang sama, urutkan by kategori
-      const kategoriOrder = {
-        'PENJUALAN': 1,
-        'PEMASUKAN LAIN-LAIN': 2,
-        'PEMASUKAN': 3,
-        'BIAYA OPERASIONAL': 10,
-        'PENGELUARAN': 11
-      };
-      const orderA = kategoriOrder[a.kategori] || 99;
-      const orderB = kategoriOrder[b.kategori] || 99;
-      return orderA - orderB;
-    });
-
-    console.log('DEBUG Filtered Arus Kas:', {
-      selectedDate,
-      saldoAwal,
-      penjualanHariIni,
-      saldoAwalTotal,
-      resultCount: sorted.length
-    });
-
-    return sorted;
-  };
-
-  // Handler: Print Kas Kecil
-  const handlePrintKasKecil = () => {
-    console.log('🖨️ TOMBOL PRINT DIKLIK! Starting print process...');
-
-    // Get filtered data for PDF
-    const displayData = getFilteredKasKecilData();
-
-    console.log('DEBUG Print Kas Kecil - FULL DETAILS:', {
-      totalKasKecilData: kasKecilData.length,
-      displayDataLength: displayData.length,
-      filterPT: filterKasKecil.pt,
-      sampleData: displayData.slice(0, 3),
-      allStatuses: displayData.map(d => d.status)
-    });
-
-    const tanggalOnly = new Date().toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-
-    // Generate PT Names with separator
-    let ptNames = '';
-    if (filterKasKecil.pt.length > 0) {
-      // Use PT codes directly if no ptList available
-      ptNames = filterKasKecil.pt.map(code => {
-        const pt = ptList?.find(p => p.code === code);
-        return pt ? pt.name : code;
-      }).join(' - ');
-    } else {
-      ptNames = 'Semua PT';
-    }
-
-    // Check if data is empty
-    if (!displayData || displayData.length === 0) {
-      console.error('ERROR: No data to print!', {
-        kasKecilData: kasKecilData,
-        filterKasKecil: filterKasKecil
-      });
-      alert('Tidak ada data untuk dicetak. Total data: ' + kasKecilData.length + ', Filter PT: ' + filterKasKecil.pt.join(', '));
-      return;
-    }
-
-    // Calculate running balance
-    let runningBalance = 0;
-    const dataWithBalance = displayData.map((item, index) => {
-      // Only count approved transactions for balance
-      if (item.status === 'approved') {
-        if (item.jenis === 'masuk') {
-          runningBalance += item.jumlah || 0;
-        } else if (item.jenis === 'keluar') {
-          runningBalance -= item.jumlah || 0;
-        }
-      }
-      return {
-        ...item,
-        no: index + 1,
-        saldo: runningBalance
-      };
-    });
-
-    // Calculate totals
-    const totalMasuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const totalKeluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const saldoAkhir = totalMasuk - totalKeluar;
-
-    // DEBUG: Alert untuk konfirmasi data sebelum print
-    console.log('✅ PRINT START - Data Count:', displayData.length);
-
-    try {
-      const printWindow = window.open('', '_blank');
-
-      if (!printWindow) {
-        alert('Gagal membuka window baru. Mohon izinkan popup di browser Anda.');
-        return;
-      }
-
-      // Generate HTML content
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>LAPORAN KAS KECIL - Sumber Jaya Grup</title>
-            <meta charset="UTF-8">
-            <style>
-              @page {
-                size: A4;
-                margin: 15mm;
-              }
-              * { 
-                margin: 0; 
-                padding: 0; 
-                box-sizing: border-box; 
-              }
-              body { 
-                font-family: 'Segoe UI', 'Arial', sans-serif; 
-                padding: 20px;
-                color: #1a1a1a;
-                line-height: 1.5;
-                background: white;
-              }
-              
-              /* ========== HEADER SECTION ========== */
-              .report-header { 
-                text-align: center;
-                margin-bottom: 25px;
-                padding: 20px;
-                border-radius: 12px;
-                color: black;
-              }
-
-              .report-title {
-                font-size: 24px;
-                font-weight: 700;
-                letter-spacing: 2px;
-                margin-bottom: 8px;
-                text-transform: uppercase;
-              }
-              .report-subtitle {
-                font-size: 13px;
-                margin-bottom: 5px;
-                font-weight: 400;
-                opacity: 0.95;
-              }
-                
-              .report-company {
-                font-size: 11px;
-                margin-top: 4px;
-                opacity: 0.85;
-                font-style: italic;
-              }
-
-              /* ========== INFO SECTION ========== */
-              .info-section {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 20px;
-                gap: 20px;
-              }
-              
-              .info-row {
-                display: flex;
-                padding: 5px 0;
-                font-size: 12px;
-                align-items: center;
-              }
-              
-              .info-label {
-                width: 120px;
-                font-weight: 500;
-                color: #666;
-              }
-              .info-value {
-                flex: 1;
-                font-weight: 600;
-                color: #1a1a1a;
-              }
-
-
-              /* ========== TABLE SECTION ========== */   
-              .table-container {
-                margin: 20px 0;
-                border-radius: 8px;
-                overflow: hidden;
-               box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-              }
-              
-              thead {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: black;
-              }
-              
-              th { 
-                padding: 12px 8px;
-                text-align: left;
-                font-weight: 600;
-                text-transform: uppercase;
-                font-size: 10px;
-                letter-spacing: 0.5px;
-                border: none;
-              }
-              
-              th.text-center { text-align: center; }
-              th.text-right { text-align: right; }
-              
-              tbody tr:hover {
-                background-color: #f8f9fa;
-              }
-        
-              tbody tr:nth-child(even) {
-                background-color: #fafbfc;
-              }
-        
-              td { 
-                padding: 10px 8px;
-                border: none;
-                color: #2d3748;
-              }
-        
-              .text-right { 
-                text-align: right;
-                font-family: 'Courier New', monospace;
-                font-weight: 500;
-              }
-        
-              .text-center { text-align: center; }
-
-              /* ========== AMOUNT STYLING ========== */
-              .amount-positive {
-                color: #059669;
-                font-weight: 600;
-              }
-              /* ========== SUMMARY SECTION ========== */
-              .summary-section {
-                margin-top: 25px;
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 15px;
-              }
-        
-              .summary-card {
-                background: white;
-                padding: 15px;
-                border-radius: 8px;
-                border: 2px solid #e9ecef;
-                text-align: center;
-              }
-        
-              .summary-card.total-in {
-                border-color: #10b981;
-                background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-              }
-        
-              .summary-card.total-out {
-                border-color: #ef4444;
-                background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-              }
-        
-              .summary-card.balance {
-                border-color: #667eea;
-                background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
               }
         
               .summary-label {
@@ -1496,284 +1100,6 @@ const SumberJayaApp = () => {
   };
 
   // Handler: Print Arus Kas
-  const handlePrintArusKas = () => {
-    const tanggal = new Date().toLocaleDateString('id-ID', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-    
-    const hari = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-    const tanggalOnly = new Date().toLocaleDateString('id-ID', { 
-      day: 'numeric',
-      month: 'long', 
-      year: 'numeric'
-    });
-
-    let ptInfo = '';
-    if (filterArusKas.pt.length > 0) {
-      ptInfo = filterArusKas.pt.join(', ');
-    } else {
-      ptInfo = 'Semua PT';
-    }
-
-    // Get filtered data for PDF
-    const displayData = getFilteredArusKasData();
-    
-    const printWindow = window.open('', '_blank');
-      
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>LAPORAN ARUS KAS - Sumber Jaya Grup</title>
-            <meta charset="UTF-8">
-            <style>
-              @page {
-                size: A4;
-                margin: 8mm;
-              }
-              * { 
-                margin: 0; 
-                padding: 0; 
-                box-sizing: border-box; 
-              }
-              body { 
-                font-family: 'Arial', sans-serif; 
-                padding: 15px;
-                color: #000;
-                line-height: 1.4;
-                background: white;
-              }
-              
-              .report-header { 
-                text-align: center;
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-                border-bottom: 3px solid #000;
-              }
-              .report-title {
-                font-size: 18px;
-                font-weight: bold;
-                letter-spacing: 1px;
-                margin-bottom: 4px;
-                line-height: 1.1;
-              }
-              .report-subtitle {
-                font-size: 12px;
-                color: #333;
-                margin-bottom: 2px;
-                font-weight: bold;
-                line-height: 1.2;
-              }
-              .report-company {
-                font-size: 9px;
-                color: #666;
-                margin-top: 2px;
-              }
-              
-              .info-section {
-                display: flex;
-                justify-content: flex-start;
-                gap: 40px;
-                margin-bottom: 15px;
-                font-size: 11px;
-              }
-              .info-left, .info-right {
-                width: 48%;
-              }
-              .info-row {
-                display: flex;
-                padding: 3px 0;
-              }
-              .info-label {
-                width: 100px;
-                font-weight: normal;
-              }
-              .info-value {
-                flex: 1;
-                font-weight: bold;
-              }
-              
-              table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                margin: 15px 0;
-                font-size: 11px;
-              }
-              th { 
-                background: #86ff81 !important;
-                color: #000 !important;
-                padding: 8px 6px;
-                text-align: left;
-                font-weight: bold;
-                border: 1px solid #ddd;
-              }
-              th.text-center { text-align: center; }
-              th.text-right { text-align: right; }
-              td { 
-                border: 1px solid #ddd;
-                padding: 6px;
-                background: white;
-              }
-              tr:nth-child(even) td { 
-                background: #f9f9f9; 
-              }
-              .text-right { text-align: right; }
-              .text-center { text-align: center; }
-              
-              .grand-total-row {
-                background: #86ff81 !important;
-                font-weight: bold;
-                border-top: 2px solid #000 !important;
-                color: #000 !important;
-              }
-              .grand-total-row td {
-                background: #86ff81 !important;
-                color: #000 !important;
-                font-weight: bold !important;
-              }
-              
-              .signature-section {
-                margin-top: 40px;
-                display: flex;
-                justify-content: space-between;
-                font-size: 9px;
-              }
-              .signature-box {
-                width: 30%;
-                text-align: center;
-              }
-              .signature-title {
-                font-weight: bold;
-                margin-bottom: 5px;
-                padding: 5px;
-                background: #86ff81;
-                color: #000;
-              }
-              .signature-space {
-                height: 60px;
-                border: 1px solid #ddd;
-                margin: 10px 0;
-              }
-              .signature-name {
-                font-weight: bold;
-                padding-top: 5px;
-              }
-              
-              .report-footer { 
-                margin-top: 30px; 
-                padding-top: 15px;
-                border-top: 2px solid #ddd;
-                text-align: center; 
-                font-size: 8px; 
-                color: #888;
-                line-height: 1.6;
-              }
-              
-              .report-footer p {
-                margin: 3px 0;
-              }
-              
-              .no-print { 
-                display: none !important; 
-              }
-            </style>
-          </head>
-          <body>
-            <div class="report-header">
-              <div class="report-title">LAPORAN ARUS KAS</div>
-              <div class="report-subtitle">Arus Kas Komprehensif (Cash + Cashless)</div>
-              <div class="report-company">Sistem Sumber Jaya Grup Official</div>
-            </div>
-            
-            <div class="info-section">
-              <div class="info-left">
-                <div class="info-row">
-                  <span class="info-label">Hari</span>
-                  <span class="info-value">: ${hari}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">Tanggal</span>
-                  <span class="info-value">: ${tanggalOnly}</span>
-                </div>
-              </div>
-              <div class="info-right">
-                <div class="info-row">
-                  <span class="info-label">Dicetak Oleh</span>
-                  <span class="info-value">: ${currentUserData?.name || 'User'}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">PT</span>
-                  <span class="info-value">: ${ptInfo}</span>
-                </div>
-              </div>
-            </div>
-            
-            <table>
-              <thead>
-                <tr>
-                  <th class="text-center">Tanggal</th>
-                  <th class="text-center">PT</th>
-                  <th class="text-center">Kategori</th>
-                  <th class="text-center">Keterangan</th>
-                  <th class="text-right">Masuk</th>
-                  <th class="text-right">Keluar</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${displayData.map(item => `
-                  <tr>
-                    <td>${new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                    <td>${item.pt}</td>
-                    <td>${item.kategori || '-'}</td>
-                    <td>${item.keterangan}</td>
-                    <td class="text-right">${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
-                    <td class="text-right">${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
-                  </tr>
-                `).join('')}
-                <tr class="grand-total-row">
-                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
-                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
-                  <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
-                </tr>
-                <tr class="grand-total-row">
-                  <td colspan="5" class="text-center"><strong>Saldo Akhir</strong></td>
-                  <td class="text-right"><strong>Rp ${(displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)).toLocaleString('id-ID')}</strong></td>
-                </tr>
-              </tbody>
-            </table>
-            
-            <div class="signature-section">
-              <div class="signature-box">
-                <div class="signature-title">Kasir</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">${currentUserData?.name || 'User'}</div>
-              </div>
-              <div class="signature-box">
-                <div class="signature-title">Manager Keuangan</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">( _________________ )</div>
-              </div>
-              <div class="signature-box">
-                <div class="signature-title">Direktur</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">( _________________ )</div>
-              </div>
-            </div>
-            
-            <div class="report-footer">
-              <p><strong>© 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click</strong></p>
-              <p>Laporan ini dicetak secara otomatis dari sistem</p>
-            </div>
-          </body>
-        </html>
-      `);
-      
-      printWindow.document.close();
-      printWindow.print();
-  };
 
   const handleSavePenjualan = async () => {
     if (!formPenjualan.pt || !formPenjualan.pangkalan || !formPenjualan.qty) {
@@ -1818,47 +1144,6 @@ const SumberJayaApp = () => {
   };
 
   // Handler Save Arus Kas Manual Entry
-  const handleSaveArusKas = async () => {
-    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.kategori) {
-      alert('Mohon lengkapi semua field!');
-      return;
-    }
-    
-    setIsLoadingArusKas(true);
-    
-    try {
-      const arusKasData = {
-        tanggal: formArusKas.tanggal,
-        pt: formArusKas.pt,
-        jenis: formArusKas.jenis,
-        jumlah: parseFloat(formArusKas.jumlah),
-        keterangan: formArusKas.keterangan,
-        kategori: formArusKas.kategori
-      };
-      
-      await arusKasService.create(arusKasData);
-      
-      // Refresh data
-      await loadArusKasData();
-      
-      // Reset form
-      setFormArusKas({ 
-        tanggal: getLocalDateString(), 
-        pt: '', 
-        jenis: 'keluar', 
-        jumlah: '', 
-        keterangan: '', 
-        kategori: ''
-      });
-      
-      alert('Data arus kas berhasil disimpan!');
-    } catch (error) {
-      console.error('Error saving arus kas:', error);
-      alert('Gagal menyimpan data arus kas: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setIsLoadingArusKas(false);
-    }
-  };
 
   // Handler Save Kas Kecil (untuk pembukuan kasir tunai)
   const handleSaveKasKecil = async () => {
@@ -1977,41 +1262,12 @@ const SumberJayaApp = () => {
     }
   };
 
-  // Handler Delete Arus Kas Manual Entry (only for manual entries from today)
-  const handleDeleteArusKas = async (arusKasId, keterangan) => {
-    if (window.confirm(`Hapus transaksi arus kas: "${keterangan}"?\n\nData yang sudah dihapus tidak dapat dikembalikan!`)) {
-      try {
-        await arusKasService.delete(arusKasId);
-        await loadArusKasData(); // Refresh data
-        alert('Transaksi arus kas berhasil dihapus!');
-      } catch (error) {
-        console.error('Error deleting arus kas:', error);
-        alert('Gagal menghapus transaksi: ' + (error.response?.data?.message || error.message));
-      }
-    }
-  };
-
   const ptList = [
     { code: 'KSS', name: 'PT KHALISA SALMA SEJAHTERA' },
     { code: 'SJE', name: 'PT SUMBER JAYA ELPIJI' },
     { code: 'FAB', name: 'PT FADILLAH AMANAH BERSAMA' },
     { code: 'KBS', name: 'PT KHABITSA INDOGAS' },
     { code: 'SJS', name: 'PT SRI JOYO SHAKTI' }
-  ];
-
-  // Kategori untuk Arus Kas (cashless transactions)
-  const kategoriList = [
-    'PENJUALAN',
-    'PEMASUKAN LAIN',
-    'TRANSPORT FEE',
-    'BIAYA OPERASIONAL',
-    'BIAYA LAIN-LAIN',
-    'BEBAN GAJI KARYAWAN',
-    'BEBAN DIMUKA',
-    'BIAYA PAJAK & KONSULTAN',
-    'BIAYA ANGSURAN',
-    'BIAYA SEWA',
-    'KASBON KARYAWAN'
   ];
 
   // Kategori Pengeluaran untuk Kas Kecil (cashless)
@@ -2033,7 +1289,6 @@ const SumberJayaApp = () => {
   const mainMenuItems = [
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'kas-kecil', label: 'Kas Kecil', icon: DollarSign },
-    { id: 'arus-kas', label: 'Arus Kas', icon: TrendingUp },
     { id: 'detail-kas', label: 'Detail Kas', icon: AlertCircle },
     { id: 'penjualan', label: 'Penjualan', icon: ShoppingCart },
     { id: 'laporan', label: 'Laporan', icon: BarChart3 },
@@ -2804,331 +2059,6 @@ const SumberJayaApp = () => {
   );
   };
 
-  const renderKasKecilOld = () => {
-    const handlePTChange = (ptCode) => {
-      setSelectedPT(prev => {
-        if (prev.includes(ptCode)) {
-          return prev.filter(p => p !== ptCode);
-        } else {
-          return [...prev, ptCode];
-        }
-      });
-    };
-
-    // Filter arus kas data based on selected PT and Date
-    const getFilteredArusKasData = (pts = []) => {
-      let filtered = arusKasData;
-
-      // Filter by PT
-      if (pts.length > 0) {
-        filtered = filtered.filter(k => pts.includes(k.pt));
-      }
-
-      // Filter by Date
-      if (selectedDate) {
-        filtered = filtered.filter(k => {
-          if (!k.tanggal) return false;
-          const itemDate = getLocalDateFromISO(k.tanggal);
-          return itemDate === selectedDate;
-        });
-      }
-
-      return filtered;
-    };
-
-    // Calculate totals from aggregated arus kas data
-    const hitungArusKas = (pts = []) => {
-      const filtered = getFilteredArusKasData(pts);
-      const masuk = filtered.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + k.jumlah, 0);
-      const keluar = filtered.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + k.jumlah, 0);
-      return { masuk, keluar, saldo: masuk - keluar };
-    };
-
-    const { masuk, keluar, saldo } = hitungArusKas(selectedPT);
-
-    return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Arus Kas Komprehensif</h2>
-        <div className="flex gap-2 flex-wrap">
-          <div className="relative">
-            <button 
-              className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white flex items-center gap-2"
-              onClick={() => document.getElementById('pt-dropdown').classList.toggle('hidden')}
-            >
-              {selectedPT.length > 0 ? `${selectedPT.length} PT Dipilih` : 'Pilih PT'}
-              <span className="text-xs">▼</span>
-            </button>
-            <div id="pt-dropdown" className="hidden absolute top-full mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[200px]">
-              {currentUserData?.accessPT?.map(code => (
-                <label key={code} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedPT.includes(code)}
-                    onChange={() => handlePTChange(code)}
-                    className="mr-2"
-                  />
-                  <span className="text-sm">{code}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-4 py-2 border rounded-lg"
-            placeholder="Pilih tanggal (opsional)"
-          />
-          <button 
-            onClick={() => handleExportPDF('kas')}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 flex items-center gap-2"
-          >
-            <Download size={18} />
-            Export PDF
-          </button>
-        </div>
-      </div>
-
-
-      <div className="bg-white rounded-lg p-6 shadow-md">
-        <h3 className="text-lg font-bold mb-4">Input Transaksi Manual (Cashless)</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Tanggal *</label>
-            <input 
-              type="date" 
-              value={formArusKas.tanggal}
-              onChange={(e) => setFormArusKas({...formArusKas, tanggal: e.target.value})}
-              className="w-full px-4 py-2 border rounded-lg" 
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">PT *</label>
-            <select 
-              value={formArusKas.pt}
-              onChange={(e) => setFormArusKas({...formArusKas, pt: e.target.value})}
-              className="w-full px-4 py-2 border rounded-lg"
-            >
-              <option value="">Pilih PT</option>
-              {currentUserData?.accessPT?.map(code => (
-                <option key={code} value={code}>{code}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Jenis Transaksi *</label>
-            <select 
-              value={formArusKas.jenis}
-              onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value})}
-              className="w-full px-4 py-2 border rounded-lg"
-            >
-              <option value="keluar">Pengeluaran (Cashless)</option>
-              <option value="masuk">Pemasukan (Cashless)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Kategori *</label>
-            <select 
-              value={formArusKas.kategori}
-              onChange={(e) => setFormArusKas({...formArusKas, kategori: e.target.value})}
-              className="w-full px-4 py-2 border rounded-lg"
-            >
-              <option value="">Pilih Kategori</option>
-              {kategoriList.map(kategori => (
-                <option key={kategori} value={kategori}>{kategori}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
-            <input 
-              type="number" 
-              value={formArusKas.jumlah}
-              onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
-              placeholder="0" 
-              className="w-full px-4 py-2 border rounded-lg" 
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Metode Pembayaran</label>
-            <select 
-              value={formArusKas.metodeBayar}
-              onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
-              className="w-full px-4 py-2 border rounded-lg"
-            >
-              <option value="cashless">Transfer Bank</option>
-              <option value="cashless">LinkAja</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-2">Keterangan *</label>
-            <textarea 
-              rows={3} 
-              value={formArusKas.keterangan}
-              onChange={(e) => setFormArusKas({...formArusKas, keterangan: e.target.value})}
-              placeholder="Deskripsi transaksi cashless..." 
-              className="w-full px-4 py-2 border rounded-lg"
-            ></textarea>
-          </div>
-        </div>
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
-          <AlertCircle className="text-blue-600 flex-shrink-0" size={20} />
-          <p className="text-sm text-blue-800">
-            Transaksi manual ini untuk pembayaran non-tunai (cashless). Untuk transaksi tunai, gunakan menu <strong>Kas Kecil</strong>.
-          </p>
-        </div>
-        <div className="mt-4 flex gap-3">
-          <button 
-            onClick={handleSaveArusKas}
-            disabled={isLoadingArusKas}
-            className={`px-6 py-2 rounded-lg flex items-center gap-2 ${
-              isLoadingArusKas 
-                ? 'bg-gray-400 cursor-not-allowed text-white' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            <Plus size={18} />
-            {isLoadingArusKas ? 'Menyimpan...' : 'Simpan Transaksi'}
-          </button>
-          <button 
-            onClick={() => setFormArusKas({ 
-              tanggal: getLocalDateString(), 
-              pt: '', 
-              jenis: 'keluar', 
-              jumlah: '', 
-              keterangan: '', 
-              kategori: ''
-            })}
-            className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
-
-      <div id="content-to-export" className="bg-white rounded-lg p-6 shadow-md">
-        <h3 className="text-lg font-bold mb-4">Riwayat Transaksi Arus Kas (Dari 3 Sumber)</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left">Tanggal</th>
-                <th className="px-4 py-3 text-left">PT</th>
-                <th className="px-4 py-3 text-left">Sumber</th>
-                <th className="px-4 py-3 text-left">Keterangan</th>
-                <th className="px-4 py-3 text-left">Kategori</th>
-                <th className="px-4 py-3 text-left">Metode</th>
-                <th className="px-4 py-3 text-right">Masuk</th>
-                <th className="px-4 py-3 text-right">Keluar</th>
-                <th className="px-4 py-3 text-center no-print">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {isLoadingArusKas ? (
-                <tr>
-                  <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
-                    Memuat data arus kas...
-                  </td>
-                </tr>
-              ) : getFilteredArusKasData(selectedPT).length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="px-4 py-8 text-center text-gray-500">
-                    Belum ada transaksi arus kas
-                  </td>
-                </tr>
-              ) : (
-                getFilteredArusKasData(selectedPT).map((item) => {
-                  // Check if transaction was created today (for manual entries only)
-                  const now = new Date();
-                  const createdDate = item.created_at ? new Date(item.created_at) : null;
-                  
-                  let isToday = false;
-                  if (createdDate && item.source === 'manual') {
-                    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    isToday = createdDate >= todayStart;
-                  }
-
-                  // Determine source label and color
-                  const sourceLabels = {
-                    'penjualan': { label: 'Penjualan', color: 'bg-purple-100 text-purple-700' },
-                    'kas_kecil': { label: 'Kas Kecil', color: 'bg-green-100 text-green-700' },
-                    'manual': { label: 'Manual', color: 'bg-blue-100 text-blue-700' }
-                  };
-                  const sourceInfo = sourceLabels[item.source] || { label: item.source, color: 'bg-gray-100 text-gray-700' };
-                  
-                  return (
-                    <tr key={`${item.source}-${item.id}`}>
-                      <td className="px-4 py-3">{item.tanggal}</td>
-                      <td className="px-4 py-3 font-semibold">{item.pt}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${sourceInfo.color}`}>
-                          {sourceInfo.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{item.keterangan}</td>
-                      <td className="px-4 py-3">
-                        {item.kategori ? (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                            {item.kategori}
-                          </span>
-                        ) : '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                          item.metodeBayar === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                    }`}>
-                          {item.metodeBayar === 'cash' ? 'Cash' : 'Cashless'}
-                    </span>
-                  </td>
-                      <td className="px-4 py-3 text-right text-green-600 font-semibold">
-                        {item.jenis === 'masuk' ? `Rp ${item.jumlah.toLocaleString('id-ID')}` : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right text-red-600 font-semibold">
-                        {item.jenis === 'keluar' ? `Rp ${item.jumlah.toLocaleString('id-ID')}` : '-'}
-                      </td>
-                  <td className="px-4 py-3 text-center no-print">
-                        {isToday && item.source === 'manual' && (
-                        <button
-                            onClick={() => handleDeleteArusKas(item.id, item.keterangan)}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
-                        >
-                            Hapus
-                        </button>
-                        )}
-                        {!isToday && item.source === 'manual' && (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                        {item.source !== 'manual' && (
-                          <span className="text-xs text-gray-400">Auto</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-              {!isLoadingArusKas && getFilteredArusKasData(selectedPT).length > 0 && (
-                <>
-                  <tr className="grand-total-row bg-gray-100 font-bold border-t-2 border-gray-800">
-                    <td colSpan="6" className="px-4 py-3 text-right">Total</td>
-                    <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
-                    <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
-                    <td className="px-4 py-3 no-print"></td>
-                  </tr>
-                  <tr className="grand-total-row bg-blue-50 font-bold">
-                    <td colSpan="6" className="px-4 py-3 text-right">Saldo Akhir</td>
-                    <td colSpan="2" className="px-4 py-3 text-right text-blue-600 text-lg">Rp {saldo.toLocaleString('id-ID')}</td>
-                    <td className="px-4 py-3 no-print"></td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    );
-  };
 
   // Search Results Modal
   const renderSearchResults = () => {
@@ -3477,33 +2407,40 @@ const SumberJayaApp = () => {
       setShowLaporanPreview(true);
     };
 
-    // Hitung Laba Rugi Komprehensif dari Arus Kas (3 Sumber: Penjualan + Kas Kecil + Manual)
+    // Hitung Laba Rugi dari Penjualan dan Kas Kecil
     const hitungLabaRugi = () => {
       // Filter data berdasarkan PT dan bulan yang dipilih
       const [year, month] = selectedMonth.split('-');
-      
-      // Filter arus kas berdasarkan PT dan bulan
-      const arusKasFiltered = arusKasData.filter(item => {
+
+      // Filter penjualan berdasarkan PT dan bulan
+      const penjualanFiltered = penjualanData.filter(item => {
         if (!selectedPT.includes(item.pt)) return false;
         const itemDate = new Date(item.tanggal);
-        return itemDate.getFullYear() === parseInt(year) && 
+        return itemDate.getFullYear() === parseInt(year) &&
                (itemDate.getMonth() + 1) === parseInt(month);
       });
 
-      // Hitung penjualan dari arus kas (source: penjualan)
-      const totalPenjualan = arusKasFiltered
-        .filter(item => item.source === 'penjualan' && item.jenis === 'masuk')
-        .reduce((sum, item) => sum + item.jumlah, 0);
+      // Hitung total penjualan
+      const totalPenjualan = penjualanFiltered
+        .reduce((sum, item) => sum + (item.total || 0), 0);
 
-      // Hitung pendapatan lain (dari kas masuk dan manual masuk, exclude penjualan)
-      const pendapatanLain = arusKasFiltered
-        .filter(item => item.source !== 'penjualan' && item.jenis === 'masuk')
-        .reduce((sum, item) => sum + item.jumlah, 0);
+      // Filter kas kecil berdasarkan PT dan bulan
+      const kasKecilFiltered = kasKecilData.filter(item => {
+        if (!selectedPT.includes(item.pt)) return false;
+        const itemDate = new Date(item.tanggal);
+        return itemDate.getFullYear() === parseInt(year) &&
+               (itemDate.getMonth() + 1) === parseInt(month);
+      });
 
-      // Hitung total pengeluaran (dari semua sumber)
-      const totalPengeluaran = arusKasFiltered
+      // Hitung pendapatan lain dari kas kecil (pemasukan)
+      const pendapatanLain = kasKecilFiltered
+        .filter(item => item.jenis === 'masuk')
+        .reduce((sum, item) => sum + (item.jumlah || 0), 0);
+
+      // Hitung total pengeluaran dari kas kecil
+      const totalPengeluaran = kasKecilFiltered
         .filter(item => item.jenis === 'keluar')
-        .reduce((sum, item) => sum + item.jumlah, 0);
+        .reduce((sum, item) => sum + (item.jumlah || 0), 0);
 
       const totalPendapatan = totalPenjualan + pendapatanLain;
       const labaBersih = totalPendapatan - totalPengeluaran;
@@ -4313,293 +3250,6 @@ const SumberJayaApp = () => {
     );
   };
 
-  // Render Arus Kas Page (Comprehensive Cash Flow - Cash + Cashless)
-  const renderArusKas = () => {
-    return (
-      <div id="arus-kas-content" className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">Arus Kas</h2>
-            <p className="text-sm text-gray-600">Laporan komprehensif: Penjualan + Kas Kecil (Cash) + Manual Entry (Cashless)</p>
-          </div>
-        </div>
-
-
-        {/* Input Form for Cashless Transactions */}
-        <div className="bg-white rounded-lg p-6 shadow-md no-print">
-          <h3 className="text-lg font-bold mb-4">Input Transaksi Manual (Cashless)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Tanggal *</label>
-              <input 
-                type="date" 
-                value={formArusKas.tanggal}
-                onChange={(e) => setFormArusKas({...formArusKas, tanggal: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">PT *</label>
-              <select 
-                value={formArusKas.pt}
-                onChange={(e) => setFormArusKas({...formArusKas, pt: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="">Pilih PT</option>
-                {currentUserData?.accessPT?.map(code => (
-                  <option key={code} value={code}>{code}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Jenis *</label>
-              <select 
-                value={formArusKas.jenis}
-                onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="keluar">Pengeluaran</option>
-                <option value="masuk">Pemasukan</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
-              <input 
-                type="number" 
-                value={formArusKas.jumlah}
-                onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
-                placeholder="0" 
-                className="w-full px-4 py-2 border rounded-lg" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Kategori *</label>
-              <select 
-                value={formArusKas.kategori}
-                onChange={(e) => setFormArusKas({...formArusKas, kategori: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-                required
-              >
-                <option value="">Pilih Kategori</option>
-                {kategoriList.map(kategori => (
-                  <option key={kategori} value={kategori}>{kategori}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Keterangan *</label>
-              <textarea
-                value={formArusKas.keterangan}
-                onChange={(e) => setFormArusKas({...formArusKas, keterangan: e.target.value})}
-                placeholder="Masukkan keterangan transaksi" 
-                className="w-full px-4 py-2 border rounded-lg"
-                rows={1}
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <button 
-              onClick={handleSaveArusKas}
-              disabled={isLoadingArusKas}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isLoadingArusKas ? 'Menyimpan...' : 'Simpan Transaksi'}
-            </button>
-          </div>
-        </div>
-
-        {/* Filter Section - Buat Baru */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h3 className="text-lg font-semibold mb-4">Filter & Print</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Filter PT */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Filter PT (Opsional)</label>
-              <div className="flex flex-wrap gap-2">
-                {currentUserData?.accessPT?.map(ptCode => (
-                  <button
-                    key={ptCode}
-                    onClick={() => {
-                      setFilterArusKas(prev => ({
-                        ...prev,
-                        pt: prev.pt.includes(ptCode)
-                          ? prev.pt.filter(p => p !== ptCode)
-                          : [...prev.pt, ptCode]
-                      }));
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      filterArusKas.pt.includes(ptCode)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {ptCode}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {filterArusKas.pt.length === 0 ? 'Semua PT' : `${filterArusKas.pt.length} PT dipilih`}
-              </p>
-            </div>
-
-            {/* Filter Tanggal */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Filter Tanggal (Opsional)</label>
-              <input
-                type="date"
-                value={filterArusKas.tanggal}
-                onChange={(e) => setFilterArusKas({...filterArusKas, tanggal: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                {filterArusKas.tanggal ? `Tanggal: ${filterArusKas.tanggal}` : 'Semua tanggal'}
-              </p>
-            </div>
-
-            {/* Button Print */}
-            <div className="flex items-end">
-              <button
-                onClick={handlePrintArusKas}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
-              >
-                <Download size={18} />
-                Print Laporan
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Riwayat Transaksi */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-4 border-b">
-            <h3 className="text-lg font-semibold">Riwayat Transaksi</h3>
-            <p className="text-sm text-gray-600">Data dari: Penjualan + Kas Kecil + Manual Entry</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PT</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sumber</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Keluar</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {(() => {
-                  // Filter data by PT (jika dipilih)
-                  let filtered = [...arusKasData];
-
-                  if (filterArusKas.pt.length > 0) {
-                    filtered = filtered.filter(item => filterArusKas.pt.includes(item.pt));
-                  }
-
-                  // Filter data by Tanggal (jika dipilih)
-                  if (filterArusKas.tanggal) {
-                    filtered = filtered.filter(item => {
-                      const itemDate = getLocalDateFromISO(item.tanggal);
-                      return itemDate === filterArusKas.tanggal;
-                    });
-                  }
-
-                  // Sort by tanggal (terbaru dulu)
-                  filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-
-                  // Calculate totals
-                  const totalMasuk = filtered.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-                  const totalKeluar = filtered.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-
-                  return (
-                    <>
-                      {filtered.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                            Tidak ada data transaksi
-                          </td>
-                        </tr>
-                      ) : (
-                        <>
-                          {filtered.map((item, index) => (
-                            <tr key={`${item.source || 'unknown'}-${item.id}-${index}`} className="hover:bg-gray-50">
-                              <td className="px-4 py-3 text-sm">
-                                {getLocalDateFromISO(item.tanggal)}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-medium">{item.pt}</td>
-                              <td className="px-4 py-3 text-sm">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  item.source === 'penjualan' ? 'bg-purple-100 text-purple-800' :
-                                  item.source === 'kas_kecil' ? 'bg-green-100 text-green-800' :
-                                  'bg-blue-100 text-blue-800'
-                                }`}>
-                                  {item.source === 'penjualan' ? 'Penjualan' :
-                                   item.source === 'kas_kecil' ? 'Kas Kecil' : 'Manual'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-sm">{item.kategori || '-'}</td>
-                              <td className="px-4 py-3 text-sm">{item.keterangan}</td>
-                              <td className="px-4 py-3 text-sm text-right">
-                                {item.jenis === 'masuk' ? (
-                                  <span className="text-green-600 font-medium">
-                                    Rp {(item.jumlah || 0).toLocaleString('id-ID')}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-right">
-                                {item.jenis === 'keluar' ? (
-                                  <span className="text-red-600 font-medium">
-                                    Rp {(item.jumlah || 0).toLocaleString('id-ID')}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                          {/* Total Row */}
-                          <tr className="bg-gray-50 font-bold">
-                            <td colSpan="5" className="px-4 py-3 text-right">TOTAL</td>
-                            <td className="px-4 py-3 text-right text-green-600">
-                              Rp {totalMasuk.toLocaleString('id-ID')}
-                            </td>
-                            <td className="px-4 py-3 text-right text-red-600">
-                              Rp {totalKeluar.toLocaleString('id-ID')}
-                            </td>
-                          </tr>
-                          {/* Saldo Row */}
-                          <tr className="bg-blue-50 font-bold">
-                            <td colSpan="5" className="px-4 py-3 text-right">SALDO</td>
-                            <td colSpan="2" className="px-4 py-3 text-right text-blue-600 text-lg">
-                              Rp {(totalMasuk - totalKeluar).toLocaleString('id-ID')}
-                            </td>
-                          </tr>
-                        </>
-                      )}
-                    </>
-                  );
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Loading State */}
-        {isLoadingArusKas && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 flex items-center gap-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <span>Memuat data arus kas...</span>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   const renderDetailKas = () => {
     const handlePTChange = (ptCode) => {
@@ -4760,7 +3410,6 @@ const SumberJayaApp = () => {
     switch (activeMenu) {
       case 'beranda': return renderBeranda();
       case 'kas-kecil': return renderKasKecil();
-      case 'arus-kas': return renderArusKas();
       case 'detail-kas': return renderDetailKas();
       case 'penjualan': return renderPenjualan();
       case 'laporan': return renderLaporan();
