@@ -151,33 +151,7 @@ db.getConnection((err, connection) => {
       });
     }
   });
-  
-  // Auto-migration: Create arus_kas table if not exists
-  const createArusKasTable = `
-    CREATE TABLE IF NOT EXISTS arus_kas (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      tanggal DATE NOT NULL,
-      pt_code VARCHAR(10) NOT NULL,
-      jenis ENUM('masuk', 'keluar') NOT NULL,
-      jumlah DECIMAL(15,2) NOT NULL,
-      keterangan TEXT,
-      kategori VARCHAR(100),
-      metode_bayar ENUM('cash', 'cashless') DEFAULT 'cashless',
-      created_by INT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (created_by) REFERENCES users(id),
-      FOREIGN KEY (pt_code) REFERENCES pt_list(code)
-    )
-  `;
-  
-  db.query(createArusKasTable, (err) => {
-    if (err) {
-      console.error('⚠️ Error creating arus_kas table:', err.message);
-    } else {
-      console.log('✅ Arus Kas table ready');
-    }
-  });
-  
+
   // Auto-migration: Add kategori column to kas_kecil if not exists
   const checkKategoriColumn = `
     SELECT COUNT(*) as count 
@@ -218,7 +192,34 @@ db.getConnection((err, connection) => {
       console.log('✅ Kategori column already exists in kas_kecil table');
     }
   });
-  
+
+  // Auto-migration: Create arus_kas table if not exists
+  const createArusKasTable = `
+    CREATE TABLE IF NOT EXISTS arus_kas (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tanggal DATE NOT NULL,
+      pt_code VARCHAR(10) NOT NULL,
+      jenis ENUM('masuk', 'keluar') NOT NULL,
+      jumlah DECIMAL(15,2) NOT NULL,
+      keterangan TEXT,
+      kategori VARCHAR(100),
+      metode_bayar ENUM('cash', 'cashless') DEFAULT 'cashless',
+      created_by INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (pt_code) REFERENCES pt_list(code)
+    )
+  `;
+
+  db.query(createArusKasTable, (err) => {
+    if (err) {
+      console.error('⚠️ Error creating arus_kas table:', err.message);
+    } else {
+      console.log('✅ Arus Kas table ready');
+    }
+  });
+
   console.log('✅ Database tables initialized');
 });
 
@@ -378,31 +379,41 @@ app.get('/api/pt', verifyToken, (req, res) => {
 // Get Kas Kecil (Cash Only)
 app.get('/api/kas-kecil', verifyToken, (req, res) => {
   const { pt, tanggal_dari, tanggal_sampai, status } = req.query;
-  
-  let query = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, kategori, status, created_by, approved_by, created_at, updated_at FROM kas_kecil WHERE 1=1';
+
+  let query = `
+    SELECT
+      kk.id, kk.tanggal, kk.pt_code AS pt, kk.jenis, kk.jumlah, kk.keterangan,
+      kk.kategori, kk.status, kk.created_by, kk.approved_by, kk.created_at, kk.updated_at,
+      kk.sub_kategori_id,
+      sk.nama AS sub_kategori_nama,
+      sk.jenis AS sub_kategori_jenis
+    FROM kas_kecil kk
+    LEFT JOIN sub_kategori sk ON kk.sub_kategori_id = sk.id
+    WHERE 1=1
+  `;
   let params = [];
-  
+
   if (pt) {
-    query += ' AND pt_code = ?';
+    query += ' AND kk.pt_code = ?';
     params.push(pt);
   }
-  
+
   if (tanggal_dari) {
-    query += ' AND tanggal >= ?';
+    query += ' AND kk.tanggal >= ?';
     params.push(tanggal_dari);
   }
-  
+
   if (tanggal_sampai) {
-    query += ' AND tanggal <= ?';
+    query += ' AND kk.tanggal <= ?';
     params.push(tanggal_sampai);
   }
-  
+
   if (status) {
-    query += ' AND status = ?';
+    query += ' AND kk.status = ?';
     params.push(status);
   }
-  
-  query += ' ORDER BY tanggal ASC, id ASC';
+
+  query += ' ORDER BY kk.tanggal ASC, kk.id ASC';
   
   db.query(query, params, (err, results) => {
     if (err) {
@@ -805,239 +816,710 @@ app.get('/api/kas-kecil/saldo', verifyToken, (req, res) => {
   });
 });
 
+
 // ==================== ARUS KAS ROUTES ====================
 
-// Get Arus Kas (Aggregated: Penjualan + Kas Kecil + Manual Arus Kas)
+// Get Arus Kas (Manual Cash Flow - No Approval)
 app.get('/api/arus-kas', verifyToken, (req, res) => {
   const { pt, tanggal_dari, tanggal_sampai } = req.query;
-  
-  // Query untuk get manual arus kas entries
-  let arusKasQuery = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, kategori, metode_bayar AS metodeBayar, created_by, created_at, "manual" AS source FROM arus_kas WHERE 1=1';
+
+  let query = `
+    SELECT
+      ak.id, ak.tanggal, ak.pt_code AS pt, ak.jenis, ak.jumlah, ak.keterangan,
+      ak.kategori, ak.metode_bayar, ak.created_by, ak.created_at, ak.updated_at,
+      ak.sub_kategori_id,
+      sk.nama AS sub_kategori_nama,
+      sk.jenis AS sub_kategori_jenis
+    FROM arus_kas ak
+    LEFT JOIN sub_kategori sk ON ak.sub_kategori_id = sk.id
+    WHERE 1=1
+  `;
   let params = [];
-  
+
   if (pt) {
-    arusKasQuery += ' AND pt_code = ?';
+    query += ' AND ak.pt_code = ?';
     params.push(pt);
   }
-  
+
   if (tanggal_dari) {
-    arusKasQuery += ' AND tanggal >= ?';
+    query += ' AND ak.tanggal >= ?';
     params.push(tanggal_dari);
   }
-  
+
   if (tanggal_sampai) {
-    arusKasQuery += ' AND tanggal <= ?';
+    query += ' AND ak.tanggal <= ?';
     params.push(tanggal_sampai);
   }
-  
-  arusKasQuery += ' ORDER BY tanggal ASC, id ASC';
-  
-  // Query untuk get kas kecil (only approved cash transactions)
-  let kasKecilQuery = 'SELECT id, tanggal, pt_code AS pt, jenis, jumlah, keterangan, "KAS TUNAI" AS kategori, "cash" AS metodeBayar, created_by, created_at, "kas_kecil" AS source FROM kas_kecil WHERE status = "approved"';
-  let kasParams = [];
-  
-  if (pt) {
-    kasKecilQuery += ' AND pt_code = ?';
-    kasParams.push(pt);
-  }
-  
-  if (tanggal_dari) {
-    kasKecilQuery += ' AND tanggal >= ?';
-    kasParams.push(tanggal_dari);
-  }
-  
-  if (tanggal_sampai) {
-    kasKecilQuery += ' AND tanggal <= ?';
-    kasParams.push(tanggal_sampai);
-  }
-  
-  kasKecilQuery += ' ORDER BY tanggal ASC, id ASC';
-  
-  // Query untuk get penjualan
-  let penjualanQuery = 'SELECT id, tanggal, pt_code AS pt, "masuk" AS jenis, total AS jumlah, CONCAT("Penjualan - ", pangkalan, " (", qty, " tabung)") AS keterangan, "PENDAPATAN PENJUALAN" AS kategori, metode_bayar AS metodeBayar, created_by, created_at, "penjualan" AS source FROM penjualan WHERE 1=1';
-  let penjualanParams = [];
-  
-  if (pt) {
-    penjualanQuery += ' AND pt_code = ?';
-    penjualanParams.push(pt);
-  }
-  
-  if (tanggal_dari) {
-    penjualanQuery += ' AND tanggal >= ?';
-    penjualanParams.push(tanggal_dari);
-  }
-  
-  if (tanggal_sampai) {
-    penjualanQuery += ' AND tanggal <= ?';
-    penjualanParams.push(tanggal_sampai);
-  }
-  
-  penjualanQuery += ' ORDER BY tanggal ASC, id ASC';
-  
-  // Execute all queries in parallel
-  Promise.all([
-    new Promise((resolve, reject) => {
-      db.query(arusKasQuery, params, (err, results) => err ? reject(err) : resolve(results));
-    }),
-    new Promise((resolve, reject) => {
-      db.query(kasKecilQuery, kasParams, (err, results) => err ? reject(err) : resolve(results));
-    }),
-    new Promise((resolve, reject) => {
-      db.query(penjualanQuery, penjualanParams, (err, results) => err ? reject(err) : resolve(results));
-    })
-  ])
-  .then(([arusKasResults, kasKecilResults, penjualanResults]) => {
-    // Combine all results
-    const combined = [...arusKasResults, ...kasKecilResults, ...penjualanResults];
-    
-    // Sort by date and format
-    const sorted = combined.sort((a, b) => {
-      const dateCompare = new Date(a.tanggal) - new Date(b.tanggal);
-      if (dateCompare !== 0) return dateCompare;
-      return a.id - b.id;
-    });
-    
-    // Format results - Convert tanggal to local YYYY-MM-DD format
-    const formatted = sorted.map(item => {
-      // Extract local date components (avoid timezone conversion)
-      let tanggalStr;
-      if (item.tanggal instanceof Date) {
-        const year = item.tanggal.getFullYear();
-        const month = String(item.tanggal.getMonth() + 1).padStart(2, '0');
-        const day = String(item.tanggal.getDate()).padStart(2, '0');
-        tanggalStr = `${year}-${month}-${day}`;
-      } else {
-        tanggalStr = item.tanggal; // Already string
-      }
 
-      return {
-        ...item,
-        jumlah: parseFloat(item.jumlah),
-        tanggal: tanggalStr
-      };
+  query += ' ORDER BY ak.tanggal DESC, ak.id DESC';
+
+  console.log('DEBUG Arus Kas Query:', { query, params });
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error('❌ ERROR loading arus kas:', {
+        error: err.message,
+        code: err.code,
+        sqlState: err.sqlState,
+        sql: err.sql,
+        query: query,
+        params: params
+      });
+      return res.status(500).json({
+        message: 'Server error loading arus kas',
+        error: err.message,
+        code: err.code
+      });
+    }
+
+    // Convert jumlah string to number for correct calculations
+    const formattedResults = results.map(item => ({
+      ...item,
+      jumlah: parseFloat(item.jumlah)
+    }));
+
+    console.log('✅ DEBUG Backend Arus Kas Load:', {
+      resultCount: formattedResults.length,
+      sampleData: formattedResults.slice(0, 2).map(item => ({
+        id: item.id,
+        tanggal: item.tanggal,
+        pt: item.pt,
+        kategori: item.kategori,
+        metode_bayar: item.metode_bayar
+      }))
     });
-    
-    res.json(formatted);
-  })
-  .catch(err => {
-    console.error('Error fetching arus kas:', err);
-    res.status(500).json({ message: 'Server error', error: err });
+
+    res.json(formattedResults);
   });
 });
 
-// Create Manual Arus Kas Entry
+// Create Arus Kas (No Approval Needed)
 app.post('/api/arus-kas', verifyToken, (req, res) => {
-  const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
-  
-  if (!kategori) {
-    return res.status(400).json({ message: 'Kategori wajib diisi' });
-  }
-  
-  // Force tanggal to be treated as local date
+  const { tanggal, pt, jenis, jumlah, keterangan, subKategoriId, metodeBayar } = req.body;
+
+  console.log('DEBUG Backend Arus Kas Save:', {
+    tanggal: tanggal,
+    pt: pt,
+    jenis: jenis,
+    subKategoriId: subKategoriId,
+    metodeBayar: metodeBayar
+  });
+
+  // Force tanggal to be treated as local date (no timezone conversion)
   const localTanggal = processTanggal(tanggal);
-  
-  const query = 'INSERT INTO arus_kas (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-  
-  db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', req.userId], (err, result) => {
+
+  // Get kategori nama from sub_kategori_id for backward compatibility
+  const getKategoriQuery = 'SELECT nama FROM sub_kategori WHERE id = ?';
+
+  db.query(getKategoriQuery, [subKategoriId], (err, kategoriResult) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error getting kategori', error: err });
+    }
+
+    const kategoriNama = kategoriResult && kategoriResult[0] ? kategoriResult[0].nama : null;
+
+    const query = 'INSERT INTO arus_kas (tanggal, pt_code, jenis, jumlah, keterangan, kategori, sub_kategori_id, metode_bayar, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+
+    db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategoriNama, subKategoriId, metodeBayar || 'cashless', req.userId], (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+
+      res.status(201).json({
+        message: 'Arus kas berhasil ditambahkan',
+        id: result.insertId
+      });
+    });
+  });
+});
+
+// Update Arus Kas (No Date Restriction - Can Edit Anytime)
+app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+  const { tanggal, pt, jenis, jumlah, keterangan, subKategoriId, metodeBayar } = req.body;
+
+  // Step 1: Get existing arus kas data to check ownership
+  const getQuery = 'SELECT created_by FROM arus_kas WHERE id = ?';
+
+  db.query(getQuery, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
-    
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Data arus kas tidak ditemukan' });
+    }
+
+    const arusKasData = results[0];
+
+    // Step 2: Validasi - only Master User or creator can edit
+    if (arusKasData.created_by !== req.userId) {
+      // Check if user is Master User
+      const checkUserQuery = 'SELECT role FROM users WHERE id = ?';
+      db.query(checkUserQuery, [req.userId], (err, userResults) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+
+        if (userResults.length === 0 || userResults[0].role !== 'Master User') {
+          return res.status(403).json({ message: 'Anda tidak memiliki akses untuk mengedit transaksi ini' });
+        }
+
+        // Master User can edit
+        updateTransaction();
+      });
+    } else {
+      // Creator can edit
+      updateTransaction();
+    }
+
+    function updateTransaction() {
+      // Force tanggal to be treated as local date (no timezone conversion)
+      const localTanggal = processTanggal(tanggal);
+
+      // Get kategori nama from sub_kategori_id for backward compatibility
+      const getKategoriQuery = 'SELECT nama FROM sub_kategori WHERE id = ?';
+
+      db.query(getKategoriQuery, [subKategoriId], (err, kategoriResult) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error getting kategori', error: err });
+        }
+
+        const kategoriNama = kategoriResult && kategoriResult[0] ? kategoriResult[0].nama : null;
+
+        const updateQuery = `
+          UPDATE arus_kas
+          SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, sub_kategori_id = ?, metode_bayar = ?
+          WHERE id = ?
+        `;
+
+        db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategoriNama, subKategoriId, metodeBayar || 'cashless', id], (err, result) => {
+          if (err) {
+            return res.status(500).json({ message: 'Server error', error: err });
+          }
+
+          res.json({
+            message: 'Data arus kas berhasil diupdate'
+          });
+        });
+      });
+    }
+  });
+});
+
+// Delete Arus Kas (No Date Restriction - Can Delete Anytime)
+app.delete('/api/arus-kas/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  // Step 1: Get existing arus kas data to check ownership
+  const getQuery = 'SELECT created_by FROM arus_kas WHERE id = ?';
+
+  db.query(getQuery, [id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ message: 'Server error', error: err });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Data arus kas tidak ditemukan' });
+    }
+
+    const arusKasData = results[0];
+
+    // Step 2: Validasi - only Master User or creator can delete
+    if (arusKasData.created_by !== req.userId) {
+      // Check if user is Master User
+      const checkUserQuery = 'SELECT role FROM users WHERE id = ?';
+      db.query(checkUserQuery, [req.userId], (err, userResults) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+
+        if (userResults.length === 0 || userResults[0].role !== 'Master User') {
+          return res.status(403).json({ message: 'Anda tidak memiliki akses untuk menghapus transaksi ini' });
+        }
+
+        // Master User can delete
+        deleteTransaction();
+      });
+    } else {
+      // Creator can delete
+      deleteTransaction();
+    }
+
+    function deleteTransaction() {
+      const deleteQuery = 'DELETE FROM arus_kas WHERE id = ?';
+
+      db.query(deleteQuery, [id], (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+
+        res.json({
+          message: 'Data arus kas berhasil dihapus'
+        });
+      });
+    }
+  });
+});
+
+// Test endpoint to debug arus_kas table structure (NO AUTH - TEMPORARY)
+app.get('/api/debug/arus-kas', (req, res) => {
+  console.log('🔍 DEBUG: Checking arus_kas table...');
+
+  // Check if table exists
+  const checkTableQuery = `
+    SELECT COUNT(*) as tableExists
+    FROM information_schema.tables
+    WHERE table_schema = DATABASE()
+    AND table_name = 'arus_kas'
+  `;
+
+  db.query(checkTableQuery, (err, tableCheck) => {
+    if (err) {
+      console.error('❌ Error checking table existence:', err);
+      return res.status(500).json({ error: 'Failed to check table', details: err.message });
+    }
+
+    const tableExists = tableCheck[0].tableExists > 0;
+    console.log('Table exists:', tableExists);
+
+    if (!tableExists) {
+      return res.json({
+        status: 'error',
+        message: 'Table arus_kas does not exist',
+        tableExists: false
+      });
+    }
+
+    // Get table structure
+    const describeQuery = 'DESCRIBE arus_kas';
+    db.query(describeQuery, (err, structure) => {
+      if (err) {
+        console.error('❌ Error getting table structure:', err);
+        return res.status(500).json({ error: 'Failed to describe table', details: err.message });
+      }
+
+      // Count rows
+      const countQuery = 'SELECT COUNT(*) as rowCount FROM arus_kas';
+      db.query(countQuery, (err, countResult) => {
+        if (err) {
+          console.error('❌ Error counting rows:', err);
+          return res.status(500).json({ error: 'Failed to count rows', details: err.message });
+        }
+
+        // Get sample data
+        const sampleQuery = 'SELECT * FROM arus_kas LIMIT 3';
+        db.query(sampleQuery, (err, sampleData) => {
+          if (err) {
+            console.error('❌ Error getting sample data:', err);
+            return res.status(500).json({ error: 'Failed to get sample data', details: err.message });
+          }
+
+          console.log('✅ Debug info collected successfully');
+          res.json({
+            status: 'success',
+            tableExists: true,
+            structure: structure,
+            rowCount: countResult[0].rowCount,
+            sampleData: sampleData
+          });
+        });
+      });
+    });
+  });
+});
+
+// Auto-migration endpoint: Add updated_at column to arus_kas (NO AUTH - TEMPORARY)
+app.get('/api/migrate/add-updated-at', (req, res) => {
+  console.log('🔧 MIGRATION: Adding updated_at column to arus_kas...');
+
+  // First check if column already exists
+  const checkColumnQuery = `
+    SELECT COUNT(*) as columnExists
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+    AND table_name = 'arus_kas'
+    AND column_name = 'updated_at'
+  `;
+
+  db.query(checkColumnQuery, (err, checkResult) => {
+    if (err) {
+      console.error('❌ Error checking column:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to check column existence',
+        details: err.message
+      });
+    }
+
+    const columnExists = checkResult[0].columnExists > 0;
+
+    if (columnExists) {
+      console.log('✅ Column updated_at already exists');
+      return res.json({
+        success: true,
+        message: 'Column updated_at already exists',
+        alreadyExists: true
+      });
+    }
+
+    // Column doesn't exist, add it
+    const addColumnQuery = `
+      ALTER TABLE arus_kas
+      ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    `;
+
+    db.query(addColumnQuery, (err, result) => {
+      if (err) {
+        console.error('❌ Error adding column:', err);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to add column',
+          details: err.message
+        });
+      }
+
+      console.log('✅ Column updated_at added successfully');
+
+      // Verify the change
+      const verifyQuery = 'DESCRIBE arus_kas';
+      db.query(verifyQuery, (err, structure) => {
+        if (err) {
+          console.error('❌ Error verifying structure:', err);
+          return res.json({
+            success: true,
+            message: 'Column added but verification failed',
+            changes: 'Added column: updated_at'
+          });
+        }
+
+        res.json({
+          success: true,
+          message: 'Migration completed successfully',
+          changes: 'Added column: updated_at',
+          newStructure: structure
+        });
+      });
+    });
+  });
+});
+
+// Auto-migration endpoint: Create sub_kategori table and migrate data (NO AUTH - TEMPORARY)
+app.get('/api/migrate/create-sub-kategori', (req, res) => {
+  console.log('🔧 MIGRATION: Creating sub_kategori table and migrating data...');
+
+  // Step 1: Check if table already exists
+  const checkTableQuery = `
+    SELECT COUNT(*) as tableExists
+    FROM information_schema.tables
+    WHERE table_schema = DATABASE()
+    AND table_name = 'sub_kategori'
+  `;
+
+  db.query(checkTableQuery, (err, tableCheck) => {
+    if (err) {
+      console.error('❌ Error checking table:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to check table existence',
+        details: err.message
+      });
+    }
+
+    const tableExists = tableCheck[0].tableExists > 0;
+
+    if (tableExists) {
+      console.log('✅ Table sub_kategori already exists');
+      return res.json({
+        success: true,
+        message: 'Table sub_kategori already exists',
+        alreadyExists: true
+      });
+    }
+
+    // Step 2: Create sub_kategori table
+    const createTableQuery = `
+      CREATE TABLE sub_kategori (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        jenis ENUM('pemasukan', 'pengeluaran') NOT NULL,
+        nama VARCHAR(100) NOT NULL,
+        urutan INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_jenis (jenis),
+        INDEX idx_urutan (urutan)
+      )
+    `;
+
+    db.query(createTableQuery, (err) => {
+      if (err) {
+        console.error('❌ Error creating table:', err);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create sub_kategori table',
+          details: err.message
+        });
+      }
+
+      console.log('✅ Table sub_kategori created successfully');
+
+      // Step 3: Seed initial data
+      const seedQuery = `
+        INSERT INTO sub_kategori (jenis, nama, urutan) VALUES
+        ('pengeluaran', 'BIAYA OPERASIONAL', 1),
+        ('pengeluaran', 'BIAYA LAIN-LAIN', 2),
+        ('pengeluaran', 'TRANSPORT FEE', 3),
+        ('pengeluaran', 'BEBAN GAJI KARYAWAN', 4),
+        ('pengeluaran', 'BEBAN DIMUKA', 5),
+        ('pengeluaran', 'BIAYA PAJAK & KONSULTAN', 6),
+        ('pengeluaran', 'BIAYA ANGSURAN', 7),
+        ('pengeluaran', 'BIAYA SEWA', 8),
+        ('pengeluaran', 'KASBON KARYAWAN', 9),
+        ('pengeluaran', 'PEMBELIAN BARANG', 10),
+        ('pengeluaran', 'MAINTENANCE', 11),
+        ('pengeluaran', 'KOMUNIKASI', 12),
+        ('pemasukan', 'PEMASUKAN LAIN', 1)
+      `;
+
+      db.query(seedQuery, (err) => {
+        if (err) {
+          console.error('❌ Error seeding data:', err);
+          return res.status(500).json({
+            success: false,
+            error: 'Table created but failed to seed initial data',
+            details: err.message
+          });
+        }
+
+        console.log('✅ Initial data seeded successfully');
+
+        // Step 4: Add sub_kategori_id column to kas_kecil
+        const alterKasKecilQuery = `
+          ALTER TABLE kas_kecil
+          ADD COLUMN sub_kategori_id INT NULL AFTER kategori,
+          ADD FOREIGN KEY (sub_kategori_id) REFERENCES sub_kategori(id)
+        `;
+
+        db.query(alterKasKecilQuery, (err) => {
+          if (err) {
+            console.error('❌ Error altering kas_kecil:', err);
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to add sub_kategori_id to kas_kecil',
+              details: err.message
+            });
+          }
+
+          console.log('✅ Column sub_kategori_id added to kas_kecil');
+
+          // Step 5: Add sub_kategori_id column to arus_kas
+          const alterArusKasQuery = `
+            ALTER TABLE arus_kas
+            ADD COLUMN sub_kategori_id INT NULL AFTER kategori,
+            ADD FOREIGN KEY (sub_kategori_id) REFERENCES sub_kategori(id)
+          `;
+
+          db.query(alterArusKasQuery, (err) => {
+            if (err) {
+              console.error('❌ Error altering arus_kas:', err);
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to add sub_kategori_id to arus_kas',
+                details: err.message
+              });
+            }
+
+            console.log('✅ Column sub_kategori_id added to arus_kas');
+
+            // Step 6: Migrate existing data from kas_kecil
+            const migrateKasKecilQuery = `
+              UPDATE kas_kecil kk
+              JOIN sub_kategori sk ON kk.kategori = sk.nama
+              SET kk.sub_kategori_id = sk.id
+              WHERE kk.kategori IS NOT NULL
+            `;
+
+            db.query(migrateKasKecilQuery, (err, result) => {
+              if (err) {
+                console.error('❌ Error migrating kas_kecil data:', err);
+              } else {
+                console.log(`✅ Migrated ${result.affectedRows} rows in kas_kecil`);
+              }
+
+              // Step 7: Migrate existing data from arus_kas
+              const migrateArusKasQuery = `
+                UPDATE arus_kas ak
+                JOIN sub_kategori sk ON ak.kategori = sk.nama
+                SET ak.sub_kategori_id = sk.id
+                WHERE ak.kategori IS NOT NULL
+              `;
+
+              db.query(migrateArusKasQuery, (err, result2) => {
+                if (err) {
+                  console.error('❌ Error migrating arus_kas data:', err);
+                } else {
+                  console.log(`✅ Migrated ${result2.affectedRows} rows in arus_kas`);
+                }
+
+                res.json({
+                  success: true,
+                  message: 'Migration completed successfully',
+                  changes: [
+                    'Created table: sub_kategori',
+                    'Seeded 13 initial sub kategori',
+                    'Added column: kas_kecil.sub_kategori_id',
+                    'Added column: arus_kas.sub_kategori_id',
+                    `Migrated ${result?.affectedRows || 0} kas_kecil records`,
+                    `Migrated ${result2?.affectedRows || 0} arus_kas records`
+                  ]
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+});
+
+
+// ==================== SUB KATEGORI ROUTES ====================
+
+// Get all sub kategori
+app.get('/api/sub-kategori', verifyToken, (req, res) => {
+  const { jenis } = req.query; // Filter by jenis: 'pemasukan' or 'pengeluaran'
+
+  let query = 'SELECT id, jenis, nama, urutan, created_at, updated_at FROM sub_kategori';
+  const params = [];
+
+  if (jenis) {
+    query += ' WHERE jenis = ?';
+    params.push(jenis);
+  }
+
+  query += ' ORDER BY jenis ASC, urutan ASC, nama ASC';
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error('Error loading sub kategori:', err);
+      return res.status(500).json({ message: 'Server error loading sub kategori', error: err.message });
+    }
+
+    res.json(results);
+  });
+});
+
+// Create new sub kategori
+app.post('/api/sub-kategori', verifyToken, (req, res) => {
+  const { jenis, nama, urutan } = req.body;
+
+  // Validation
+  if (!jenis || !nama) {
+    return res.status(400).json({ message: 'Jenis dan nama sub kategori wajib diisi' });
+  }
+
+  if (!['pemasukan', 'pengeluaran'].includes(jenis)) {
+    return res.status(400).json({ message: 'Jenis harus pemasukan atau pengeluaran' });
+  }
+
+  const insertQuery = `
+    INSERT INTO sub_kategori (jenis, nama, urutan)
+    VALUES (?, ?, ?)
+  `;
+
+  db.query(insertQuery, [jenis, nama, urutan || 0], (err, result) => {
+    if (err) {
+      console.error('Error creating sub kategori:', err);
+      return res.status(500).json({ message: 'Server error creating sub kategori', error: err.message });
+    }
+
     res.status(201).json({
-      message: 'Arus kas berhasil ditambahkan',
+      message: 'Sub kategori berhasil ditambahkan',
       id: result.insertId
     });
   });
 });
 
-// Update Manual Arus Kas Entry (only for today's entries)
-app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
+// Update sub kategori
+app.put('/api/sub-kategori/:id', verifyToken, (req, res) => {
   const { id } = req.params;
-  const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
-  const today = getLocalDate();
-  
-  // Get existing entry
-  const getQuery = 'SELECT tanggal, created_by FROM arus_kas WHERE id = ?';
-  
-  db.query(getQuery, [id], (err, results) => {
+  const { jenis, nama, urutan } = req.body;
+
+  // Validation
+  if (!jenis || !nama) {
+    return res.status(400).json({ message: 'Jenis dan nama sub kategori wajib diisi' });
+  }
+
+  if (!['pemasukan', 'pengeluaran'].includes(jenis)) {
+    return res.status(400).json({ message: 'Jenis harus pemasukan atau pengeluaran' });
+  }
+
+  const updateQuery = `
+    UPDATE sub_kategori
+    SET jenis = ?, nama = ?, urutan = ?
+    WHERE id = ?
+  `;
+
+  db.query(updateQuery, [jenis, nama, urutan || 0, id], (err, result) => {
     if (err) {
-      return res.status(500).json({ message: 'Server error', error: err });
+      console.error('Error updating sub kategori:', err);
+      return res.status(500).json({ message: 'Server error updating sub kategori', error: err.message });
     }
-    
-    if (results.length === 0) {
-      return res.status(404).json({ message: 'Data tidak ditemukan' });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Sub kategori tidak ditemukan' });
     }
-    
-    const entry = results[0];
-    const entryDate = formatLocalDate(entry.tanggal);
-    
-    // Validate: only today's entries
-    if (entryDate !== today) {
-      return res.status(403).json({ message: 'Hanya bisa mengedit transaksi hari ini' });
+
+    res.json({ message: 'Sub kategori berhasil diupdate' });
+  });
+});
+
+// Delete sub kategori
+app.delete('/api/sub-kategori/:id', verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  // Check if sub kategori is being used in kas_kecil or arus_kas
+  const checkUsageQuery = `
+    SELECT
+      (SELECT COUNT(*) FROM kas_kecil WHERE sub_kategori_id = ?) as kas_kecil_count,
+      (SELECT COUNT(*) FROM arus_kas WHERE sub_kategori_id = ?) as arus_kas_count
+  `;
+
+  db.query(checkUsageQuery, [id, id], (err, result) => {
+    if (err) {
+      console.error('Error checking sub kategori usage:', err);
+      return res.status(500).json({ message: 'Server error checking usage', error: err.message });
     }
-    
-    // Validate: only creator can edit
-    if (entry.created_by !== req.userId) {
-      return res.status(403).json({ message: 'Anda tidak memiliki akses untuk mengedit transaksi ini' });
+
+    const kasKecilCount = result[0].kas_kecil_count;
+    const arusKasCount = result[0].arus_kas_count;
+    const totalUsage = kasKecilCount + arusKasCount;
+
+    if (totalUsage > 0) {
+      return res.status(400).json({
+        message: `Sub kategori tidak dapat dihapus karena masih digunakan di ${kasKecilCount} transaksi Kas Kecil dan ${arusKasCount} transaksi Arus Kas`,
+        usage: { kas_kecil: kasKecilCount, arus_kas: arusKasCount }
+      });
     }
-    
-    // Force tanggal to be treated as local date
-    const localTanggal = processTanggal(tanggal);
-    
-    const updateQuery = 'UPDATE arus_kas SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, metode_bayar = ? WHERE id = ?';
-    
-    db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', id], (err, result) => {
+
+    // Safe to delete
+    const deleteQuery = 'DELETE FROM sub_kategori WHERE id = ?';
+
+    db.query(deleteQuery, [id], (err, result) => {
       if (err) {
-        return res.status(500).json({ message: 'Server error', error: err });
+        console.error('Error deleting sub kategori:', err);
+        return res.status(500).json({ message: 'Server error deleting sub kategori', error: err.message });
       }
-      
-      res.json({ message: 'Data arus kas berhasil diupdate' });
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Sub kategori tidak ditemukan' });
+      }
+
+      res.json({ message: 'Sub kategori berhasil dihapus' });
     });
   });
 });
 
-// Delete Manual Arus Kas Entry (only for today's entries)
-app.delete('/api/arus-kas/:id', verifyToken, (req, res) => {
-  const { id } = req.params;
-  const today = getLocalDate();
-  
-  // Get existing entry
-  const getQuery = 'SELECT tanggal, created_by FROM arus_kas WHERE id = ?';
-  
-  db.query(getQuery, [id], (err, results) => {
-    if (err) {
-      return res.status(500).json({ message: 'Server error', error: err });
-    }
-    
-    if (results.length === 0) {
-      return res.status(404).json({ message: 'Data tidak ditemukan' });
-    }
-    
-    const entry = results[0];
-    const entryDate = formatLocalDate(entry.tanggal);
-    
-    // Validate: only today's entries
-    if (entryDate !== today) {
-      return res.status(403).json({ message: 'Hanya bisa menghapus transaksi hari ini' });
-    }
-    
-    // Validate: only creator or Master User can delete
-    const userRole = req.userRole || ''; // Assuming we add userRole to req in verifyToken
-    if (entry.created_by !== req.userId && userRole !== 'Master User') {
-      return res.status(403).json({ message: 'Anda tidak memiliki akses untuk menghapus transaksi ini' });
-    }
-    
-    const deleteQuery = 'DELETE FROM arus_kas WHERE id = ?';
-    
-    db.query(deleteQuery, [id], (err, result) => {
-      if (err) {
-        return res.status(500).json({ message: 'Server error', error: err });
-      }
-      
-      res.json({ message: 'Data arus kas berhasil dihapus' });
-    });
-  });
-});
 
 // ==================== PENJUALAN ROUTES ====================
 
