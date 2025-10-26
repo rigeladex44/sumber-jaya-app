@@ -2435,7 +2435,7 @@ const SumberJayaApp = () => {
       ptInfo = selectedPT.length > 0 ? selectedPT.join(' - ') : 'Semua PT'; // PT codes
     } else if (type === 'labarugi') {
       headerTitle = 'LAPORAN LABA RUGI';
-      
+
       // Nama PT lengkap untuk laba rugi
       let ptNamesForLabaRugi = '';
       if (selectedPT.length > 0) {
@@ -2448,13 +2448,116 @@ const SumberJayaApp = () => {
         ptNamesForLabaRugi = 'Semua PT';
         ptInfo = 'Semua PT';
       }
-      
+
       headerSubtitle = `${ptNamesForLabaRugi}`;
     }
-    
+
+    // Generate Laba Rugi data for PDF
+    let labaRugiContent = '';
+    if (type === 'labarugi') {
+      // Hitung data Laba Rugi
+      const [year, month] = selectedMonth.split('-');
+      const arusKasFiltered = arusKasData.filter(item => {
+        if (!selectedPT.includes(item.pt)) return false;
+        const itemDate = new Date(item.tanggal);
+        return itemDate.getFullYear() === parseInt(year) &&
+               (itemDate.getMonth() + 1) === parseInt(month);
+      });
+
+      const pemasukanPerSubKategori = [];
+      const pengeluaranPerSubKategori = [];
+      const subKatIdsSet = new Set(arusKasFiltered.map(item => item.sub_kategori_id).filter(id => id));
+
+      subKatIdsSet.forEach(subKatId => {
+        const subKat = subKategoriData.find(sk => sk.id === subKatId);
+        if (!subKat) return;
+
+        const itemsForSubKat = arusKasFiltered.filter(item => item.sub_kategori_id === subKatId);
+        const total = itemsForSubKat.reduce((sum, item) => sum + (item.jumlah || 0), 0);
+
+        const subKatData = {
+          id: subKat.id,
+          nama: subKat.nama,
+          total: total,
+          urutan: subKat.urutan
+        };
+
+        if (subKat.jenis === 'pemasukan') {
+          pemasukanPerSubKategori.push(subKatData);
+        } else if (subKat.jenis === 'pengeluaran') {
+          pengeluaranPerSubKategori.push(subKatData);
+        }
+      });
+
+      pemasukanPerSubKategori.sort((a, b) => a.urutan - b.urutan);
+      pengeluaranPerSubKategori.sort((a, b) => a.urutan - b.urutan);
+
+      const totalPendapatan = pemasukanPerSubKategori.reduce((sum, item) => sum + item.total, 0);
+      const totalPengeluaran = pengeluaranPerSubKategori.reduce((sum, item) => sum + item.total, 0);
+      const labaBersih = totalPendapatan - totalPengeluaran;
+
+      // Generate HTML untuk Laba Rugi
+      labaRugiContent = `
+        <div style="margin-bottom: 20px;">
+          <div style="background: #16a34a; padding: 8px 12px; margin-bottom: 0;">
+            <h3 style="color: white; font-weight: bold; font-size: 11px; margin: 0; text-transform: uppercase;">Pendapatan (Pemasukan)</h3>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin: 0;">
+            <tbody>
+              ${pemasukanPerSubKategori.length > 0 ? pemasukanPerSubKategori.map((item, index) => `
+                <tr style="background: ${index % 2 === 0 ? '#fff' : '#f9fafb'}; border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 6px 12px; font-size: 9px; color: #374151;">${item.nama}</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: 600; font-size: 9px; color: #15803d;">Rp ${item.total.toLocaleString('id-ID')}</td>
+                </tr>
+              `).join('') : `
+                <tr>
+                  <td colspan="2" style="padding: 6px 12px; text-align: center; font-size: 9px; color: #9ca3af; font-style: italic;">Tidak ada data pemasukan</td>
+                </tr>
+              `}
+              <tr style="background: #dcfce7; border-top: 2px solid #16a34a;">
+                <td style="padding: 8px 12px; font-weight: bold; font-size: 10px; color: #1f2937;">TOTAL PENDAPATAN</td>
+                <td style="padding: 8px 12px; text-align: right; font-weight: bold; font-size: 11px; color: #15803d;">Rp ${totalPendapatan.toLocaleString('id-ID')}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <div style="background: #dc2626; padding: 8px 12px; margin-bottom: 0;">
+            <h3 style="color: white; font-weight: bold; font-size: 11px; margin: 0; text-transform: uppercase;">Pengeluaran</h3>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin: 0;">
+            <tbody>
+              ${pengeluaranPerSubKategori.length > 0 ? pengeluaranPerSubKategori.map((item, index) => `
+                <tr style="background: ${index % 2 === 0 ? '#fff' : '#f9fafb'}; border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 6px 12px; font-size: 9px; color: #374151;">${item.nama}</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: 600; font-size: 9px; color: #b91c1c;">Rp ${item.total.toLocaleString('id-ID')}</td>
+                </tr>
+              `).join('') : `
+                <tr>
+                  <td colspan="2" style="padding: 6px 12px; text-align: center; font-size: 9px; color: #9ca3af; font-style: italic;">Tidak ada data pengeluaran</td>
+                </tr>
+              `}
+              <tr style="background: #fee2e2; border-top: 2px solid #dc2626;">
+                <td style="padding: 8px 12px; font-weight: bold; font-size: 10px; color: #1f2937;">TOTAL PENGELUARAN</td>
+                <td style="padding: 8px 12px; text-align: right; font-weight: bold; font-size: 11px; color: #b91c1c;">Rp ${totalPengeluaran.toLocaleString('id-ID')}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin: 20px 12px; border: 3px solid ${labaBersih >= 0 ? '#22c55e' : '#ef4444'}; border-radius: 6px; padding: 12px; background: ${labaBersih >= 0 ? '#f0fdf4' : '#fef2f2'};">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; font-size: 12px; color: #1f2937;">${labaBersih >= 0 ? 'LABA BERSIH' : 'RUGI BERSIH'}</span>
+            <span style="font-weight: bold; font-size: 16px; color: ${labaBersih >= 0 ? '#15803d' : '#b91c1c'};">Rp ${Math.abs(labaBersih).toLocaleString('id-ID')}</span>
+          </div>
+        </div>
+      `;
+    }
+
     if (content) {
       const printWindow = window.open('', '_blank');
-      
+
       // Untuk Laporan Laba Rugi, tidak ada tanda tangan
       const signatureSection = type === 'kas' ? `
         <div class="signature-section">
@@ -2799,7 +2902,7 @@ const SumberJayaApp = () => {
                 })()}
               </tbody>
             </table>
-            ` : content.innerHTML}
+            ` : labaRugiContent}
 
             ${signatureSection}
           </body>
