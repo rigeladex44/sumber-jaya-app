@@ -1861,10 +1861,12 @@ const SumberJayaApp = () => {
           transactionsFiltered.forEach(item => {
             rows += `
               <tr style="border: 1px solid #333;">
-                <td style="border: 1px solid #333; padding: 4px; padding-left: 40px; width: 15%; text-align: center; font-size: 9px;">
-                  ${item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
+                <td style="border: 1px solid #333; padding: 4px; padding-left: 40px; width: 60%; font-size: 10px;">${item.keterangan}</td>
+                <td style="border: 1px solid #333; padding: 4px; width: 19%; text-align: center; font-size: 9px;">
+                  <span class="payment-badge ${item.metode_bayar === 'cash' ? 'payment-cash' : 'payment-cashless'}">
+                    ${item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
+                  </span>
                 </td>
-                <td style="border: 1px solid #333; padding: 4px; width: 64%; font-size: 10px;">${item.keterangan}</td>
                 <td style="border: 1px solid #333; padding: 4px; text-align: right; width: 21%; font-size: 10px;">
                   Rp ${(item.jumlah || 0).toLocaleString('id-ID')}
                 </td>
@@ -2023,6 +2025,27 @@ const SumberJayaApp = () => {
                 font-weight: 600;
               }
 
+              /* ========== PAYMENT BADGE ========== */
+              .payment-badge {
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 9px;
+                font-weight: 600;
+                text-align: center;
+                letter-spacing: 0.3px;
+              }
+              .payment-cash {
+                background-color: #fee2e2;
+                color: #991b1b;
+                border: 1px solid #fca5a5;
+              }
+              .payment-cashless {
+                background-color: #dbeafe;
+                color: #1e40af;
+                border: 1px solid #93c5fd;
+              }
+
               /* ========== SIGNATURE SECTION ========== */
               .signature-section {
                 margin-top: 50px;
@@ -2065,6 +2088,27 @@ const SumberJayaApp = () => {
                 padding-top: 5px;
                 font-size: 11px;
                 color: #2d3748;
+              }
+
+              @media print {
+                body {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                .payment-badge {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                .payment-cash {
+                  background-color: #fee2e2 !important;
+                  color: #991b1b !important;
+                  border: 1px solid #fca5a5 !important;
+                }
+                .payment-cashless {
+                  background-color: #dbeafe !important;
+                  color: #1e40af !important;
+                  border: 1px solid #93c5fd !important;
+                }
               }
             </style>
           </head>
