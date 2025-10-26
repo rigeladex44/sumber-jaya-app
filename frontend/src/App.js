@@ -1831,7 +1831,7 @@ const SumberJayaApp = () => {
       // Kategori Header
       rows += `
         <tr style="background: ${jenis === 'masuk' ? '#d1fae5' : '#fee2e2'}; border: 1px solid #333;">
-          <td colspan="3" style="border: 1px solid #333; padding: 10px; font-weight: 700; font-size: 14px; text-transform: uppercase;">
+          <td colspan="3" style="border: 1px solid #333; padding: 6px; font-weight: 700; font-size: 12px; text-transform: uppercase;">
             ${jenis === 'masuk' ? 'PEMASUKAN' : 'PENGELUARAN'}
           </td>
         </tr>
@@ -1847,10 +1847,10 @@ const SumberJayaApp = () => {
         // Sub Kategori Header
         rows += `
           <tr style="background: #f3f4f6; border: 1px solid #333;">
-            <td colspan="2" style="border: 1px solid #333; padding: 8px; padding-left: 20px; font-weight: 600; font-size: 12px;">
+            <td colspan="2" style="border: 1px solid #333; padding: 5px; padding-left: 20px; font-weight: 600; font-size: 10px;">
               ${subKat.nama}
             </td>
-            <td style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 600; font-size: 12px;">
+            <td style="border: 1px solid #333; padding: 5px; text-align: right; font-weight: 600; font-size: 10px;">
               ${subKatTotal > 0 ? `Rp ${subKatTotal.toLocaleString('id-ID')}` : '-'}
             </td>
           </tr>
@@ -1861,11 +1861,11 @@ const SumberJayaApp = () => {
           transactionsFiltered.forEach(item => {
             rows += `
               <tr style="border: 1px solid #333;">
-                <td style="border: 1px solid #333; padding: 6px; padding-left: 40px; width: 5%; text-align: center; font-size: 10px;">
+                <td style="border: 1px solid #333; padding: 4px; padding-left: 40px; width: 5%; text-align: center; font-size: 9px;">
                   ${item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
                 </td>
-                <td style="border: 1px solid #333; padding: 6px; width: 65%;">${item.keterangan}</td>
-                <td style="border: 1px solid #333; padding: 6px; text-align: right; width: 30%;">
+                <td style="border: 1px solid #333; padding: 4px; width: 65%; font-size: 10px;">${item.keterangan}</td>
+                <td style="border: 1px solid #333; padding: 4px; text-align: right; width: 30%; font-size: 10px;">
                   Rp ${(item.jumlah || 0).toLocaleString('id-ID')}
                 </td>
               </tr>
@@ -1875,7 +1875,7 @@ const SumberJayaApp = () => {
           // Show empty row if no transactions
           rows += `
             <tr style="border: 1px solid #333;">
-              <td colspan="3" style="border: 1px solid #333; padding: 6px; padding-left: 40px; font-style: italic; color: #999;">
+              <td colspan="3" style="border: 1px solid #333; padding: 4px; padding-left: 40px; font-style: italic; color: #999; font-size: 9px;">
                 (Tidak ada transaksi)
               </td>
             </tr>
@@ -1885,11 +1885,11 @@ const SumberJayaApp = () => {
 
       // Total for this jenis
       rows += `
-        <tr style="background: ${jenis === 'masuk' ? '#10b981' : '#ef4444'}; border: 1px solid #333;">
-          <td colspan="2" style="border: 1px solid #333; padding: 10px; font-weight: 700; color: white; text-align: right; font-size: 13px;">
+        <tr style="background: ${jenis === 'masuk' ? '#d1fae5' : '#fee2e2'}; border: 1px solid #333;">
+          <td colspan="2" style="border: 1px solid #333; padding: 6px; font-weight: 700; color: #000; text-align: right; font-size: 11px;">
             TOTAL ${jenis === 'masuk' ? 'PEMASUKAN' : 'PENGELUARAN'}
           </td>
-          <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 700; color: white; font-size: 13px;">
+          <td style="border: 1px solid #333; padding: 6px; text-align: right; font-weight: 700; color: #000; font-size: 11px;">
             Rp ${jenisTotal.toLocaleString('id-ID')}
           </td>
         </tr>
@@ -2090,11 +2090,11 @@ const SumberJayaApp = () => {
                     ${generateGroupedRows('keluar')}
 
                     <!-- GRAND TOTAL -->
-                    <tr style="background: #1f2937; border: 1px solid #333;">
-                      <td colspan="2" style="border: 1px solid #333; padding: 12px; font-weight: 700; color: white; text-align: right; font-size: 14px;">
+                    <tr style="background: #fef08a; border: 1px solid #333;">
+                      <td colspan="2" style="border: 1px solid #333; padding: 6px; font-weight: 700; color: #000; text-align: right; font-size: 11px;">
                         SALDO AKHIR
                       </td>
-                      <td style="border: 1px solid #333; padding: 12px; text-align: right; font-weight: 700; color: white; font-size: 14px;">
+                      <td style="border: 1px solid #333; padding: 6px; text-align: right; font-weight: 700; color: #000; font-size: 11px;">
                         Rp ${saldoAkhir.toLocaleString('id-ID')}
                       </td>
                     </tr>
