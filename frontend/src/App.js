@@ -49,7 +49,16 @@ const SumberJayaApp = () => {
   const [selectedPT, setSelectedPT] = useState([]);
   const [selectedDate, setSelectedDate] = useState(''); // Filter tanggal untuk Arus Kas Komprehensif
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState('2025-10');
+
+  // Get current month in YYYY-MM format
+  const getCurrentMonth = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  };
+
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [currentUserData, setCurrentUserData] = useState(() => {
     const savedUser = sessionStorage.getItem('currentUserData');
@@ -493,7 +502,21 @@ const SumberJayaApp = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
-  
+
+  // Auto set selectedPT to all user's PT when currentUserData changes
+  useEffect(() => {
+    if (currentUserData?.accessPT && currentUserData.accessPT.length > 0) {
+      setSelectedPT(currentUserData.accessPT);
+    }
+  }, [currentUserData]);
+
+  // Auto show Laporan Laba Rugi when menu "laporan" is opened
+  useEffect(() => {
+    if (activeMenu === 'laporan' && selectedPT.length > 0) {
+      setShowLaporanPreview(true);
+    }
+  }, [activeMenu, selectedPT]);
+
   // Helper: Get today's date in YYYY-MM-DD format (Asia/Jakarta timezone)
   const getTodayDate = () => {
     return getLocalDateString();
@@ -3334,15 +3357,6 @@ const SumberJayaApp = () => {
           return [...prev, ptCode];
         }
       });
-      setShowLaporanPreview(false); // Reset preview saat PT berubah
-    };
-
-    const handleTampilkanLaporan = () => {
-      if (selectedPT.length === 0) {
-        alert('Mohon pilih minimal 1 PT terlebih dahulu!');
-        return;
-      }
-      setShowLaporanPreview(true);
     };
 
     // Hitung Laba Rugi dari Arus Kas (dikelompokkan per Sub Kategori)
@@ -3432,13 +3446,27 @@ const SumberJayaApp = () => {
 
     const laporanData = hitungLabaRugi();
 
+    // Format bulan untuk display
+    const [year, month] = selectedMonth.split('-');
+    const bulanNama = new Date(selectedMonth + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+    // Get PT names
+    const ptNames = selectedPT.map(code => {
+      const pt = ptList.find(p => p.code === code);
+      return pt ? pt.name : code;
+    }).join(' - ') || 'Semua PT';
+
     return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Laporan Laba Rugi Komprehensif</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Laporan Laba Rugi</h2>
+          <p className="text-sm text-gray-600 mt-1">Periode: {bulanNama}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{ptNames}</p>
+        </div>
         <div className="flex gap-2 flex-wrap">
           <div className="relative">
-            <button 
+            <button
               className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white flex items-center gap-2"
               onClick={() => document.getElementById('pt-dropdown-laporan').classList.toggle('hidden')}
             >
@@ -3448,8 +3476,8 @@ const SumberJayaApp = () => {
             <div id="pt-dropdown-laporan" className="hidden absolute top-full mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[200px]">
               {currentUserData?.accessPT?.map(code => (
                 <label key={code} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={selectedPT.includes(code)}
                     onChange={() => handlePTChange(code)}
                     className="mr-2"
@@ -3459,53 +3487,22 @@ const SumberJayaApp = () => {
               ))}
             </div>
           </div>
-          <input 
-            type="month" 
+          <input
+            type="month"
             value={selectedMonth}
-            onChange={(e) => {
-              setSelectedMonth(e.target.value);
-              setShowLaporanPreview(false); // Reset preview saat bulan berubah
-            }}
-            className="px-4 py-2 border rounded-lg" 
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-4 py-2 border rounded-lg"
           />
-          <button 
-            onClick={handleTampilkanLaporan}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-          >
-            <BarChart3 size={18} />
-            Tampilkan Laporan
-          </button>
-          {showLaporanPreview && (
-          <button 
+          <button
             onClick={() => handleExportPDF('labarugi')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
             <Download size={18} />
             Export PDF
           </button>
-          )}
         </div>
       </div>
 
-      {!showLaporanPreview && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-12 shadow-md border-2 border-blue-200">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 mb-4">
-              <BarChart3 className="text-blue-600" size={40} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Siap Membuat Laporan Laba Rugi</h3>
-            <p className="text-gray-600 mb-6">
-              Pilih PT dan periode bulan, kemudian klik tombol "Tampilkan Laporan" untuk melihat rincian laba rugi
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <AlertCircle size={16} />
-              <span>Pastikan PT sudah dipilih sebelum menampilkan laporan</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showLaporanPreview && (
       <div id="content-to-export" className="bg-white rounded-lg p-6 shadow-md">
           <div className="labarugi-section mb-8">
             <div className="labarugi-title">
@@ -3566,9 +3563,8 @@ const SumberJayaApp = () => {
             <span className="labarugi-nett-value" style={{color: laporanData.labaBersih >= 0 ? '#059669' : '#dc2626'}}>
               Rp {Math.abs(laporanData.labaBersih).toLocaleString('id-ID')}
             </span>
-      </div>
+          </div>
         </div>
-      )}
     </div>
     );
   };
