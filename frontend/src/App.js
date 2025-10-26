@@ -1861,11 +1861,11 @@ const SumberJayaApp = () => {
           transactionsFiltered.forEach(item => {
             rows += `
               <tr style="border: 1px solid #333;">
-                <td style="border: 1px solid #333; padding: 4px; padding-left: 40px; width: 5%; text-align: center; font-size: 9px;">
+                <td style="border: 1px solid #333; padding: 4px; padding-left: 40px; width: 15%; text-align: center; font-size: 9px;">
                   ${item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
                 </td>
-                <td style="border: 1px solid #333; padding: 4px; width: 65%; font-size: 10px;">${item.keterangan}</td>
-                <td style="border: 1px solid #333; padding: 4px; text-align: right; width: 30%; font-size: 10px;">
+                <td style="border: 1px solid #333; padding: 4px; width: 64%; font-size: 10px;">${item.keterangan}</td>
+                <td style="border: 1px solid #333; padding: 4px; text-align: right; width: 21%; font-size: 10px;">
                   Rp ${(item.jumlah || 0).toLocaleString('id-ID')}
                 </td>
               </tr>
