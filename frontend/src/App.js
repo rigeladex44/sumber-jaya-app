@@ -216,6 +216,9 @@ const SumberJayaApp = () => {
 
     console.log('🔄 Arus Kas auto-refresh: ACTIVATED (30s interval)');
 
+    // Load sub kategori immediately when entering menu
+    loadSubKategoriData();
+
     // Refresh immediately when entering menu
 
     // Then refresh every 30 seconds for real-time collaboration
@@ -296,7 +299,7 @@ const SumberJayaApp = () => {
     jenis: 'keluar',
     jumlah: '',
     keterangan: '',
-    kategori: '',
+    subKategoriId: '',
     metodeBayar: 'cashless'
   });
   const [showEditArusKasModal, setShowEditArusKasModal] = useState(false);
@@ -1645,7 +1648,7 @@ const SumberJayaApp = () => {
 
   // Handler Save Arus Kas (No Approval)
   const handleSaveArusKas = async () => {
-    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.kategori) {
+    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.subKategoriId) {
       alert('Mohon lengkapi semua field!');
       return;
     }
@@ -1659,7 +1662,7 @@ const SumberJayaApp = () => {
         jenis: formArusKas.jenis,
         jumlah: parseFloat(formArusKas.jumlah),
         keterangan: formArusKas.keterangan,
-        kategori: formArusKas.kategori,
+        subKategoriId: parseInt(formArusKas.subKategoriId),
         metodeBayar: formArusKas.metodeBayar || 'cashless'
       };
 
@@ -1677,7 +1680,7 @@ const SumberJayaApp = () => {
         jenis: 'keluar',
         jumlah: '',
         keterangan: '',
-        kategori: '',
+        subKategoriId: '',
         metodeBayar: 'cashless'
       });
 
@@ -1712,7 +1715,7 @@ const SumberJayaApp = () => {
   const handleUpdateArusKas = async () => {
     if (!editingArusKas) return;
 
-    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.kategori) {
+    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.subKategoriId) {
       alert('Mohon lengkapi semua field!');
       return;
     }
@@ -1726,7 +1729,7 @@ const SumberJayaApp = () => {
         jenis: formArusKas.jenis,
         jumlah: parseFloat(formArusKas.jumlah),
         keterangan: formArusKas.keterangan,
-        kategori: formArusKas.kategori,
+        subKategoriId: parseInt(formArusKas.subKategoriId),
         metodeBayar: formArusKas.metodeBayar || 'cashless'
       };
 
@@ -1744,7 +1747,7 @@ const SumberJayaApp = () => {
         jenis: 'keluar',
         jumlah: '',
         keterangan: '',
-        kategori: '',
+        subKategoriId: '',
         metodeBayar: 'cashless'
       });
 
@@ -4614,19 +4617,43 @@ const SumberJayaApp = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Kategori *</label>
+              <label className="block text-sm font-medium mb-2">Sub Kategori *</label>
               <select
-                value={formArusKas.kategori}
-                onChange={(e) => setFormArusKas({...formArusKas, kategori: e.target.value})}
+                value={formArusKas.subKategoriId}
+                onChange={(e) => setFormArusKas({...formArusKas, subKategoriId: e.target.value})}
                 className="w-full px-4 py-2 border rounded-lg"
                 required
               >
-                <option value="">Pilih Kategori</option>
-                {kategoriPengeluaran.map(kategori => (
-                  <option key={kategori} value={kategori}>{kategori}</option>
-                ))}
-                <option value="PEMASUKAN LAIN">PEMASUKAN LAIN</option>
+                <option value="">Pilih Sub Kategori</option>
+                {formArusKas.jenis === 'masuk' ? (
+                  <>
+                    <optgroup label="PEMASUKAN">
+                      {subKategoriData
+                        .filter(sk => sk.jenis === 'pemasukan')
+                        .sort((a, b) => a.urutan - b.urutan)
+                        .map(sk => (
+                          <option key={sk.id} value={sk.id}>{sk.nama}</option>
+                        ))
+                      }
+                    </optgroup>
+                  </>
+                ) : (
+                  <>
+                    <optgroup label="PENGELUARAN">
+                      {subKategoriData
+                        .filter(sk => sk.jenis === 'pengeluaran')
+                        .sort((a, b) => a.urutan - b.urutan)
+                        .map(sk => (
+                          <option key={sk.id} value={sk.id}>{sk.nama}</option>
+                        ))
+                      }
+                    </optgroup>
+                  </>
+                )}
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Pilih jenis transaksi terlebih dahulu. Kelola sub kategori di menu Master Kategori.
+              </p>
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">Keterangan *</label>
@@ -4834,7 +4861,7 @@ const SumberJayaApp = () => {
                               jenis: item.jenis,
                               jumlah: item.jumlah.toString(),
                               keterangan: item.keterangan,
-                              kategori: item.kategori || '',
+                              subKategoriId: item.sub_kategori_id?.toString() || '',
                               metodeBayar: item.metode_bayar || 'cashless'
                             });
                             setShowEditArusKasModal(true);
@@ -4895,7 +4922,7 @@ const SumberJayaApp = () => {
                         jenis: 'keluar',
                         jumlah: '',
                         keterangan: '',
-                        kategori: '',
+                        subKategoriId: '',
                         metodeBayar: 'cashless'
                       });
                     }}
@@ -4961,17 +4988,39 @@ const SumberJayaApp = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Kategori *</label>
+                    <label className="block text-sm font-medium mb-2">Sub Kategori *</label>
                     <select
-                      value={formArusKas.kategori}
-                      onChange={(e) => setFormArusKas({...formArusKas, kategori: e.target.value})}
+                      value={formArusKas.subKategoriId}
+                      onChange={(e) => setFormArusKas({...formArusKas, subKategoriId: e.target.value})}
                       className="w-full px-4 py-2 border rounded-lg"
+                      required
                     >
-                      <option value="">Pilih Kategori</option>
-                      {kategoriPengeluaran.map(kategori => (
-                        <option key={kategori} value={kategori}>{kategori}</option>
-                      ))}
-                      <option value="PEMASUKAN LAIN">PEMASUKAN LAIN</option>
+                      <option value="">Pilih Sub Kategori</option>
+                      {formArusKas.jenis === 'masuk' ? (
+                        <>
+                          <optgroup label="PEMASUKAN">
+                            {subKategoriData
+                              .filter(sk => sk.jenis === 'pemasukan')
+                              .sort((a, b) => a.urutan - b.urutan)
+                              .map(sk => (
+                                <option key={sk.id} value={sk.id}>{sk.nama}</option>
+                              ))
+                            }
+                          </optgroup>
+                        </>
+                      ) : (
+                        <>
+                          <optgroup label="PENGELUARAN">
+                            {subKategoriData
+                              .filter(sk => sk.jenis === 'pengeluaran')
+                              .sort((a, b) => a.urutan - b.urutan)
+                              .map(sk => (
+                                <option key={sk.id} value={sk.id}>{sk.nama}</option>
+                              ))
+                            }
+                          </optgroup>
+                        </>
+                      )}
                     </select>
                   </div>
                   <div className="md:col-span-2">
@@ -5004,7 +5053,7 @@ const SumberJayaApp = () => {
                         jenis: 'keluar',
                         jumlah: '',
                         keterangan: '',
-                        kategori: '',
+                        subKategoriId: '',
                         metodeBayar: 'cashless'
                       });
                     }}
