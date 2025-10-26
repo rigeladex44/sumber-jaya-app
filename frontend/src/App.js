@@ -2739,6 +2739,7 @@ const SumberJayaApp = () => {
             </div>
             ` : ''}
 
+            ${type === 'kas' ? `
             <table>
               <thead>
                 <tr>
@@ -2769,6 +2770,7 @@ const SumberJayaApp = () => {
                 })()}
               </tbody>
             </table>
+            ` : content.innerHTML}
 
             ${signatureSection}
           </body>
@@ -3343,48 +3345,60 @@ const SumberJayaApp = () => {
       setShowLaporanPreview(true);
     };
 
-    // Hitung Laba Rugi dari Penjualan dan Kas Kecil
+    // Hitung Laba Rugi dari Arus Kas (dikelompokkan per Sub Kategori)
     const hitungLabaRugi = () => {
-      // Filter data berdasarkan PT dan bulan yang dipilih
+      // Filter data Arus Kas berdasarkan PT dan bulan yang dipilih
       const [year, month] = selectedMonth.split('-');
 
-      // Filter penjualan berdasarkan PT dan bulan
-      const penjualanFiltered = penjualanData.filter(item => {
-        if (!selectedPT.includes(item.pt)) return false;
+      // Filter Arus Kas berdasarkan PT dan bulan
+      const arusKasFiltered = arusKasData.filter(item => {
+        if (!selectedPT.includes(item.pt_code)) return false;
         const itemDate = new Date(item.tanggal);
         return itemDate.getFullYear() === parseInt(year) &&
                (itemDate.getMonth() + 1) === parseInt(month);
       });
 
-      // Hitung total penjualan
-      const totalPenjualan = penjualanFiltered
-        .reduce((sum, item) => sum + (item.total || 0), 0);
+      // Kelompokkan per sub kategori untuk pemasukan
+      const pemasukanPerSubKategori = [];
+      const pengeluaranPerSubKategori = [];
 
-      // Filter kas kecil berdasarkan PT dan bulan
-      const kasKecilFiltered = kasKecilData.filter(item => {
-        if (!selectedPT.includes(item.pt)) return false;
-        const itemDate = new Date(item.tanggal);
-        return itemDate.getFullYear() === parseInt(year) &&
-               (itemDate.getMonth() + 1) === parseInt(month) &&
-               item.status === 'approved';
+      // Get unique sub kategori IDs from filtered data
+      const subKatIdsSet = new Set(arusKasFiltered.map(item => item.sub_kategori_id).filter(id => id));
+
+      // Process each sub kategori
+      subKatIdsSet.forEach(subKatId => {
+        const subKat = subKategoriData.find(sk => sk.id === subKatId);
+        if (!subKat) return;
+
+        const itemsForSubKat = arusKasFiltered.filter(item => item.sub_kategori_id === subKatId);
+        const total = itemsForSubKat.reduce((sum, item) => sum + (item.jumlah || 0), 0);
+
+        const subKatData = {
+          id: subKat.id,
+          nama: subKat.nama,
+          total: total,
+          urutan: subKat.urutan
+        };
+
+        if (subKat.jenis === 'pemasukan') {
+          pemasukanPerSubKategori.push(subKatData);
+        } else if (subKat.jenis === 'pengeluaran') {
+          pengeluaranPerSubKategori.push(subKatData);
+        }
       });
 
-      // Hitung pendapatan lain dari kas kecil (pemasukan)
-      const pendapatanLain = kasKecilFiltered
-        .filter(item => item.jenis === 'masuk')
-        .reduce((sum, item) => sum + (item.jumlah || 0), 0);
+      // Sort by urutan
+      pemasukanPerSubKategori.sort((a, b) => a.urutan - b.urutan);
+      pengeluaranPerSubKategori.sort((a, b) => a.urutan - b.urutan);
 
-      // Hitung total pengeluaran dari kas kecil
-      const totalPengeluaran = kasKecilFiltered
-        .filter(item => item.jenis === 'keluar')
-        .reduce((sum, item) => sum + (item.jumlah || 0), 0);
-
-      const totalPendapatan = totalPenjualan + pendapatanLain;
+      // Hitung total pendapatan dan pengeluaran
+      const totalPendapatan = pemasukanPerSubKategori.reduce((sum, item) => sum + item.total, 0);
+      const totalPengeluaran = pengeluaranPerSubKategori.reduce((sum, item) => sum + item.total, 0);
       const labaBersih = totalPendapatan - totalPengeluaran;
 
       return {
-        penjualanGas: totalPenjualan,
-        pendapatanLain,
+        pemasukan: pemasukanPerSubKategori,
+        pengeluaran: pengeluaranPerSubKategori,
         totalPendapatan,
         totalPengeluaran,
         labaBersih
@@ -3470,38 +3484,51 @@ const SumberJayaApp = () => {
       <div id="content-to-export" className="bg-white rounded-lg p-6 shadow-md">
           <div className="labarugi-section mb-8">
             <div className="labarugi-title">
-              <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">PENDAPATAN</p>
+              <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">PENDAPATAN (PEMASUKAN)</p>
           </div>
-          
+
             <div className="mb-4">
-              <div className="labarugi-item">
-                <span className="labarugi-item-label">Penjualan Gas LPG</span>
-                <span className="labarugi-item-value">Rp {laporanData.penjualanGas.toLocaleString('id-ID')}</span>
-          </div>
-          
-              <div className="labarugi-item">
-                <span className="labarugi-item-label">Pendapatan Lain (Kas Masuk)</span>
-                <span className="labarugi-item-value">Rp {laporanData.pendapatanLain.toLocaleString('id-ID')}</span>
-          </div>
-        </div>
+              {laporanData.pemasukan.length > 0 ? (
+                laporanData.pemasukan.map((item) => (
+                  <div key={item.id} className="labarugi-item">
+                    <span className="labarugi-item-label">{item.nama}</span>
+                    <span className="labarugi-item-value">Rp {item.total.toLocaleString('id-ID')}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="labarugi-item">
+                  <span className="labarugi-item-label text-gray-400">Tidak ada data pemasukan</span>
+                  <span className="labarugi-item-value text-gray-400">Rp 0</span>
+                </div>
+              )}
+            </div>
 
             <div className="labarugi-total">
               <span className="labarugi-total-label">Total Pendapatan</span>
               <span className="labarugi-total-value" style={{color: '#059669'}}>Rp {laporanData.totalPendapatan.toLocaleString('id-ID')}</span>
           </div>
           </div>
-          
+
           <div className="labarugi-section mb-8">
             <div className="labarugi-title">
               <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">PENGELUARAN</p>
           </div>
-          
+
             <div className="mb-4">
-              <div className="labarugi-item">
-                <span className="labarugi-item-label">Total Pengeluaran (Kas Keluar)</span>
-                <span className="labarugi-item-value">Rp {laporanData.totalPengeluaran.toLocaleString('id-ID')}</span>
-          </div>
-        </div>
+              {laporanData.pengeluaran.length > 0 ? (
+                laporanData.pengeluaran.map((item) => (
+                  <div key={item.id} className="labarugi-item">
+                    <span className="labarugi-item-label">{item.nama}</span>
+                    <span className="labarugi-item-value">Rp {item.total.toLocaleString('id-ID')}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="labarugi-item">
+                  <span className="labarugi-item-label text-gray-400">Tidak ada data pengeluaran</span>
+                  <span className="labarugi-item-value text-gray-400">Rp 0</span>
+                </div>
+              )}
+            </div>
 
             <div className="labarugi-total">
               <span className="labarugi-total-label">Total Pengeluaran</span>
