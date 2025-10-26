@@ -1784,7 +1784,8 @@ const SumberJayaApp = () => {
       totalArusKasData: arusKasData.length,
       displayDataLength: displayData.length,
       filterPT: filterArusKas.pt,
-      sampleData: displayData.slice(0, 3)
+      sampleData: displayData.slice(0, 3),
+      subKategoriData: subKategoriData
     });
 
     const tanggalOnly = new Date().toLocaleDateString('id-ID', {
@@ -1796,7 +1797,6 @@ const SumberJayaApp = () => {
     // Generate PT Names with separator
     let ptNames = '';
     if (filterArusKas.pt && filterArusKas.pt.length > 0) {
-      // Use PT codes directly if no ptList available
       ptNames = filterArusKas.pt.map(code => {
         const pt = ptList?.find(p => p.code === code);
         return pt ? pt.name : code;
@@ -1805,38 +1805,101 @@ const SumberJayaApp = () => {
       ptNames = 'Semua PT';
     }
 
-    // Check if data is empty
-    if (!displayData || displayData.length === 0) {
-      console.error('ERROR: No data to print!', {
-        arusKasData: arusKasData,
-        filterArusKas: filterArusKas
-      });
-      alert('Tidak ada data untuk dicetak. Total data: ' + arusKasData.length + ', Filter PT: ' + (filterArusKas.pt ? filterArusKas.pt.join(', ') : 'Semua'));
-      return;
-    }
-
-    // Calculate running balance
-    let runningBalance = 0;
-    const dataWithBalance = displayData.map((item, index) => {
-      if (item.jenis === 'masuk') {
-        runningBalance += item.jumlah || 0;
-      } else if (item.jenis === 'keluar') {
-        runningBalance -= item.jumlah || 0;
-      }
-      return {
-        ...item,
-        no: index + 1,
-        saldo: runningBalance
-      };
-    });
-
     // Calculate totals
     const totalMasuk = displayData.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const totalKeluar = displayData.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const saldoAkhir = totalMasuk - totalKeluar;
 
+    // Group data by sub_kategori_id
+    const groupedData = {};
+    displayData.forEach(item => {
+      const subKatId = item.sub_kategori_id || 'uncategorized';
+      if (!groupedData[subKatId]) {
+        groupedData[subKatId] = [];
+      }
+      groupedData[subKatId].push(item);
+    });
+
+    // Generate rows grouped by kategori
+    const generateGroupedRows = (jenis) => {
+      const jenisLabel = jenis === 'masuk' ? 'pemasukan' : 'pengeluaran';
+      const subKats = subKategoriData.filter(sk => sk.jenis === jenisLabel).sort((a, b) => a.urutan - b.urutan);
+
+      let rows = '';
+      let jenisTotal = 0;
+
+      // Kategori Header
+      rows += `
+        <tr style="background: ${jenis === 'masuk' ? '#d1fae5' : '#fee2e2'}; border: 1px solid #333;">
+          <td colspan="3" style="border: 1px solid #333; padding: 10px; font-weight: 700; font-size: 14px; text-transform: uppercase;">
+            ${jenis === 'masuk' ? 'PEMASUKAN' : 'PENGELUARAN'}
+          </td>
+        </tr>
+      `;
+
+      // For each sub kategori
+      subKats.forEach(subKat => {
+        const transactions = groupedData[subKat.id] || [];
+        const transactionsFiltered = transactions.filter(t => t.jenis === jenis);
+        const subKatTotal = transactionsFiltered.reduce((sum, t) => sum + (t.jumlah || 0), 0);
+        jenisTotal += subKatTotal;
+
+        // Sub Kategori Header
+        rows += `
+          <tr style="background: #f3f4f6; border: 1px solid #333;">
+            <td colspan="2" style="border: 1px solid #333; padding: 8px; padding-left: 20px; font-weight: 600; font-size: 12px;">
+              ${subKat.nama}
+            </td>
+            <td style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 600; font-size: 12px;">
+              ${subKatTotal > 0 ? `Rp ${subKatTotal.toLocaleString('id-ID')}` : '-'}
+            </td>
+          </tr>
+        `;
+
+        // Transactions under this sub kategori
+        if (transactionsFiltered.length > 0) {
+          transactionsFiltered.forEach(item => {
+            rows += `
+              <tr style="border: 1px solid #333;">
+                <td style="border: 1px solid #333; padding: 6px; padding-left: 40px; width: 5%; text-align: center; font-size: 10px;">
+                  ${item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
+                </td>
+                <td style="border: 1px solid #333; padding: 6px; width: 65%;">${item.keterangan}</td>
+                <td style="border: 1px solid #333; padding: 6px; text-align: right; width: 30%;">
+                  Rp ${(item.jumlah || 0).toLocaleString('id-ID')}
+                </td>
+              </tr>
+            `;
+          });
+        } else {
+          // Show empty row if no transactions
+          rows += `
+            <tr style="border: 1px solid #333;">
+              <td colspan="3" style="border: 1px solid #333; padding: 6px; padding-left: 40px; font-style: italic; color: #999;">
+                (Tidak ada transaksi)
+              </td>
+            </tr>
+          `;
+        }
+      });
+
+      // Total for this jenis
+      rows += `
+        <tr style="background: ${jenis === 'masuk' ? '#10b981' : '#ef4444'}; border: 1px solid #333;">
+          <td colspan="2" style="border: 1px solid #333; padding: 10px; font-weight: 700; color: white; text-align: right; font-size: 13px;">
+            TOTAL ${jenis === 'masuk' ? 'PEMASUKAN' : 'PENGELUARAN'}
+          </td>
+          <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 700; color: white; font-size: 13px;">
+            Rp ${jenisTotal.toLocaleString('id-ID')}
+          </td>
+        </tr>
+      `;
+
+      return rows;
+    };
+
     // DEBUG: Alert untuk konfirmasi data sebelum print
-    console.log('✅ PRINT START - Data Count:', displayData.length);
+    console.log('✅ PRINT START - Data Count:', displayData.length, 'Sub Kategori:', subKategoriData.length);
 
     try {
       const printWindow = window.open('', '_blank');
@@ -2019,57 +2082,21 @@ const SumberJayaApp = () => {
                 <div><strong>Dicetak Oleh:</strong> ${currentUserData?.name || 'User'}</div>
               </div>
 
-              <!-- TABLE -->
+              <!-- TABLE WITH GROUPED CATEGORIES -->
               <div class="table-container">
                 <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
-                  <thead>
-                    <tr style="background: #fff; border: 1px solid #333;">
-                      <th style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: 700; color: #000;" width="5%">No</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: left; font-weight: 700; color: #000;" width="40%">Keterangan</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: 700; color: #000;" width="10%">Metode</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="16%">Masuk</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="16%">Keluar</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="13%">Saldo</th>
-                    </tr>
-                  </thead>
                   <tbody>
-                    ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
-                      <tr style="border: 1px solid #333;">
-                        <td style="border: 1px solid #333; padding: 6px; text-align: center;">${item.no}</td>
-                        <td style="border: 1px solid #333; padding: 6px;">${item.keterangan}</td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: center; font-size: 9px;">
-                          ${item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
-                        </td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: right;">
-                          ${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
-                        </td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: right;">
-                          ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
-                        </td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: right; font-weight: 600;">
-                          Rp ${item.saldo.toLocaleString('id-ID')}
-                        </td>
-                      </tr>
-                    `).join('') : '<tr><td colspan="6" style="text-align:center; padding: 20px; border: 1px solid #333;">Tidak ada data</td></tr>'}
-                  </tbody>
-                </table>
-              </div>
+                    ${generateGroupedRows('masuk')}
+                    ${generateGroupedRows('keluar')}
 
-              <!-- SUMMARY TABLE -->
-              <div style="margin-top: 20px;">
-                <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
-                  <tbody>
-                    <tr style="background: #f0f0f0; border: 1px solid #333;">
-                      <td style="border: 1px solid #333; padding: 10px; font-weight: 600; text-align: right; width: 70%;">TOTAL PEMASUKAN</td>
-                      <td style="border: 1px solid #333; padding: 10px; text-align: right; width: 30%; font-weight: 600;">Rp ${totalMasuk.toLocaleString('id-ID')}</td>
-                    </tr>
-                    <tr style="border: 1px solid #333;">
-                      <td style="border: 1px solid #333; padding: 10px; font-weight: 600; text-align: right;">TOTAL PENGELUARAN</td>
-                      <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 600;">Rp ${totalKeluar.toLocaleString('id-ID')}</td>
-                    </tr>
-                    <tr style="background: #e0e0e0; border: 1px solid #333;">
-                      <td style="border: 1px solid #333; padding: 10px; font-weight: 700; text-align: right; font-size: 14px;">SALDO AKHIR</td>
-                      <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 700; font-size: 14px;">Rp ${saldoAkhir.toLocaleString('id-ID')}</td>
+                    <!-- GRAND TOTAL -->
+                    <tr style="background: #1f2937; border: 1px solid #333;">
+                      <td colspan="2" style="border: 1px solid #333; padding: 12px; font-weight: 700; color: white; text-align: right; font-size: 14px;">
+                        SALDO AKHIR
+                      </td>
+                      <td style="border: 1px solid #333; padding: 12px; text-align: right; font-weight: 700; color: white; font-size: 14px;">
+                        Rp ${saldoAkhir.toLocaleString('id-ID')}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
