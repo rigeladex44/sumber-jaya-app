@@ -3547,68 +3547,101 @@ const SumberJayaApp = () => {
         </div>
       </div>
 
-      <div id="content-to-export" className="bg-white rounded-lg p-6 shadow-md">
-          <div className="labarugi-section mb-8">
-            <div className="labarugi-title">
-              <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">PENDAPATAN (PEMASUKAN)</p>
+      <div id="content-to-export" className="bg-white rounded-lg shadow-md overflow-hidden">
+        {/* PENDAPATAN Section */}
+        <div className="mb-6">
+          <div className="bg-green-600 px-6 py-3">
+            <h3 className="text-white font-bold text-lg uppercase">Pendapatan (Pemasukan)</h3>
           </div>
-
-            <div className="mb-4">
-              {laporanData.pemasukan.length > 0 ? (
-                laporanData.pemasukan.map((item) => (
-                  <div key={item.id} className="labarugi-item">
-                    <span className="labarugi-item-label">{item.nama}</span>
-                    <span className="labarugi-item-value">Rp {item.total.toLocaleString('id-ID')}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="labarugi-item">
-                  <span className="labarugi-item-label text-gray-400">Tidak ada data pemasukan</span>
-                  <span className="labarugi-item-value text-gray-400">Rp 0</span>
-                </div>
-              )}
-            </div>
-
-            <div className="labarugi-total">
-              <span className="labarugi-total-label">Total Pendapatan</span>
-              <span className="labarugi-total-value" style={{color: '#059669'}}>Rp {laporanData.totalPendapatan.toLocaleString('id-ID')}</span>
-          </div>
-          </div>
-
-          <div className="labarugi-section mb-8">
-            <div className="labarugi-title">
-              <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">PENGELUARAN</p>
-          </div>
-
-            <div className="mb-4">
-              {laporanData.pengeluaran.length > 0 ? (
-                laporanData.pengeluaran.map((item) => (
-                  <div key={item.id} className="labarugi-item">
-                    <span className="labarugi-item-label">{item.nama}</span>
-                    <span className="labarugi-item-value">Rp {item.total.toLocaleString('id-ID')}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="labarugi-item">
-                  <span className="labarugi-item-label text-gray-400">Tidak ada data pengeluaran</span>
-                  <span className="labarugi-item-value text-gray-400">Rp 0</span>
-                </div>
-              )}
-            </div>
-
-            <div className="labarugi-total">
-              <span className="labarugi-total-label">Total Pengeluaran</span>
-              <span className="labarugi-total-value" style={{color: '#dc2626'}}>Rp {laporanData.totalPengeluaran.toLocaleString('id-ID')}</span>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-green-100 border-b-2 border-green-600">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-800">Keterangan</th>
+                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-800">Jumlah</th>
+                </tr>
+              </thead>
+              <tbody>
+                {laporanData.pemasukan.length > 0 ? (
+                  laporanData.pemasukan.map((item, index) => (
+                    <tr key={item.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-green-50 transition-colors`}>
+                      <td className="px-6 py-4 text-gray-800">{item.nama}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-green-700">
+                        Rp {item.total.toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="2" className="px-6 py-4 text-center text-gray-400 italic">
+                      Tidak ada data pemasukan
+                    </td>
+                  </tr>
+                )}
+                <tr className="bg-green-100 border-t-2 border-green-600">
+                  <td className="px-6 py-4 font-bold text-gray-800">TOTAL PENDAPATAN</td>
+                  <td className="px-6 py-4 text-right font-bold text-green-700 text-lg">
+                    Rp {laporanData.totalPendapatan.toLocaleString('id-ID')}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-          <div className={`labarugi-nett border-2 rounded-lg p-5 ${laporanData.labaBersih >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
-            <span className="labarugi-nett-label">{laporanData.labaBersih >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}</span>
-            <span className="labarugi-nett-value" style={{color: laporanData.labaBersih >= 0 ? '#059669' : '#dc2626'}}>
+        {/* PENGELUARAN Section */}
+        <div className="mb-6">
+          <div className="bg-red-600 px-6 py-3">
+            <h3 className="text-white font-bold text-lg uppercase">Pengeluaran</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-red-100 border-b-2 border-red-600">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-800">Keterangan</th>
+                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-800">Jumlah</th>
+                </tr>
+              </thead>
+              <tbody>
+                {laporanData.pengeluaran.length > 0 ? (
+                  laporanData.pengeluaran.map((item, index) => (
+                    <tr key={item.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-red-50 transition-colors`}>
+                      <td className="px-6 py-4 text-gray-800">{item.nama}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-red-700">
+                        Rp {item.total.toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="2" className="px-6 py-4 text-center text-gray-400 italic">
+                      Tidak ada data pengeluaran
+                    </td>
+                  </tr>
+                )}
+                <tr className="bg-red-100 border-t-2 border-red-600">
+                  <td className="px-6 py-4 font-bold text-gray-800">TOTAL PENGELUARAN</td>
+                  <td className="px-6 py-4 text-right font-bold text-red-700 text-lg">
+                    Rp {laporanData.totalPengeluaran.toLocaleString('id-ID')}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* LABA/RUGI BERSIH */}
+        <div className={`mx-6 mb-6 border-4 rounded-lg p-6 ${laporanData.labaBersih >= 0 ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
+          <div className="flex justify-between items-center">
+            <span className="text-xl font-bold text-gray-800">
+              {laporanData.labaBersih >= 0 ? 'LABA BERSIH' : 'RUGI BERSIH'}
+            </span>
+            <span className={`text-3xl font-bold ${laporanData.labaBersih >= 0 ? 'text-green-700' : 'text-red-700'}`}>
               Rp {Math.abs(laporanData.labaBersih).toLocaleString('id-ID')}
             </span>
           </div>
         </div>
+      </div>
     </div>
     );
   };
