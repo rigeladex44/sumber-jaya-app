@@ -1634,12 +1634,29 @@ const SumberJayaApp = () => {
                 color: #000 !important;
                 font-weight: bold !important;
               }
-              
+
+              .payment-badge {
+                display: inline-block;
+                padding: 3px 10px;
+                border-radius: 12px;
+                font-size: 10px;
+                font-weight: 600;
+                text-align: center;
+              }
+              .payment-cash {
+                background-color: #fee2e2;
+                color: #991b1b;
+              }
+              .payment-cashless {
+                background-color: #dbeafe;
+                color: #1e40af;
+              }
+
               .signature-section {
                 margin-top: 40px;
                 display: flex;
                 justify-content: space-between;
-                font-size: 9px;
+                font-size: 11px;
               }
               .signature-box {
                 width: 30%;
@@ -1661,8 +1678,8 @@ const SumberJayaApp = () => {
                 font-weight: bold;
                 padding-top: 5px;
               }
-              
-              .report-footer { 
+
+              .report-footer {
                 margin-top: 30px; 
                 padding-top: 15px;
                 border-top: 2px solid #ddd;
@@ -1675,9 +1692,28 @@ const SumberJayaApp = () => {
               .report-footer p {
                 margin: 3px 0;
               }
-              
-              .no-print { 
-                display: none !important; 
+
+              .no-print {
+                display: none !important;
+              }
+
+              @media print {
+                body {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                .payment-badge {
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                .payment-cash {
+                  background-color: #fee2e2 !important;
+                  color: #991b1b !important;
+                }
+                .payment-cashless {
+                  background-color: #dbeafe !important;
+                  color: #1e40af !important;
+                }
               }
             </style>
           </head>
@@ -1718,6 +1754,7 @@ const SumberJayaApp = () => {
                   <th class="text-center">PT</th>
                   <th class="text-center">Kategori</th>
                   <th class="text-center">Keterangan</th>
+                  <th class="text-center">Jenis Payment</th>
                   <th class="text-right">Masuk</th>
                   <th class="text-right">Keluar</th>
                 </tr>
@@ -1729,17 +1766,22 @@ const SumberJayaApp = () => {
                     <td>${item.pt}</td>
                     <td>${item.kategori || '-'}</td>
                     <td>${item.keterangan}</td>
+                    <td class="text-center">
+                      <span class="payment-badge ${item.metodeBayar === 'cash' ? 'payment-cash' : 'payment-cashless'}">
+                        ${item.metodeBayar === 'cash' ? 'Cash' : 'Cashless'}
+                      </span>
+                    </td>
                     <td class="text-right">${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
                     <td class="text-right">${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
                   </tr>
                 `).join('')}
                 <tr class="grand-total-row">
-                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
+                  <td colspan="5" class="text-center"><strong>Total (Approved)</strong></td>
                   <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
                   <td class="text-right"><strong>Rp ${displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0).toLocaleString('id-ID')}</strong></td>
                 </tr>
                 <tr class="grand-total-row">
-                  <td colspan="5" class="text-center"><strong>Saldo Akhir</strong></td>
+                  <td colspan="6" class="text-center"><strong>Saldo Akhir</strong></td>
                   <td class="text-right"><strong>Rp ${(displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0) - displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0)).toLocaleString('id-ID')}</strong></td>
                 </tr>
               </tbody>
