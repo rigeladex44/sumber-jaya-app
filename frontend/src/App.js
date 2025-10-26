@@ -3555,12 +3555,6 @@ const SumberJayaApp = () => {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="bg-green-100 border-b-2 border-green-600">
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-800">Keterangan</th>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-800">Jumlah</th>
-                </tr>
-              </thead>
               <tbody>
                 {laporanData.pemasukan.length > 0 ? (
                   laporanData.pemasukan.map((item, index) => (
@@ -3596,12 +3590,6 @@ const SumberJayaApp = () => {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="bg-red-100 border-b-2 border-red-600">
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-800">Keterangan</th>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-800">Jumlah</th>
-                </tr>
-              </thead>
               <tbody>
                 {laporanData.pengeluaran.length > 0 ? (
                   laporanData.pengeluaran.map((item, index) => (
