@@ -512,10 +512,16 @@ const SumberJayaApp = () => {
 
   // Auto show Laporan Laba Rugi when menu "laporan" is opened
   useEffect(() => {
-    if (activeMenu === 'laporan' && selectedPT.length > 0) {
-      setShowLaporanPreview(true);
+    if (activeMenu === 'laporan') {
+      // Reload data Arus Kas dan Sub Kategori untuk memastikan data terbaru
+      loadArusKasData();
+      loadSubKategoriData();
+
+      if (selectedPT.length > 0) {
+        setShowLaporanPreview(true);
+      }
     }
-  }, [activeMenu, selectedPT]);
+  }, [activeMenu]);
 
   // Helper: Get today's date in YYYY-MM-DD format (Asia/Jakarta timezone)
   const getTodayDate = () => {
@@ -3361,6 +3367,22 @@ const SumberJayaApp = () => {
 
     // Hitung Laba Rugi dari Arus Kas (dikelompokkan per Sub Kategori)
     const hitungLabaRugi = () => {
+      console.log('🔍 DEBUG Laba Rugi - START:', {
+        totalArusKasData: arusKasData.length,
+        totalSubKategoriData: subKategoriData.length,
+        selectedPT: selectedPT,
+        selectedMonth: selectedMonth,
+        sampleArusKasData: arusKasData.slice(0, 3).map(item => ({
+          id: item.id,
+          pt: item.pt,
+          tanggal: item.tanggal,
+          sub_kategori_id: item.sub_kategori_id,
+          jenis: item.jenis,
+          jumlah: item.jumlah
+        })),
+        sampleSubKategori: subKategoriData.slice(0, 3)
+      });
+
       // Filter data Arus Kas berdasarkan PT dan bulan yang dipilih
       const [year, month] = selectedMonth.split('-');
 
@@ -3372,17 +3394,16 @@ const SumberJayaApp = () => {
                (itemDate.getMonth() + 1) === parseInt(month);
       });
 
-      console.log('DEBUG Laba Rugi - Data Filter:', {
-        totalArusKasData: arusKasData.length,
+      console.log('📊 DEBUG Laba Rugi - Data Filtered:', {
         filteredCount: arusKasFiltered.length,
-        selectedPT: selectedPT,
-        selectedMonth: selectedMonth,
-        sampleFilteredData: arusKasFiltered.slice(0, 3).map(item => ({
+        yearMonthFilter: `${year}-${month}`,
+        allFilteredData: arusKasFiltered.map(item => ({
           id: item.id,
           pt: item.pt,
           tanggal: item.tanggal,
           sub_kategori_id: item.sub_kategori_id,
           sub_kategori_nama: item.sub_kategori_nama,
+          jenis: item.jenis,
           jumlah: item.jumlah
         }))
       });
@@ -3394,13 +3415,33 @@ const SumberJayaApp = () => {
       // Get unique sub kategori IDs from filtered data
       const subKatIdsSet = new Set(arusKasFiltered.map(item => item.sub_kategori_id).filter(id => id));
 
+      console.log('🏷️ DEBUG Laba Rugi - Sub Kategori IDs:', {
+        uniqueSubKatIds: Array.from(subKatIdsSet),
+        subKategoriDataIds: subKategoriData.map(sk => ({ id: sk.id, nama: sk.nama, jenis: sk.jenis }))
+      });
+
       // Process each sub kategori
       subKatIdsSet.forEach(subKatId => {
         const subKat = subKategoriData.find(sk => sk.id === subKatId);
-        if (!subKat) return;
+
+        console.log(`🔎 Processing SubKat ID ${subKatId}:`, {
+          found: !!subKat,
+          subKat: subKat
+        });
+
+        if (!subKat) {
+          console.warn(`⚠️ Sub kategori ID ${subKatId} tidak ditemukan di subKategoriData!`);
+          return;
+        }
 
         const itemsForSubKat = arusKasFiltered.filter(item => item.sub_kategori_id === subKatId);
         const total = itemsForSubKat.reduce((sum, item) => sum + (item.jumlah || 0), 0);
+
+        console.log(`💰 SubKat "${subKat.nama}" (${subKat.jenis}):`, {
+          itemCount: itemsForSubKat.length,
+          items: itemsForSubKat,
+          total: total
+        });
 
         const subKatData = {
           id: subKat.id,
@@ -3425,14 +3466,17 @@ const SumberJayaApp = () => {
       const totalPengeluaran = pengeluaranPerSubKategori.reduce((sum, item) => sum + item.total, 0);
       const labaBersih = totalPendapatan - totalPengeluaran;
 
-      console.log('DEBUG Laba Rugi - Hasil Perhitungan:', {
+      console.log('✅ DEBUG Laba Rugi - HASIL AKHIR:', {
         pemasukanCount: pemasukanPerSubKategori.length,
         pengeluaranCount: pengeluaranPerSubKategori.length,
         pemasukan: pemasukanPerSubKategori,
         pengeluaran: pengeluaranPerSubKategori,
         totalPendapatan,
         totalPengeluaran,
-        labaBersih
+        labaBersih,
+        statusMessage: pemasukanPerSubKategori.length === 0 && pengeluaranPerSubKategori.length === 0
+          ? '❌ TIDAK ADA DATA - Cek filter PT dan bulan!'
+          : '✅ DATA DITEMUKAN'
       });
 
       return {
