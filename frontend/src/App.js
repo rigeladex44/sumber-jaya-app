@@ -1862,7 +1862,7 @@ const SumberJayaApp = () => {
             rows += `
               <tr style="border: 1px solid #333;">
                 <td style="border: 1px solid #333; padding: 4px; padding-left: 40px; width: 60%; font-size: 10px;">${item.keterangan}</td>
-                <td style="border: 1px solid #333; padding: 4px; width: 19%; text-align: center; font-size: 9px;">
+                <td style="border: 1px solid #333; padding: 2px 4px; width: 19%; text-align: center; font-size: 9px; vertical-align: middle;">
                   <span class="payment-badge ${item.metode_bayar === 'cash' ? 'payment-cash' : 'payment-cashless'}">
                     ${item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
                   </span>
@@ -2028,12 +2028,13 @@ const SumberJayaApp = () => {
               /* ========== PAYMENT BADGE ========== */
               .payment-badge {
                 display: inline-block;
-                padding: 4px 12px;
-                border-radius: 12px;
-                font-size: 9px;
+                padding: 2px 8px;
+                border-radius: 8px;
+                font-size: 8px;
                 font-weight: 600;
                 text-align: center;
-                letter-spacing: 0.3px;
+                letter-spacing: 0.2px;
+                line-height: 1.2;
               }
               .payment-cash {
                 background-color: #fee2e2;
