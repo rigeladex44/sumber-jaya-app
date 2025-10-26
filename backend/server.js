@@ -895,29 +895,40 @@ app.get('/api/arus-kas', verifyToken, (req, res) => {
 
 // Create Arus Kas (No Approval Needed)
 app.post('/api/arus-kas', verifyToken, (req, res) => {
-  const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
+  const { tanggal, pt, jenis, jumlah, keterangan, subKategoriId, metodeBayar } = req.body;
 
   console.log('DEBUG Backend Arus Kas Save:', {
     tanggal: tanggal,
     pt: pt,
     jenis: jenis,
-    kategori: kategori,
+    subKategoriId: subKategoriId,
     metodeBayar: metodeBayar
   });
 
   // Force tanggal to be treated as local date (no timezone conversion)
   const localTanggal = processTanggal(tanggal);
 
-  const query = 'INSERT INTO arus_kas (tanggal, pt_code, jenis, jumlah, keterangan, kategori, metode_bayar, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+  // Get kategori nama from sub_kategori_id for backward compatibility
+  const getKategoriQuery = 'SELECT nama FROM sub_kategori WHERE id = ?';
 
-  db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', req.userId], (err, result) => {
+  db.query(getKategoriQuery, [subKategoriId], (err, kategoriResult) => {
     if (err) {
-      return res.status(500).json({ message: 'Server error', error: err });
+      return res.status(500).json({ message: 'Server error getting kategori', error: err });
     }
 
-    res.status(201).json({
-      message: 'Arus kas berhasil ditambahkan',
-      id: result.insertId
+    const kategoriNama = kategoriResult && kategoriResult[0] ? kategoriResult[0].nama : null;
+
+    const query = 'INSERT INTO arus_kas (tanggal, pt_code, jenis, jumlah, keterangan, kategori, sub_kategori_id, metode_bayar, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+
+    db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategoriNama, subKategoriId, metodeBayar || 'cashless', req.userId], (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+
+      res.status(201).json({
+        message: 'Arus kas berhasil ditambahkan',
+        id: result.insertId
+      });
     });
   });
 });
@@ -925,7 +936,7 @@ app.post('/api/arus-kas', verifyToken, (req, res) => {
 // Update Arus Kas (No Date Restriction - Can Edit Anytime)
 app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
   const { id } = req.params;
-  const { tanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar } = req.body;
+  const { tanggal, pt, jenis, jumlah, keterangan, subKategoriId, metodeBayar } = req.body;
 
   // Step 1: Get existing arus kas data to check ownership
   const getQuery = 'SELECT created_by FROM arus_kas WHERE id = ?';
@@ -966,19 +977,30 @@ app.put('/api/arus-kas/:id', verifyToken, (req, res) => {
       // Force tanggal to be treated as local date (no timezone conversion)
       const localTanggal = processTanggal(tanggal);
 
-      const updateQuery = `
-        UPDATE arus_kas
-        SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, metode_bayar = ?
-        WHERE id = ?
-      `;
+      // Get kategori nama from sub_kategori_id for backward compatibility
+      const getKategoriQuery = 'SELECT nama FROM sub_kategori WHERE id = ?';
 
-      db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategori, metodeBayar || 'cashless', id], (err, result) => {
+      db.query(getKategoriQuery, [subKategoriId], (err, kategoriResult) => {
         if (err) {
-          return res.status(500).json({ message: 'Server error', error: err });
+          return res.status(500).json({ message: 'Server error getting kategori', error: err });
         }
 
-        res.json({
-          message: 'Data arus kas berhasil diupdate'
+        const kategoriNama = kategoriResult && kategoriResult[0] ? kategoriResult[0].nama : null;
+
+        const updateQuery = `
+          UPDATE arus_kas
+          SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, sub_kategori_id = ?, metode_bayar = ?
+          WHERE id = ?
+        `;
+
+        db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategoriNama, subKategoriId, metodeBayar || 'cashless', id], (err, result) => {
+          if (err) {
+            return res.status(500).json({ message: 'Server error', error: err });
+          }
+
+          res.json({
+            message: 'Data arus kas berhasil diupdate'
+          });
         });
       });
     }
