@@ -151,6 +151,32 @@ export const arusKasService = {
   },
 };
 
+// ==================== SUB KATEGORI SERVICES ====================
+
+export const subKategoriService = {
+  getAll: async (jenis = null) => {
+    const response = await api.get('/sub-kategori', {
+      params: jenis ? { jenis } : {}
+    });
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/sub-kategori', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/sub-kategori/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/sub-kategori/${id}`);
+    return response.data;
+  },
+};
+
 // ==================== PENJUALAN SERVICES ====================
 
 export const penjualanService = {
