@@ -291,7 +291,7 @@ const SumberJayaApp = () => {
   const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
   const [filterArusKas, setFilterArusKas] = useState({
     pt: [],  // Array for multi-select
-    tanggal: ''  // Single date for daily report
+    tanggal: getLocalDateString()  // Default to today for realtime view
   });
   const [formArusKas, setFormArusKas] = useState({
     tanggal: getLocalDateString(),
@@ -4588,33 +4588,12 @@ const SumberJayaApp = () => {
               <label className="block text-sm font-medium mb-2">Jenis *</label>
               <select
                 value={formArusKas.jenis}
-                onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value})}
+                onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value, subKategoriId: ''})}
                 className="w-full px-4 py-2 border rounded-lg"
               >
                 <option value="keluar">Pengeluaran</option>
                 <option value="masuk">Pemasukan</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Metode Bayar *</label>
-              <select
-                value={formArusKas.metodeBayar}
-                onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="cashless">Cashless (Transfer/Non-Tunai)</option>
-                <option value="cash">Cash (Tunai)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
-              <input
-                type="number"
-                value={formArusKas.jumlah}
-                onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
-                placeholder="0"
-                className="w-full px-4 py-2 border rounded-lg"
-              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Sub Kategori *</label>
@@ -4652,8 +4631,29 @@ const SumberJayaApp = () => {
                 )}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Pilih jenis transaksi terlebih dahulu. Kelola sub kategori di menu Master Kategori.
+                Kategori berubah otomatis sesuai jenis transaksi
               </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Metode Bayar *</label>
+              <select
+                value={formArusKas.metodeBayar}
+                onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="cashless">Cashless (Transfer/Non-Tunai)</option>
+                <option value="cash">Cash (Tunai)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
+              <input
+                type="number"
+                value={formArusKas.jumlah}
+                onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
+                placeholder="0"
+                className="w-full px-4 py-2 border rounded-lg"
+              />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">Keterangan *</label>
@@ -4959,33 +4959,12 @@ const SumberJayaApp = () => {
                     <label className="block text-sm font-medium mb-2">Jenis *</label>
                     <select
                       value={formArusKas.jenis}
-                      onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value})}
+                      onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value, subKategoriId: ''})}
                       className="w-full px-4 py-2 border rounded-lg"
                     >
                       <option value="keluar">Pengeluaran</option>
                       <option value="masuk">Pemasukan</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Metode Bayar *</label>
-                    <select
-                      value={formArusKas.metodeBayar}
-                      onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option value="cashless">Cashless</option>
-                      <option value="cash">Cash</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
-                    <input
-                      type="number"
-                      value={formArusKas.jumlah}
-                      onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
-                      placeholder="0"
-                      className="w-full px-4 py-2 border rounded-lg"
-                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Sub Kategori *</label>
@@ -5022,6 +5001,27 @@ const SumberJayaApp = () => {
                         </>
                       )}
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Metode Bayar *</label>
+                    <select
+                      value={formArusKas.metodeBayar}
+                      onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="cashless">Cashless</option>
+                      <option value="cash">Cash</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
+                    <input
+                      type="number"
+                      value={formArusKas.jumlah}
+                      onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
+                      placeholder="0"
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-2">Keterangan *</label>
