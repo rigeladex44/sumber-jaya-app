@@ -3352,10 +3352,25 @@ const SumberJayaApp = () => {
 
       // Filter Arus Kas berdasarkan PT dan bulan
       const arusKasFiltered = arusKasData.filter(item => {
-        if (!selectedPT.includes(item.pt_code)) return false;
+        if (!selectedPT.includes(item.pt)) return false;
         const itemDate = new Date(item.tanggal);
         return itemDate.getFullYear() === parseInt(year) &&
                (itemDate.getMonth() + 1) === parseInt(month);
+      });
+
+      console.log('DEBUG Laba Rugi - Data Filter:', {
+        totalArusKasData: arusKasData.length,
+        filteredCount: arusKasFiltered.length,
+        selectedPT: selectedPT,
+        selectedMonth: selectedMonth,
+        sampleFilteredData: arusKasFiltered.slice(0, 3).map(item => ({
+          id: item.id,
+          pt: item.pt,
+          tanggal: item.tanggal,
+          sub_kategori_id: item.sub_kategori_id,
+          sub_kategori_nama: item.sub_kategori_nama,
+          jumlah: item.jumlah
+        }))
       });
 
       // Kelompokkan per sub kategori untuk pemasukan
@@ -3395,6 +3410,16 @@ const SumberJayaApp = () => {
       const totalPendapatan = pemasukanPerSubKategori.reduce((sum, item) => sum + item.total, 0);
       const totalPengeluaran = pengeluaranPerSubKategori.reduce((sum, item) => sum + item.total, 0);
       const labaBersih = totalPendapatan - totalPengeluaran;
+
+      console.log('DEBUG Laba Rugi - Hasil Perhitungan:', {
+        pemasukanCount: pemasukanPerSubKategori.length,
+        pengeluaranCount: pengeluaranPerSubKategori.length,
+        pemasukan: pemasukanPerSubKategori,
+        pengeluaran: pengeluaranPerSubKategori,
+        totalPendapatan,
+        totalPengeluaran,
+        labaBersih
+      });
 
       return {
         pemasukan: pemasukanPerSubKategori,
