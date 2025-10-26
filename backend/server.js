@@ -1321,7 +1321,7 @@ app.get('/api/migrate/create-sub-kategori', (req, res) => {
               if (err) {
                 console.error('❌ Error migrating kas_kecil data:', err);
               } else {
-                console.log(\`✅ Migrated \${result.affectedRows} rows in kas_kecil\`);
+                console.log(`✅ Migrated ${result.affectedRows} rows in kas_kecil`);
               }
 
               // Step 7: Migrate existing data from arus_kas
@@ -1336,7 +1336,7 @@ app.get('/api/migrate/create-sub-kategori', (req, res) => {
                 if (err) {
                   console.error('❌ Error migrating arus_kas data:', err);
                 } else {
-                  console.log(\`✅ Migrated \${result2.affectedRows} rows in arus_kas\`);
+                  console.log(`✅ Migrated ${result2.affectedRows} rows in arus_kas`);
                 }
 
                 res.json({
@@ -1347,8 +1347,8 @@ app.get('/api/migrate/create-sub-kategori', (req, res) => {
                     'Seeded 13 initial sub kategori',
                     'Added column: kas_kecil.sub_kategori_id',
                     'Added column: arus_kas.sub_kategori_id',
-                    \`Migrated \${result?.affectedRows || 0} kas_kecil records\`,
-                    \`Migrated \${result2?.affectedRows || 0} arus_kas records\`
+                    `Migrated ${result?.affectedRows || 0} kas_kecil records`,
+                    `Migrated ${result2?.affectedRows || 0} arus_kas records`
                   ]
                 });
               });
