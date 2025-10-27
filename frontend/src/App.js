@@ -547,7 +547,8 @@ const SumberJayaApp = () => {
 
   // Filter State for Kas Kecil & Arus Kas (Auto-filter, no manual trigger)
   const [filterKasKecil, setFilterKasKecil] = useState({
-    pt: [] // Multi-select for Kas Kecil, no date filter
+    pt: [], // Multi-select for Kas Kecil
+    tanggal: getLocalDateString() // Default to today
   });
 
   const [formUser, setFormUser] = useState({
@@ -897,13 +898,13 @@ const SumberJayaApp = () => {
 
   // Auto-filter: Get filtered data for Kas Kecil (Harian - tampilkan hari ini saja)
   const getFilteredKasKecilData = () => {
-    // Get today's date in local timezone (YYYY-MM-DD)
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Get selected date from filter (defaults to today)
+    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00'); // Parse as local date
 
     console.log('DEBUG Kas Kecil Filter:', {
       filterPT: filterKasKecil.pt,
-      today: getLocalDateString(),
+      selectedDate: selectedDate,
       kasKecilDataCount: kasKecilData.length,
       sampleData: kasKecilData.slice(0, 3).map(item => ({
         id: item.id,
@@ -915,8 +916,8 @@ const SumberJayaApp = () => {
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    // Filter data hari ini (berdasarkan tanggal item, bukan created_at)
-    const todayData = kasKecilData.filter(item => {
+    // Filter data by selected date (berdasarkan tanggal item, bukan created_at)
+    const dateFilteredData = kasKecilData.filter(item => {
       if (!item.tanggal) return false;
 
       // Parse tanggal item (handle both ISO string and date object)
@@ -924,21 +925,21 @@ const SumberJayaApp = () => {
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
 
       // Compare date only (ignore time)
-      return itemDateOnly.getTime() === today.getTime();
+      return itemDateOnly.getTime() === selectedDateObj.getTime();
     });
 
-    console.log('DEBUG Today Data:', {
-      count: todayData.length,
-      data: todayData.map(d => ({ pt: d.pt, keterangan: d.keterangan.substring(0, 30) }))
+    console.log('DEBUG Date Filtered Data:', {
+      count: dateFilteredData.length,
+      data: dateFilteredData.map(d => ({ pt: d.pt, keterangan: d.keterangan.substring(0, 30) }))
     });
 
-    // If no PT selected, show all data hari ini
+    // If no PT selected, show all data for selected date
     if (filterKasKecil.pt.length === 0) {
-      return todayData;
+      return dateFilteredData;
     }
 
     // If PT selected, filter by PT
-    const filtered = todayData.filter(item =>
+    const filtered = dateFilteredData.filter(item =>
       filterKasKecil.pt.includes(item.pt)
     );
 
@@ -962,11 +963,15 @@ const SumberJayaApp = () => {
       totalKasKecilData: kasKecilData.length,
       displayDataLength: displayData.length,
       filterPT: filterKasKecil.pt,
+      filterTanggal: filterKasKecil.tanggal,
       sampleData: displayData.slice(0, 3),
       allStatuses: displayData.map(d => d.status)
     });
 
-    const tanggalOnly = new Date().toLocaleDateString('id-ID', {
+    // Use selected date from filter (or today as fallback)
+    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+    const tanggalOnly = selectedDateObj.toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
@@ -4485,14 +4490,23 @@ const SumberJayaApp = () => {
               </p>
             </div>
 
-            {/* Info Text */}
-            <div className="flex items-center">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full">
-                <p className="text-sm text-blue-800">
-                  <strong>Info:</strong> Kas Kecil menampilkan semua transaksi tunai. 
-                  Data sudah tersinkronisasi dengan menu Arus Kas untuk laporan lengkap.
-                </p>
-              </div>
+            {/* Date Filter - Single Date */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Filter Tanggal</label>
+              <input
+                type="date"
+                value={filterKasKecil.tanggal}
+                onChange={(e) => {
+                  setFilterKasKecil(prev => ({
+                    ...prev,
+                    tanggal: e.target.value
+                  }));
+                }}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Menampilkan transaksi pada tanggal yang dipilih
+              </p>
             </div>
           </div>
         </div>
