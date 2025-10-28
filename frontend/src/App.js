@@ -2826,98 +2826,352 @@ const SumberJayaApp = () => {
 
   const renderBeranda = () => {
     // Filter menu berdasarkan akses user
-    const filteredMenuItems = mainMenuItems.filter(item => 
+    const filteredMenuItems = mainMenuItems.filter(item =>
       currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes(item.id)
     );
 
+    // Check user access for widgets
+    const hasKasKecilAccess = currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes('kas-kecil');
+    const hasDetailKasAccess = currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes('detail-kas');
+    const hasPenjualanAccess = currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes('penjualan');
+    const hasArusKasAccess = currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes('arus-kas');
+
+    // Get recent transactions for each widget
+    const getRecentKasKecil = () => {
+      return kasKecilData
+        .filter(item => currentUserData?.accessPT?.includes(item.pt))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5);
+    };
+
+    const getPendingApprovals = () => {
+      return kasKecilData
+        .filter(item =>
+          item.status === 'pending' &&
+          currentUserData?.accessPT?.includes(item.pt)
+        )
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5);
+    };
+
+    const getRecentPenjualan = () => {
+      const today = getLocalDateString();
+      return penjualanData
+        .filter(item => {
+          const itemDate = getLocalDateFromISO(item.tanggal);
+          return itemDate === today && currentUserData?.accessPT?.includes(item.pt);
+        })
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5);
+    };
+
+    const getRecentArusKas = () => {
+      return arusKasData
+        .filter(item => currentUserData?.accessPT?.includes(item.pt))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5);
+    };
+
     return (
     <div className="space-y-6">
+      {/* Welcome Header */}
       <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-6 md:p-8 text-white shadow-lg">
           <div>
           <h2 className="text-2xl md:text-3xl font-bold mb-1">Selamat Datang, {currentUserData?.name}!</h2>
           <p className="text-gray-300 text-base md:text-lg">{currentUserData?.role} - SUMBER JAYA GRUP</p>
           </div>
-        
+
         <div className="mt-4 flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <Calendar size={16} />
-            <span>Rabu, 15 Oktober 2025</span>
+            <span>{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
           </div>
         </div>
       </div>
 
+      {/* Summary Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-gray-900">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Kas Kecil</p>
-            <DollarSign className="text-gray-900" size={28} />
+        {hasKasKecilAccess && (
+          <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-gray-900">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-gray-600">Kas Kecil</p>
+              <DollarSign className="text-gray-900" size={28} />
+            </div>
+            {isLoadingStats ? (
+              <p className="text-2xl font-bold text-gray-400">Loading...</p>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-800">
+                  Rp {dashboardStats.kasHarian.toLocaleString('id-ID')}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">Saldo kas tunai</p>
+              </>
+            )}
           </div>
-          {isLoadingStats ? (
-            <p className="text-2xl font-bold text-gray-400">Loading...</p>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-gray-800">
-                Rp {dashboardStats.kasHarian.toLocaleString('id-ID')}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Saldo kas tunai</p>
-            </>
-          )}
-        </div>
+        )}
 
-        <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-gray-700">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Penjualan Hari Ini</p>
-            <ShoppingCart className="text-gray-700" size={28} />
+        {hasPenjualanAccess && (
+          <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-gray-600">Penjualan Hari Ini</p>
+              <ShoppingCart className="text-gray-700" size={28} />
+            </div>
+            {isLoadingStats ? (
+              <p className="text-2xl font-bold text-gray-400">Loading...</p>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-800">
+                  {dashboardStats.penjualanQty.toLocaleString('id-ID')} Tabung
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Rp {dashboardStats.penjualanNilai.toLocaleString('id-ID')}
+                </p>
+              </>
+            )}
           </div>
-          {isLoadingStats ? (
-            <p className="text-2xl font-bold text-gray-400">Loading...</p>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-gray-800">
-                {dashboardStats.penjualanQty.toLocaleString('id-ID')} Tabung
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Rp {dashboardStats.penjualanNilai.toLocaleString('id-ID')}
-              </p>
-            </>
-          )}
-        </div>
+        )}
 
-        <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-yellow-500">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Pending Approval</p>
-            <AlertCircle className="text-yellow-500" size={28} />
+        {hasDetailKasAccess && (
+          <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-yellow-500 cursor-pointer hover:shadow-lg transition-shadow"
+               onClick={() => setActiveMenu('detail-kas')}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-gray-600">Pending Approval</p>
+              <AlertCircle className="text-yellow-500" size={28} />
+            </div>
+            {isLoadingStats ? (
+              <p className="text-2xl font-bold text-gray-400">...</p>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-800">{dashboardStats.pendingApproval}</p>
+                <p className="text-xs text-yellow-600 mt-2 font-medium">
+                  {dashboardStats.pendingApproval > 0 ? '👆 Klik untuk approve' : 'Semua sudah disetujui'}
+                </p>
+              </>
+            )}
           </div>
-          {isLoadingStats ? (
-            <p className="text-2xl font-bold text-gray-400">...</p>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-gray-800">{dashboardStats.pendingApproval}</p>
-              <p className="text-xs text-yellow-600 mt-2 font-medium">
-                {dashboardStats.pendingApproval > 0 ? 'Perlu persetujuan' : 'Semua sudah disetujui'}
-              </p>
-            </>
-          )}
-        </div>
+        )}
 
-        <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-red-500">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-600">Pengeluaran 7 Hari</p>
-            <TrendingDown className="text-red-500" size={28} />
+        {hasKasKecilAccess && (
+          <div className="bg-white rounded-xl p-6 shadow-md border-l-4 border-red-500">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-gray-600">Pengeluaran 7 Hari</p>
+              <TrendingDown className="text-red-500" size={28} />
+            </div>
+            {isLoadingStats ? (
+              <p className="text-2xl font-bold text-gray-400">Loading...</p>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-800">
+                  Rp {dashboardStats.pengeluaran7Hari.toLocaleString('id-ID')}
+                </p>
+                <p className="text-xs text-red-600 mt-2 font-medium">Seminggu terakhir</p>
+              </>
+            )}
           </div>
-          {isLoadingStats ? (
-            <p className="text-2xl font-bold text-gray-400">Loading...</p>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-gray-800">
-                Rp {dashboardStats.pengeluaran7Hari.toLocaleString('id-ID')}
-              </p>
-              <p className="text-xs text-red-600 mt-2 font-medium">Seminggu terakhir</p>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
+      {/* Dynamic Widgets Based on User Access */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Widget: Detail Kas - Pending Approvals */}
+        {hasDetailKasAccess && getPendingApprovals().length > 0 && (
+          <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-yellow-500">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <AlertCircle className="text-yellow-500" size={20} />
+                Menunggu Persetujuan
+              </h3>
+              <button
+                onClick={() => setActiveMenu('detail-kas')}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Lihat Semua →
+              </button>
+            </div>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {getPendingApprovals().map(kas => (
+                <div key={kas.id} className="border border-yellow-200 bg-yellow-50 rounded-lg p-4 hover:bg-yellow-100 transition-colors">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-gray-800">{kas.pt}</span>
+                        <span className="text-xs px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full">
+                          {kas.jenis === 'masuk' ? 'Masuk' : 'Keluar'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1">{kas.keterangan}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(kas.tanggal).toLocaleDateString('id-ID')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${kas.jenis === 'masuk' ? 'text-green-600' : 'text-red-600'}`}>
+                        Rp {(kas.jumlah || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-yellow-300">
+                    <button
+                      onClick={() => handleApproveKas(kas.id)}
+                      className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 font-medium transition-colors"
+                    >
+                      ✓ Approve
+                    </button>
+                    <button
+                      onClick={() => handleRejectKas(kas.id)}
+                      className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 font-medium transition-colors"
+                    >
+                      ✗ Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Widget: Kas Kecil - Recent Transactions */}
+        {hasKasKecilAccess && (
+          <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-green-500">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <DollarSign className="text-green-500" size={20} />
+                Transaksi Kas Kecil Terbaru
+              </h3>
+              <button
+                onClick={() => setActiveMenu('kas-kecil')}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Lihat Semua →
+              </button>
+            </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {getRecentKasKecil().length > 0 ? (
+                getRecentKasKecil().map(kas => (
+                  <div key={kas.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm text-gray-800">{kas.pt}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            kas.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            kas.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {kas.status === 'approved' ? 'Approved' : kas.status === 'rejected' ? 'Rejected' : 'Pending'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600">{kas.keterangan}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(kas.tanggal).toLocaleDateString('id-ID')}
+                        </p>
+                      </div>
+                      <p className={`text-sm font-bold ${kas.jenis === 'masuk' ? 'text-green-600' : 'text-red-600'}`}>
+                        {kas.jenis === 'masuk' ? '+' : '-'} Rp {(kas.jumlah || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-400 py-8">Belum ada transaksi</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Widget: Penjualan - Today's Sales */}
+        {hasPenjualanAccess && (
+          <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-blue-500">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <ShoppingCart className="text-blue-500" size={20} />
+                Penjualan Hari Ini
+              </h3>
+              <button
+                onClick={() => setActiveMenu('penjualan')}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Lihat Semua →
+              </button>
+            </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {getRecentPenjualan().length > 0 ? (
+                getRecentPenjualan().map(item => (
+                  <div key={item.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm text-gray-800">{item.pt}</span>
+                          <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                            {item.pangkalan}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 font-medium">{item.qty} Tabung × Rp {(item.harga || 0).toLocaleString('id-ID')}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {item.metode_bayar === 'cash' ? '💵 Cash' : '💳 Cashless'}
+                        </p>
+                      </div>
+                      <p className="text-sm font-bold text-blue-600">
+                        Rp {(item.total || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-400 py-8">Belum ada penjualan hari ini</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Widget: Arus Kas - Recent Transactions */}
+        {hasArusKasAccess && (
+          <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-purple-500">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <TrendingUp className="text-purple-500" size={20} />
+                Arus Kas Terbaru
+              </h3>
+              <button
+                onClick={() => setActiveMenu('arus-kas')}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Lihat Semua →
+              </button>
+            </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {getRecentArusKas().length > 0 ? (
+                getRecentArusKas().map(item => (
+                  <div key={item.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm text-gray-800">{item.pt}</span>
+                          <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                            {item.metode === 'cash' ? 'Cash' : 'Cashless'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600">{item.keterangan}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(item.tanggal).toLocaleDateString('id-ID')}
+                        </p>
+                      </div>
+                      <p className={`text-sm font-bold ${item.jenis === 'masuk' ? 'text-green-600' : 'text-red-600'}`}>
+                        {item.jenis === 'masuk' ? '+' : '-'} Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-400 py-8">Belum ada transaksi</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* PT Access List */}
       <div className="bg-white rounded-xl p-6 shadow-md">
         <h3 className="text-lg font-bold text-gray-800 mb-4">PT Yang Dapat Diakses</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
