@@ -204,13 +204,13 @@ const SumberJayaApp = () => {
 
     console.log('🔄 Kas Kecil auto-refresh: ACTIVATED (30s interval)');
 
-    // Refresh immediately when entering menu
+    // Refresh immediately when entering menu (with loading indicator)
     loadKasKecilData();
 
-    // Then refresh every 30 seconds for real-time collaboration
+    // Then refresh every 30 seconds for real-time collaboration (silent, no popup)
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Auto-refreshing Kas Kecil data...');
-      loadKasKecilData();
+      console.log('🔄 Auto-refreshing Kas Kecil data (silent)...');
+      loadKasKecilData({}, true); // silent = true
     }, 30000); // 30 seconds
 
     return () => {
@@ -228,11 +228,13 @@ const SumberJayaApp = () => {
     // Load sub kategori immediately when entering menu
     loadSubKategoriData();
 
-    // Refresh immediately when entering menu
+    // Refresh immediately when entering menu (with loading indicator)
+    loadArusKasData();
 
-    // Then refresh every 30 seconds for real-time collaboration
+    // Then refresh every 30 seconds for real-time collaboration (silent, no popup)
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Auto-refreshing Arus Kas data...');
+      console.log('🔄 Auto-refreshing Arus Kas data (silent)...');
+      loadArusKasData({}, true); // silent = true
     }, 30000); // 30 seconds
 
     return () => {
@@ -414,10 +416,14 @@ const SumberJayaApp = () => {
   };
 
   // Load Kas Kecil Data from API (untuk pembukuan kasir tunai)
-  const loadKasKecilData = async (filters = {}) => {
+  const loadKasKecilData = async (filters = {}, silent = false) => {
     if (!isLoggedIn) return;
-    
-    setIsLoadingKasKecil(true);
+
+    // Only show loading indicator if not silent refresh
+    if (!silent) {
+      setIsLoadingKasKecil(true);
+    }
+
     try {
       // Auto-transfer saldo kemarin jika belum
       try {
@@ -428,10 +434,10 @@ const SumberJayaApp = () => {
       } catch (error) {
         console.log('Transfer saldo skip:', error.response?.data?.message || error.message);
       }
-      
+
       // Load data kas kecil
       const data = await kasKecilService.getAll(filters);
-      
+
       console.log('DEBUG Load Kas Kecil Data:', {
         dataCount: data.length,
         sampleData: data.slice(0, 2).map(item => ({
@@ -441,15 +447,18 @@ const SumberJayaApp = () => {
           pt: item.pt,
           keterangan: item.keterangan
         })),
-        localDate: getLocalDateString()
+        localDate: getLocalDateString(),
+        silentRefresh: silent
       });
-      
+
       setKasKecilData(data);
     } catch (error) {
       console.error('Error loading kas kecil:', error);
       // Don't alert on load error, just log it
     } finally {
-      setIsLoadingKasKecil(false);
+      if (!silent) {
+        setIsLoadingKasKecil(false);
+      }
     }
   };
   
@@ -466,10 +475,14 @@ const SumberJayaApp = () => {
   };
 
   // Load Arus Kas Data from API (Manual Cash Flow - No Approval)
-  const loadArusKasData = async (filters = {}) => {
+  const loadArusKasData = async (filters = {}, silent = false) => {
     if (!isLoggedIn) return;
 
-    setIsLoadingArusKas(true);
+    // Only show loading indicator if not silent refresh
+    if (!silent) {
+      setIsLoadingArusKas(true);
+    }
+
     try {
       const data = await arusKasService.getAll(filters);
 
@@ -481,14 +494,17 @@ const SumberJayaApp = () => {
           pt: item.pt,
           kategori: item.kategori,
           metode_bayar: item.metode_bayar
-        }))
+        })),
+        silentRefresh: silent
       });
 
       setArusKasData(data);
     } catch (error) {
       console.error('Error loading arus kas:', error);
     } finally {
-      setIsLoadingArusKas(false);
+      if (!silent) {
+        setIsLoadingArusKas(false);
+      }
     }
   };
 
