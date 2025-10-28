@@ -1043,459 +1043,245 @@ const SumberJayaApp = () => {
             <style>
               @page {
                 size: A4;
-                margin: 15mm;
+                margin: 8mm;
               }
-              * { 
-                margin: 0; 
-                padding: 0; 
-                box-sizing: border-box; 
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
               }
-              body { 
-                font-family: 'Segoe UI', 'Arial', sans-serif; 
-                padding: 20px;
-                color: #1a1a1a;
-                line-height: 1.5;
+              body {
+                font-family: 'Arial', sans-serif;
+                padding: 15px;
+                color: #000;
+                line-height: 1.4;
                 background: white;
               }
-              
-              /* ========== HEADER SECTION ========== */
-              .report-header { 
-                text-align: center;
-                margin-bottom: 25px;
-                padding: 20px;
-                border-radius: 12px;
-                color: black;
-              }
 
+              .report-header {
+                text-align: center;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+                border-bottom: 3px solid #000;
+              }
               .report-title {
-                font-size: 24px;
-                font-weight: 700;
-                letter-spacing: 2px;
-                margin-bottom: 8px;
-                text-transform: uppercase;
+                font-size: 18px;
+                font-weight: bold;
+                letter-spacing: 1px;
+                margin-bottom: 4px;
+                line-height: 1.1;
               }
               .report-subtitle {
-                font-size: 13px;
-                margin-bottom: 5px;
-                font-weight: 400;
-                opacity: 0.95;
+                font-size: 12px;
+                color: #333;
+                margin-bottom: 2px;
+                font-weight: bold;
+                line-height: 1.2;
               }
-                
               .report-company {
-                font-size: 11px;
-                margin-top: 4px;
-                opacity: 0.85;
-                font-style: italic;
+                font-size: 9px;
+                color: #666;
+                margin-top: 2px;
               }
 
-              /* ========== INFO SECTION ========== */
               .info-section {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 20px;
-                gap: 20px;
+                margin-bottom: 10px;
+                font-size: 12px;
               }
-              
+              .info-left, .info-right {
+                width: 48%;
+              }
               .info-row {
                 display: flex;
-                padding: 5px 0;
-                font-size: 12px;
-                align-items: center;
+                padding: 3px 0;
               }
-              
               .info-label {
-                width: 120px;
-                font-weight: 500;
-                color: #666;
+                width: 100px;
+                font-weight: normal;
               }
               .info-value {
                 flex: 1;
-                font-weight: 600;
-                color: #1a1a1a;
+                font-weight: bold;
               }
 
-
-              /* ========== TABLE SECTION ========== */   
-              .table-container {
-                margin: 20px 0;
-                border-radius: 8px;
-                overflow: hidden;
-               box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+                font-size: 11px;
               }
-              
-              thead {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: black;
-              }
-              
-              th { 
-                padding: 12px 8px;
+              th {
+                background: #86ff81 !important;
+                color: #000 !important;
+                padding: 8px 6px;
                 text-align: left;
-                font-weight: 600;
-                text-transform: uppercase;
-                font-size: 10px;
-                letter-spacing: 0.5px;
-                border: none;
+                font-weight: bold;
+                border: 1px solid #ddd;
               }
-              
               th.text-center { text-align: center; }
               th.text-right { text-align: right; }
-              
-              tbody tr:hover {
-                background-color: #f8f9fa;
+              td {
+                border: 1px solid #ddd;
+                padding: 6px;
+                background: white;
               }
-        
-              tbody tr:nth-child(even) {
-                background-color: #fafbfc;
+              tr:nth-child(even) td {
+                background: #f9f9f9;
               }
-        
-              td { 
-                padding: 10px 8px;
-                border: none;
-                color: #2d3748;
-              }
-        
-              .text-right { 
-                text-align: right;
-                font-family: 'Courier New', monospace;
-                font-weight: 500;
-              }
-        
+              .text-right { text-align: right; }
               .text-center { text-align: center; }
 
-              /* ========== AMOUNT STYLING ========== */
-              .amount-positive {
-                color: #059669;
-                font-weight: 600;
-              }
-              /* ========== SUMMARY SECTION ========== */
-              .summary-section {
-                margin-top: 25px;
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 15px;
-              }
-        
-              .summary-card {
-                background: white;
-                padding: 15px;
-                border-radius: 8px;
-                border: 2px solid #e9ecef;
-                text-align: center;
-              }
-        
-              .summary-card.total-in {
-                border-color: #10b981;
-                background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-              }
-        
-              .summary-card.total-out {
-                border-color: #ef4444;
-                background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-              }
-        
-              .summary-card.balance {
-                border-color: #667eea;
-                background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-              }
-        
-              .summary-label {
-                font-size: 11px;
-                font-weight: 600;
-                text-transform: uppercase;
-                color: #64748b;
-                margin-bottom: 8px;
-                letter-spacing: 0.5px;
-              }
-        
-              .summary-amount {
-                font-size: 15px;
-                font-weight: 500;
-                font-family: 'Courier New', monospace;
-              }
-        
-              .summary-card.total-in .summary-amount {
-                color: #059669;
-              }
-        
-              .summary-card.total-out .summary-amount {
-                color: #dc2626;
-              }
-        
-              .summary-card.balance .summary-amount {
-                color: #667eea;
-              }
-              
-              /* ========== GRAND TOTAL ROW ========== */
               .grand-total-row {
-               background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-               font-weight: 700;
-               border-top: 3px solid #10b981 !important;
-               border-bottom: 3px solid #10b981 !important;
-             }
-        
-             .grand-total-row td {
-               padding: 12px 8px;
-               font-size: 12px;
-               color: #065f46;
-             }
-        
-             .balance-row {
-               background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-               font-weight: 700;
-               border-top: 3px solid #667eea !important;
-               border-bottom: 3px solid #667eea !important;
-             }
-        
-             .balance-row td {
-               padding: 12px 8px;
-               font-size: 13px;
-               color: #1e40af;
-             }
-              
-             /* ========== SIGNATURE SECTION ========== */
-             .signature-section {
-                margin-top: 50px;
+                background: #86ff81 !important;
+                font-weight: bold;
+                border-top: 2px solid #000 !important;
+                color: #000 !important;
+              }
+              .grand-total-row td {
+                background: #86ff81 !important;
+                color: #000 !important;
+                font-weight: bold !important;
+              }
+
+              .signature-section {
+                margin-top: 40px;
                 display: flex;
                 justify-content: space-between;
-                gap: 20px;
+                font-size: 9px;
               }
-        
               .signature-box {
-                flex: 1;
+                width: 30%;
                 text-align: center;
-                padding: 15px;
-                background: white;
-                border-radius: 8px;
-                border: 2px solid #e9ecef;
               }
-        
               .signature-title {
-                font-weight: 600;
-                margin-bottom: 10px;
-                padding: 8px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border-radius: 6px;
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
+                font-weight: bold;
+                margin-bottom: 5px;
+                padding: 5px;
+                background: #86ff81;
+                color: #000;
               }
-              
               .signature-space {
-                height: 70px;
-                border: 2px dashed #cbd5e0;
-                margin: 15px 0;
-                border-radius: 6px;
-                background: white;
+                height: 60px;
+                border: 1px solid #ddd;
+                margin: 10px 0;
               }
-              
               .signature-name {
-                font-weight: 600;
+                font-weight: bold;
                 padding-top: 5px;
-                font-size: 11px;
-                color: #2d3748;
               }
-              
-              /* ========== FOOTER ========== */
-              .report-footer { 
-                margin-top: 40px; 
-                padding-top: 20px;
-                border-top: 2px solid #e9ecef;
-                text-align: center; 
-                font-size: 9px; 
-                color: #718096;
-                line-height: 1.8;
+
+              .report-footer {
+                margin-top: 30px;
+                padding-top: 15px;
+                border-top: 2px solid #ddd;
+                text-align: center;
+                font-size: 8px;
+                color: #888;
+                line-height: 1.6;
               }
-              
+
               .report-footer p {
                 margin: 3px 0;
               }
-              .report-footer strong {
-                color: #667eea;
+
+              .no-print {
+                display: none !important;
               }
               
-              /* ========== PRINT SPECIFIC ========== */
               @media print {
-                @page {
-                  size: A4 portrait;
-                  margin: 10mm;
-                }
-
                 body {
-                  padding: 5px;
-                  font-size: 10px;
+                  padding: 0;
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
                 }
-
-                .report-header {
-                  box-shadow: none;
-                  page-break-inside: avoid;
+                .no-print {
+                  display: none !important;
                 }
-
-                .table-container {
-                  box-shadow: none;
-                  page-break-inside: auto;
-                }
-
-                table {
-                  width: 100%;
-                  font-size: 9px;
-                  border-collapse: collapse;
-                }
-
-                th {
-                  padding: 6px 4px;
-                  font-size: 8px;
-                }
-
-                td {
-                  padding: 5px 4px;
-                  font-size: 9px;
-                }
-
-                tbody tr:hover {
-                  background-color: inherit;
-                }
-
-                .signature-section {
-                  page-break-inside: avoid;
-                }
-
-                .report-footer {
-                  page-break-inside: avoid;
-                  font-size: 7px;
-                }
-              }
-
-              /* ========== CATEGORY BADGE ========== */
-              .category-badge {
-                display: inline-block;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 10px;
-                font-weight: 600;
-                background: #e0e7ff;
-                color: #4338ca;
-              }
-              /* ========== STATUS INDICATOR ========== */
-              .status-pending {
-                display: inline-block;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 9px;
-                font-weight: 600;
-                background: #fef3c7;
-                color: #f59e0b;
-              }
-              .status-approved {
-                display: inline-block;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 9px;
-                font-weight: 600;
-                background: #d1fae5;
-                color: #059669;
-              }
-              .status-rejected {
-                display: inline-block;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 9px;
-                font-weight: 600;
-                background: #fee2e2;
-                color: #dc2626;
               }
             </style>
           </head>
           <body>
-
-              <!-- HEADER -->
-              <div style="text-align: center; margin-bottom: 20px;">
-                <div style="font-size: 18px; font-weight: 700; margin-bottom: 5px;">LAPORAN KAS KECIL</div>
-                <div style="font-size: 14px; font-weight: 700; color: #000;">${ptNames}</div>
-              </div>
-
-              <!-- INFO SECTION -->
-              <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 12px;">
-                <div><strong>Periode:</strong> ${tanggalOnly}</div>
-                <div><strong>Dicetak Oleh:</strong> ${currentUserData?.name || 'User'}</div>
-              </div>
-
-              <!-- TABLE -->
-              <div class="table-container">
-                <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
-                  <thead>
-                    <tr style="background: #fff; border: 1px solid #333;">
-                      <th style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: 700; color: #000;" width="5%">No</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: left; font-weight: 700; color: #000;" width="45%">Keterangan</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="18%">Masuk</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="18%">Keluar</th>
-                      <th style="border: 1px solid #333; padding: 8px; text-align: right; font-weight: 700; color: #000;" width="14%">Saldo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
-                      <tr style="border: 1px solid #333;">
-                        <td style="border: 1px solid #333; padding: 6px; text-align: center;">${item.no}</td>
-                        <td style="border: 1px solid #333; padding: 6px;">${item.keterangan}</td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: right;">
-                          ${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
-                        </td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: right;">
-                          ${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}
-                        </td>
-                        <td style="border: 1px solid #333; padding: 6px; text-align: right; font-weight: 600;">
-                          Rp ${item.saldo.toLocaleString('id-ID')}
-                        </td>
-                      </tr>
-                    `).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px; border: 1px solid #333;">Tidak ada data</td></tr>'}
-                </tbody>
-              </table>
+            <div class="report-header">
+              <div class="report-title">LAPORAN KAS KECIL</div>
+              <div class="report-subtitle">Pembukuan Kas Fisik Tunai di Kasir (Cash Only)</div>
+              <div class="report-company">Sistem Sumber Jaya Grup Official</div>
             </div>
 
-            <!-- SUMMARY TABLE -->
-            <div style="margin-top: 20px;">
-              <table style="width: 100%; border-collapse: collapse; border: 1px solid #333;">
-                <tbody>
-                  <tr style="background: #f0f0f0; border: 1px solid #333;">
-                    <td style="border: 1px solid #333; padding: 10px; font-weight: 600; text-align: right; width: 70%;">TOTAL PEMASUKAN</td>
-                    <td style="border: 1px solid #333; padding: 10px; text-align: right; width: 30%; font-weight: 600;">Rp ${totalMasuk.toLocaleString('id-ID')}</td>
-                  </tr>
-                  <tr style="border: 1px solid #333;">
-                    <td style="border: 1px solid #333; padding: 10px; font-weight: 600; text-align: right;">TOTAL PENGELUARAN</td>
-                    <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 600;">Rp ${totalKeluar.toLocaleString('id-ID')}</td>
-                  </tr>
-                  <tr style="background: #e0e0e0; border: 1px solid #333;">
-                    <td style="border: 1px solid #333; padding: 10px; font-weight: 700; text-align: right; font-size: 14px;">SALDO AKHIR</td>
-                    <td style="border: 1px solid #333; padding: 10px; text-align: right; font-weight: 700; font-size: 14px;">Rp ${saldoAkhir.toLocaleString('id-ID')}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="info-section">
+              <div class="info-left">
+                <div class="info-row">
+                  <span class="info-label">Tanggal</span>
+                  <span class="info-value">: ${tanggalOnly}</span>
+                </div>
+              </div>
+              <div class="info-right">
+                <div class="info-row">
+                  <span class="info-label">Dicetak Oleh</span>
+                  <span class="info-value">: ${currentUserData?.name || 'User'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">PT</span>
+                  <span class="info-value">: ${ptNames}</span>
+                </div>
+              </div>
             </div>
 
-            <!-- SIGNATURE SECTION -->
-            <div style="margin-top: 50px; display: flex; justify-content: space-between; gap: 20px;">
-              <div style="flex: 1; text-align: center;">
-                <div style="font-weight: 600; margin-bottom: 10px;">Kasir,</div>
-                <div style="height: 60px;"></div>
-                <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
-                  ${currentUserData?.name || 'User'}
-                </div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="text-center">No</th>
+                  <th class="text-center">Tanggal</th>
+                  <th class="text-center">Kategori</th>
+                  <th class="text-center">Keterangan</th>
+                  <th class="text-right">Masuk</th>
+                  <th class="text-right">Keluar</th>
+                  <th class="text-right">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
+                  <tr>
+                    <td class="text-center">${item.no}</td>
+                    <td>${new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td>${item.kategori || '-'}</td>
+                    <td>${item.keterangan}</td>
+                    <td class="text-right">${item.jenis === 'masuk' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                    <td class="text-right">${item.jenis === 'keluar' ? `Rp ${(item.jumlah || 0).toLocaleString('id-ID')}` : '-'}</td>
+                    <td class="text-right"><strong>Rp ${item.saldo.toLocaleString('id-ID')}</strong></td>
+                  </tr>
+                `).join('') : '<tr><td colspan="7" class="text-center">Tidak ada data</td></tr>'}
+                <tr class="grand-total-row">
+                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
+                  <td class="text-right"><strong>Rp ${totalMasuk.toLocaleString('id-ID')}</strong></td>
+                  <td class="text-right"><strong>Rp ${totalKeluar.toLocaleString('id-ID')}</strong></td>
+                  <td class="text-right"><strong>Rp ${saldoAkhir.toLocaleString('id-ID')}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="signature-section">
+              <div class="signature-box">
+                <div class="signature-title">Kasir</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">${currentUserData?.name || 'User'}</div>
               </div>
-              <div style="flex: 1; text-align: center;">
-                <div style="font-weight: 600; margin-bottom: 10px;">Manager Keuangan,</div>
-                <div style="height: 60px;"></div>
-                <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
-                  ( _________________ )
-                </div>
+              <div class="signature-box">
+                <div class="signature-title">Manager Keuangan</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">( _________________ )</div>
               </div>
-              <div style="flex: 1; text-align: center;">
-                <div style="font-weight: 600; margin-bottom: 10px;">Direktur,</div>
-                <div style="height: 60px;"></div>
-                <div style="border-bottom: 1px solid #333; display: inline-block; min-width: 150px; padding-bottom: 2px;">
-                  ( _________________ )
-                </div>
+              <div class="signature-box">
+                <div class="signature-title">Direktur</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">( _________________ )</div>
               </div>
+            </div>
+
+            <div class="report-footer">
+              <p><strong>© 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click</strong></p>
+              <p>Laporan ini dicetak secara otomatis dari sistem</p>
             </div>
           </body>
         </html>
