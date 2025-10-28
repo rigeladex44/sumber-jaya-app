@@ -1,10 +1,8 @@
--- Migration: Create arus_kas table for comprehensive cash flow tracking
--- Date: 2025-10-22
+-- Migration: Create arus_kas table
+-- Description: Tabel untuk pencatatan manual arus kas (cash & cashless)
+-- Date: 2025-10-25
 
--- Create arus_kas table for manual entries (cashless transactions)
--- This table stores manual cash flow entries with categories
--- Auto-synced with penjualan and kas_kecil data via API aggregation
-
+-- Check if table exists before creating
 CREATE TABLE IF NOT EXISTS arus_kas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tanggal DATE NOT NULL,
@@ -13,20 +11,15 @@ CREATE TABLE IF NOT EXISTS arus_kas (
   jumlah DECIMAL(15, 2) NOT NULL,
   keterangan TEXT NOT NULL,
   kategori VARCHAR(100) NOT NULL,
-  metode_bayar VARCHAR(20) DEFAULT 'cashless',
+  metode_bayar ENUM('cash', 'cashless') NOT NULL DEFAULT 'cashless',
   created_by INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_arus_kas_tanggal (tanggal),
-  INDEX idx_arus_kas_pt (pt_code),
-  INDEX idx_arus_kas_kategori (kategori),
-  INDEX idx_arus_kas_metode (metode_bayar)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  FOREIGN KEY (created_by) REFERENCES users(id),
+  FOREIGN KEY (pt_code) REFERENCES pt_list(code)
+);
 
--- Note: Data aggregation happens at API level
--- GET /api/arus-kas returns combined data from:
--- 1. arus_kas table (manual entries)
--- 2. kas_kecil table (approved cash transactions)
--- 3. penjualan table (sales data)
-
+-- Add index for better query performance
+CREATE INDEX IF NOT EXISTS idx_arus_kas_tanggal ON arus_kas(tanggal);
+CREATE INDEX IF NOT EXISTS idx_arus_kas_pt_code ON arus_kas(pt_code);
+CREATE INDEX IF NOT EXISTS idx_arus_kas_created_by ON arus_kas(created_by);

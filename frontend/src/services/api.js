@@ -130,27 +130,49 @@ export const kasKecilService = {
 // ==================== ARUS KAS SERVICES ====================
 
 export const arusKasService = {
-  // Get aggregated arus kas data (from manual entries + kas_kecil + penjualan)
   getAll: async (params = {}) => {
     const response = await api.get('/arus-kas', { params });
     return response.data;
   },
 
-  // Create manual arus kas entry (for cashless transactions)
   create: async (data) => {
     const response = await api.post('/arus-kas', data);
     return response.data;
   },
 
-  // Update manual arus kas entry (only for today's entries)
   update: async (id, data) => {
     const response = await api.put(`/arus-kas/${id}`, data);
     return response.data;
   },
 
-  // Delete manual arus kas entry (only for today's entries)
   delete: async (id) => {
     const response = await api.delete(`/arus-kas/${id}`);
+    return response.data;
+  },
+};
+
+// ==================== SUB KATEGORI SERVICES ====================
+
+export const subKategoriService = {
+  getAll: async (jenis = null) => {
+    const response = await api.get('/sub-kategori', {
+      params: jenis ? { jenis } : {}
+    });
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/sub-kategori', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/sub-kategori/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/sub-kategori/${id}`);
     return response.data;
   },
 };
