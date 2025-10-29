@@ -2945,7 +2945,7 @@ const SumberJayaApp = () => {
               <>
                 <p className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">{dashboardStats.pendingApproval}</p>
                 <p className="text-xs text-yellow-600 mt-1 md:mt-2 font-medium">
-                  {dashboardStats.pendingApproval > 0 ? '👆 Klik untuk approve' : 'Semua sudah disetujui'}
+                  {dashboardStats.pendingApproval > 0 ? 'Klik untuk approve/reject' : 'Semua sudah disetujui'}
                 </p>
               </>
             )}
