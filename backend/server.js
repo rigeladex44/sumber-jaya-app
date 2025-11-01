@@ -255,11 +255,14 @@ const getLocalDate = () => {
 // Helper function to convert Date object to local YYYY-MM-DD (no timezone conversion)
 const formatLocalDate = (date) => {
   if (!date) return null;
+
+  // If already a string, just extract the date part
   if (typeof date === 'string') return date.split('T')[0];
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  // If Date object, use UTC methods to avoid timezone issues
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
@@ -656,7 +659,7 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
   const today = getLocalDate();
   
   // Step 1: Get existing kas data
-  const getKasQuery = 'SELECT tanggal, created_by FROM kas_kecil WHERE id = ?';
+  const getKasQuery = 'SELECT DATE_FORMAT(tanggal, "%Y-%m-%d") as tanggal, created_by FROM kas_kecil WHERE id = ?';
   
   db.query(getKasQuery, [id], (err, kasResults) => {
     if (err) {
@@ -720,9 +723,11 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
 app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
   const { id } = req.params;
   const today = getLocalDate();
-  
+
+  console.log('🗑️ DELETE REQUEST:', { kasId: id, today: today, userId: req.userId });
+
   // Step 1: Get existing kas data
-  const getKasQuery = 'SELECT tanggal, created_by, created_at FROM kas_kecil WHERE id = ?';
+  const getKasQuery = 'SELECT DATE_FORMAT(tanggal, "%Y-%m-%d") as tanggal, created_by, created_at FROM kas_kecil WHERE id = ?';
   
   db.query(getKasQuery, [id], (err, kasResults) => {
     if (err) {
@@ -736,14 +741,25 @@ app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
     const kasData = kasResults[0];
     const kasTanggal = formatLocalDate(kasData.tanggal);
 
+    console.log('🔍 DELETE VALIDATION DEBUG:', {
+      kasId: id,
+      kasTanggal: kasTanggal,
+      today: today,
+      match: kasTanggal === today,
+      rawTanggal: kasData.tanggal
+    });
+
     // Step 2: Validasi - hanya bisa hapus transaksi hari ini
     if (kasTanggal !== today) {
+      console.log('❌ DELETE REJECTED: Date mismatch');
       return res.status(403).json({
         message: 'Hanya bisa menghapus transaksi hari ini',
         kasDate: kasTanggal,
         today: today
       });
     }
+
+    console.log('✅ DELETE VALIDATION PASSED: Date matches');
     
     // Step 3: Validasi - hanya creator atau Master User yang bisa delete
     if (kasData.created_by !== req.userId) {
