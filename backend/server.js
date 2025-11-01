@@ -734,16 +734,14 @@ app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
     }
     
     const kasData = kasResults[0];
-    
-    // Step 2: Validasi - hanya bisa hapus transaksi yang dibuat hari ini
-    const createdDate = new Date(kasData.created_at);
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    
-    if (createdDate < todayStart) {
-      return res.status(403).json({ 
-        message: 'Hanya bisa menghapus transaksi yang dibuat hari ini',
-        createdAt: kasData.created_at
+    const kasTanggal = formatLocalDate(kasData.tanggal);
+
+    // Step 2: Validasi - hanya bisa hapus transaksi hari ini
+    if (kasTanggal !== today) {
+      return res.status(403).json({
+        message: 'Hanya bisa menghapus transaksi hari ini',
+        kasDate: kasTanggal,
+        today: today
       });
     }
     
