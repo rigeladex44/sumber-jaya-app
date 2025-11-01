@@ -659,7 +659,7 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
   const today = getLocalDate();
   
   // Step 1: Get existing kas data
-  const getKasQuery = 'SELECT tanggal, created_by FROM kas_kecil WHERE id = ?';
+  const getKasQuery = 'SELECT DATE_FORMAT(tanggal, "%Y-%m-%d") as tanggal, created_by FROM kas_kecil WHERE id = ?';
   
   db.query(getKasQuery, [id], (err, kasResults) => {
     if (err) {
@@ -727,7 +727,7 @@ app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
   console.log('🗑️ DELETE REQUEST:', { kasId: id, today: today, userId: req.userId });
 
   // Step 1: Get existing kas data
-  const getKasQuery = 'SELECT tanggal, created_by, created_at FROM kas_kecil WHERE id = ?';
+  const getKasQuery = 'SELECT DATE_FORMAT(tanggal, "%Y-%m-%d") as tanggal, created_by, created_at FROM kas_kecil WHERE id = ?';
   
   db.query(getKasQuery, [id], (err, kasResults) => {
     if (err) {
