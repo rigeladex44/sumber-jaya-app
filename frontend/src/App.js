@@ -2044,16 +2044,11 @@ const SumberJayaApp = () => {
   const kategoriPengeluaran = [
     'BIAYA OPERASIONAL',
     'BIAYA LAIN-LAIN',
-    'TRANSPORT FEE',
     'BEBAN GAJI KARYAWAN',
     'BEBAN DIMUKA',
-    'BIAYA PAJAK & KONSULTAN',
-    'BIAYA ANGSURAN',
     'BIAYA SEWA',
-    'KASBON KARYAWAN',
-    'PEMBELIAN BARANG',
-    'MAINTENANCE',
-    'KOMUNIKASI'
+    'KASBON KARYAWAN'
+    
   ];
 
   const mainMenuItems = [
