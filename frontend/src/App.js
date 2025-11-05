@@ -567,6 +567,11 @@ const SumberJayaApp = () => {
     tanggal: getLocalDateString() // Default to today
   });
 
+  // Filter State for Detail Kas (PT and date filters)
+  const [filterDetailKas, setFilterDetailKas] = useState({
+    tanggal: '' // Empty means show all dates
+  });
+
   const [formUser, setFormUser] = useState({
     nama: '',
     username: '',
@@ -623,7 +628,25 @@ const SumberJayaApp = () => {
   };
 
   const getFilteredKasData = (pts = []) => {
-    return pts.length > 0 ? kasKecilData.filter(k => pts.includes(k.pt)) : kasKecilData;
+    let filtered = kasKecilData;
+
+    // Filter by PT if selected
+    if (pts.length > 0) {
+      filtered = filtered.filter(k => pts.includes(k.pt));
+    }
+
+    // Filter by date if selected
+    if (filterDetailKas.tanggal) {
+      const selectedDate = new Date(filterDetailKas.tanggal + 'T00:00:00');
+      filtered = filtered.filter(item => {
+        if (!item.tanggal) return false;
+        const itemDate = new Date(item.tanggal);
+        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+        return itemDateOnly.getTime() === selectedDate.getTime();
+      });
+    }
+
+    return filtered;
   };
 
   const handleSaveKas = async () => {
@@ -1049,12 +1072,16 @@ const SumberJayaApp = () => {
         return;
       }
 
+      // Format date for filename (DD-MM-YYYY)
+      const filenameDateParts = selectedDate.split('-'); // YYYY-MM-DD
+      const filenameDate = `${filenameDateParts[2]}-${filenameDateParts[1]}-${filenameDateParts[0]}`; // DD-MM-YYYY
+
       // Generate HTML content
       const htmlContent = `
         <!DOCTYPE html>
         <html>
           <head>
-            <title>LAPORAN KAS KECIL - Sumber Jaya Grup</title>
+            <title>Laporan Kas Kecil ${filenameDate}</title>
             <meta charset="UTF-8">
             <style>
               @page {
@@ -2360,6 +2387,21 @@ const SumberJayaApp = () => {
     if (content) {
       const printWindow = window.open('', '_blank');
 
+      // Format date for filename
+      let filenameDate = '';
+      if (type === 'kas') {
+        // For Kas Kecil: use DD-MM-YYYY format
+        const todayDate = new Date();
+        const day = String(todayDate.getDate()).padStart(2, '0');
+        const month = String(todayDate.getMonth() + 1).padStart(2, '0');
+        const year = todayDate.getFullYear();
+        filenameDate = `${day}-${month}-${year}`;
+      } else if (type === 'labarugi') {
+        // For Laba Rugi: use MM-YYYY format
+        const [year, month] = selectedMonth.split('-');
+        filenameDate = `${month}-${year}`;
+      }
+
       // Untuk Laporan Laba Rugi, tidak ada tanda tangan
       const signatureSection = type === 'kas' ? `
         <div class="signature-section">
@@ -2380,12 +2422,16 @@ const SumberJayaApp = () => {
           </div>
         </div>
       ` : '';
-      
+
+      const documentTitle = type === 'kas'
+        ? `Laporan Kas Kecil ${filenameDate}`
+        : `Laporan Laba Rugi ${filenameDate}`;
+
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
-            <title>${headerTitle} - Sumber Jaya Grup</title>
+            <title>${documentTitle}</title>
             <meta charset="UTF-8">
             <style>
               @page {
@@ -4384,13 +4430,49 @@ const SumberJayaApp = () => {
       return { masuk, keluar, saldo: masuk - keluar };
     };
 
+    // Calculate yesterday's closing balance (Saldo Awal)
+    const hitungSaldoAwal = () => {
+      const selectedDate = filterKasKecil.tanggal || getLocalDateString();
+      const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+
+      // Get yesterday's date
+      const yesterday = new Date(selectedDateObj);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      // Filter data for dates before selected date (all transactions up to yesterday)
+      const beforeSelectedDate = kasKecilData.filter(item => {
+        if (!item.tanggal) return false;
+        const itemDate = new Date(item.tanggal);
+        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+        return itemDateOnly < selectedDateObj;
+      });
+
+      // Filter by PT if selected
+      const filteredByPT = filterKasKecil.pt.length > 0
+        ? beforeSelectedDate.filter(item => filterKasKecil.pt.includes(item.pt))
+        : beforeSelectedDate;
+
+      // Calculate yesterday's closing balance (only approved transactions)
+      const masuk = filteredByPT.filter(k => k.jenis === 'masuk' && k.status === 'approved')
+        .reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      const keluar = filteredByPT.filter(k => k.jenis === 'keluar' && k.status === 'approved')
+        .reduce((sum, k) => sum + (k.jumlah || 0), 0);
+
+      return masuk - keluar;
+    };
+
     // Use auto-filtered data (real-time)
     const displayData = getFilteredKasKecilData();
-    
+
     // Calculate totals based on display data
     const masuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const keluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const saldo = masuk - keluar;
+
+    // Get opening balance (yesterday's closing balance)
+    const saldoAwal = hitungSaldoAwal();
+
+    // Calculate closing balance = opening balance + today's masuk - today's keluar
+    const saldo = saldoAwal + masuk - keluar;
 
     // Check if transaction is from today for edit/delete
     const isToday = (createdAt) => {
@@ -4564,7 +4646,19 @@ const SumberJayaApp = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Saldo Awal</p>
+                <p className="text-2xl font-bold text-purple-600">Rp {saldoAwal.toLocaleString('id-ID')}</p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-full">
+                <DollarSign className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -4576,7 +4670,7 @@ const SumberJayaApp = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -4588,7 +4682,7 @@ const SumberJayaApp = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -4697,8 +4791,14 @@ const SumberJayaApp = () => {
                 ))}
               </tbody>
               <tfoot className="bg-gray-100 font-bold">
+                <tr className="bg-yellow-50">
+                  <td colSpan="4" className="px-4 py-3 text-right">Saldo Awal (Sisa Saldo Kemarin)</td>
+                  <td colSpan="4" className="px-4 py-3 text-right text-purple-600 text-lg">
+                    Rp {saldoAwal.toLocaleString('id-ID')}
+                  </td>
+                </tr>
                 <tr>
-                  <td colSpan="4" className="px-4 py-3 text-right">Total (Approved)</td>
+                  <td colSpan="4" className="px-4 py-3 text-right">Total Hari Ini (Approved)</td>
                   <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
                   <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
                   <td colSpan="2" className="px-4 py-3"></td>
@@ -4770,7 +4870,12 @@ const SumberJayaApp = () => {
               ))}
             </div>
           </div>
-          <input type="date" className="px-4 py-2 border rounded-lg" />
+          <input
+            type="date"
+            value={filterDetailKas.tanggal}
+            onChange={(e) => setFilterDetailKas({ tanggal: e.target.value })}
+            className="px-4 py-2 border rounded-lg"
+          />
         </div>
       </div>
 
