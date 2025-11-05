@@ -72,11 +72,12 @@ const SumberJayaApp = () => {
   
   // Dashboard Stats State
   const [dashboardStats, setDashboardStats] = useState({
-    kasHarian: 0,
+    kasKecilSaldoAkhir: 0,
+    kasKecilPemasukanHariIni: 0,
+    kasKecilPengeluaranHariIni: 0,
     penjualanQty: 0,
     penjualanNilai: 0,
-    pendingApproval: 0,
-    pengeluaran7Hari: 0
+    pendingApproval: 0
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -149,11 +150,12 @@ const SumberJayaApp = () => {
       try {
         const data = await dashboardService.getStats();
         setDashboardStats({
-          kasHarian: data.kasHarian || 0,
+          kasKecilSaldoAkhir: data.kasKecilSaldoAkhir || 0,
+          kasKecilPemasukanHariIni: data.kasKecilPemasukanHariIni || 0,
+          kasKecilPengeluaranHariIni: data.kasKecilPengeluaranHariIni || 0,
           penjualanQty: data.penjualanQty || 0,
           penjualanNilai: data.penjualanNilai || 0,
-          pendingApproval: data.pendingApproval || 0,
-          pengeluaran7Hari: data.pengeluaran7Hari || 0
+          pendingApproval: data.pendingApproval || 0
         });
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -2966,19 +2968,38 @@ const SumberJayaApp = () => {
       {/* Summary Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {hasKasKecilAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-gray-900">
+          <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-blue-600">
             <div className="flex items-center justify-between mb-2 md:mb-3">
               <p className="text-xs md:text-sm text-gray-600">Kas Kecil</p>
-              <DollarSign className="text-gray-900" size={20} />
+              <DollarSign className="text-blue-600" size={20} />
             </div>
             {isLoadingStats ? (
               <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
             ) : (
               <>
-                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
-                  Rp {dashboardStats.kasHarian.toLocaleString('id-ID')}
+                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">
+                  Rp {dashboardStats.kasKecilSaldoAkhir.toLocaleString('id-ID')}
                 </p>
-                <p className="text-xs text-gray-500 mt-1 md:mt-2">Saldo kas tunai</p>
+                <p className="text-xs text-gray-500 mt-1 md:mt-2">Saldo akhir hari ini</p>
+              </>
+            )}
+          </div>
+        )}
+
+        {hasKasKecilAccess && (
+          <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-green-500">
+            <div className="flex items-center justify-between mb-2 md:mb-3">
+              <p className="text-xs md:text-sm text-gray-600">Pemasukan Hari Ini</p>
+              <TrendingUp className="text-green-500" size={20} />
+            </div>
+            {isLoadingStats ? (
+              <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
+            ) : (
+              <>
+                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-green-600">
+                  Rp {dashboardStats.kasKecilPemasukanHariIni.toLocaleString('id-ID')}
+                </p>
+                <p className="text-xs text-green-600 mt-1 md:mt-2 font-medium">Kas Kecil approved</p>
               </>
             )}
           </div>
@@ -3028,17 +3049,17 @@ const SumberJayaApp = () => {
         {hasKasKecilAccess && (
           <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-red-500">
             <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-xs md:text-sm text-gray-600">Pengeluaran 7 Hari</p>
+              <p className="text-xs md:text-sm text-gray-600">Pengeluaran Hari Ini</p>
               <TrendingDown className="text-red-500" size={20} />
             </div>
             {isLoadingStats ? (
               <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
             ) : (
               <>
-                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
-                  Rp {dashboardStats.pengeluaran7Hari.toLocaleString('id-ID')}
+                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-red-600">
+                  Rp {dashboardStats.kasKecilPengeluaranHariIni.toLocaleString('id-ID')}
                 </p>
-                <p className="text-xs text-red-600 mt-1 md:mt-2 font-medium">Seminggu terakhir</p>
+                <p className="text-xs text-red-600 mt-1 md:mt-2 font-medium">Kas Kecil approved</p>
               </>
             )}
           </div>
