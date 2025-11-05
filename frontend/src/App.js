@@ -1039,10 +1039,6 @@ const SumberJayaApp = () => {
     }
 
     // Calculate running balance - START FROM YESTERDAY'S CLOSING BALANCE
-    // Get yesterday's closing balance as opening balance for today
-    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
-    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
-
     // Filter data for dates before selected date (all transactions up to yesterday)
     const beforeSelectedDate = kasKecilData.filter(item => {
       if (!item.tanggal) return false;
