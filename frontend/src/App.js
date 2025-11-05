@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut,
-  Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Search, Tags, Edit, Trash2, NotebookPen
+  Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Search, Tags, Edit, Trash2, BookOpen
 } from 'lucide-react';
 import {
   authService,
@@ -2080,7 +2080,7 @@ const SumberJayaApp = () => {
 
   const mainMenuItems = [
     { id: 'beranda', label: 'Beranda', icon: Home },
-    { id: 'kas-kecil', label: 'Kas Kecil', icon: NotebookPen },
+    { id: 'kas-kecil', label: 'Kas Kecil', icon: BookOpen },
     { id: 'arus-kas', label: 'Arus Kas', icon: TrendingUp },
     { id: 'detail-kas', label: 'Detail Kas', icon: AlertCircle },
     { id: 'penjualan', label: 'Penjualan', icon: ShoppingCart },
