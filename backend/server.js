@@ -491,6 +491,128 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
   });
 });
 
+// Recalculate Saldo Run from specific date
+app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
+  const { startDate } = req.body; // Format: YYYY-MM-DD
+
+  if (!startDate) {
+    return res.status(400).json({ message: 'startDate is required (format: YYYY-MM-DD)' });
+  }
+
+  console.log('🔄 Recalculating Saldo Run from:', startDate);
+
+  // Step 1: Delete all "Sisa Saldo" transactions from startDate onwards
+  const deleteQuery = `
+    DELETE FROM kas_kecil
+    WHERE tanggal >= ?
+    AND keterangan LIKE 'Sisa Saldo tanggal%'
+  `;
+
+  db.query(deleteQuery, [startDate], (err, deleteResult) => {
+    if (err) {
+      console.error('❌ Error deleting old Sisa Saldo transactions:', err);
+      return res.status(500).json({ message: 'Server error deleting old transactions', error: err });
+    }
+
+    console.log(`✅ Deleted ${deleteResult.affectedRows} old Sisa Saldo transactions`);
+
+    // Step 2: Get all dates from startDate to today
+    const today = getLocalDate();
+    const dates = [];
+    let currentDate = new Date(startDate);
+    const todayDate = new Date(today);
+
+    while (currentDate <= todayDate) {
+      dates.push(formatLocalDate(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    console.log(`📅 Processing ${dates.length} dates from ${startDate} to ${today}`);
+
+    // Step 3: For each date, calculate closing balance from previous date and create "Sisa Saldo"
+    const processDate = (dateIndex) => {
+      if (dateIndex >= dates.length) {
+        // All dates processed
+        console.log('✅ Recalculation complete!');
+        return res.json({
+          message: 'Saldo Run successfully recalculated',
+          startDate: startDate,
+          endDate: today,
+          datesProcessed: dates.length,
+          deletedTransactions: deleteResult.affectedRows
+        });
+      }
+
+      const currentDateStr = dates[dateIndex];
+      const yesterday = new Date(currentDateStr);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = formatLocalDate(yesterday);
+
+      console.log(`🔄 Processing date: ${currentDateStr}, yesterday: ${yesterdayStr}`);
+
+      // Calculate closing balance for yesterday per PT
+      const saldoQuery = `
+        SELECT pt_code,
+          SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
+          SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
+        FROM kas_kecil
+        WHERE tanggal <= ?
+        GROUP BY pt_code
+        HAVING saldo_akhir > 0
+      `;
+
+      db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
+        if (err) {
+          console.error(`❌ Error calculating saldo for ${yesterdayStr}:`, err);
+          return res.status(500).json({ message: 'Server error calculating saldo', error: err });
+        }
+
+        if (saldoResults.length === 0) {
+          console.log(`⚠️ No saldo to transfer for ${currentDateStr}`);
+          // Continue to next date
+          processDate(dateIndex + 1);
+          return;
+        }
+
+        // Create "Sisa Saldo" transactions for each PT
+        const insertPromises = saldoResults.map(pt => {
+          return new Promise((resolve, reject) => {
+            const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
+            const insertQuery = `
+              INSERT INTO kas_kecil
+              (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
+              VALUES (?, ?, 'masuk', ?, ?, 'approved', ?, ?)
+            `;
+
+            db.query(
+              insertQuery,
+              [currentDateStr, pt.pt_code, pt.saldo_akhir, keterangan, req.userId, req.userId],
+              (err, result) => {
+                if (err) reject(err);
+                else resolve({ pt: pt.pt_code, saldo: pt.saldo_akhir, date: currentDateStr });
+              }
+            );
+          });
+        });
+
+        Promise.all(insertPromises)
+          .then(results => {
+            console.log(`✅ Created ${results.length} Sisa Saldo transactions for ${currentDateStr}`);
+            // Continue to next date
+            processDate(dateIndex + 1);
+          })
+          .catch(err => {
+            console.error(`❌ Error creating Sisa Saldo for ${currentDateStr}:`, err);
+            res.status(500).json({ message: 'Error creating Sisa Saldo transactions', error: err });
+          });
+      });
+    };
+
+    // Start processing from first date
+    processDate(0);
+  });
+});
+
 // Auto Transfer Saldo Kemarin
 app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
   const today = getLocalDate();
