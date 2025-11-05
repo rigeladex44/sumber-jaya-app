@@ -1038,8 +1038,32 @@ const SumberJayaApp = () => {
       return;
     }
 
-    // Calculate running balance
-    let runningBalance = 0;
+    // Calculate running balance - START FROM YESTERDAY'S CLOSING BALANCE
+    // Get yesterday's closing balance as opening balance for today
+    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+
+    // Filter data for dates before selected date (all transactions up to yesterday)
+    const beforeSelectedDate = kasKecilData.filter(item => {
+      if (!item.tanggal) return false;
+      const itemDate = new Date(item.tanggal);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      return itemDateOnly < selectedDateObj;
+    });
+
+    // Filter by PT if selected
+    const filteredByPT = filterKasKecil.pt.length > 0
+      ? beforeSelectedDate.filter(item => filterKasKecil.pt.includes(item.pt))
+      : beforeSelectedDate;
+
+    // Calculate yesterday's closing balance (only approved transactions)
+    const yesterdayMasuk = filteredByPT.filter(k => k.jenis === 'masuk' && k.status === 'approved')
+      .reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const yesterdayKeluar = filteredByPT.filter(k => k.jenis === 'keluar' && k.status === 'approved')
+      .reduce((sum, k) => sum + (k.jumlah || 0), 0);
+
+    let runningBalance = yesterdayMasuk - yesterdayKeluar; // Start from yesterday's closing balance
+
     const dataWithBalance = displayData.map((item, index) => {
       // Only count approved transactions for balance
       if (item.status === 'approved') {
@@ -1059,7 +1083,9 @@ const SumberJayaApp = () => {
     // Calculate totals
     const totalMasuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const totalKeluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const saldoAkhir = totalMasuk - totalKeluar;
+
+    // Saldo Akhir = Saldo Awal (yesterday's closing) + Total Masuk - Total Keluar
+    const saldoAkhir = (yesterdayMasuk - yesterdayKeluar) + totalMasuk - totalKeluar;
 
     // DEBUG: Alert untuk konfirmasi data sebelum print
     console.log('✅ PRINT START - Data Count:', displayData.length);
@@ -1284,6 +1310,10 @@ const SumberJayaApp = () => {
                 </tr>
               </thead>
               <tbody>
+                <tr style="background: #fff9e6;">
+                  <td colspan="6" class="text-right"><strong>Saldo Awal (Sisa Saldo Kemarin)</strong></td>
+                  <td class="text-right"><strong style="color: #9333ea;">Rp ${(yesterdayMasuk - yesterdayKeluar).toLocaleString('id-ID')}</strong></td>
+                </tr>
                 ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
                   <tr>
                     <td class="text-center">${item.no}</td>
@@ -1296,7 +1326,7 @@ const SumberJayaApp = () => {
                   </tr>
                 `).join('') : '<tr><td colspan="7" class="text-center">Tidak ada data</td></tr>'}
                 <tr class="grand-total-row">
-                  <td colspan="4" class="text-center"><strong>Total (Approved)</strong></td>
+                  <td colspan="4" class="text-center"><strong>Total Hari Ini (Approved)</strong></td>
                   <td class="text-right"><strong>Rp ${totalMasuk.toLocaleString('id-ID')}</strong></td>
                   <td class="text-right"><strong>Rp ${totalKeluar.toLocaleString('id-ID')}</strong></td>
                   <td class="text-right"><strong>Rp ${saldoAkhir.toLocaleString('id-ID')}</strong></td>
@@ -4474,6 +4504,23 @@ const SumberJayaApp = () => {
     // Calculate closing balance = opening balance + today's masuk - today's keluar
     const saldo = saldoAwal + masuk - keluar;
 
+    // Add running balance to display data
+    let runningBalance = saldoAwal; // Start from yesterday's closing balance
+    const dataWithBalance = displayData.map((item) => {
+      // Only count approved transactions for balance
+      if (item.status === 'approved') {
+        if (item.jenis === 'masuk') {
+          runningBalance += item.jumlah || 0;
+        } else if (item.jenis === 'keluar') {
+          runningBalance -= item.jumlah || 0;
+        }
+      }
+      return {
+        ...item,
+        saldo: runningBalance
+      };
+    });
+
     // Check if transaction is from today for edit/delete
     const isToday = (createdAt) => {
       if (!createdAt) return false;
@@ -4714,12 +4761,13 @@ const SumberJayaApp = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Keluar</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase no-print">Status</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase no-print">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {displayData.map((item) => (
+                {dataWithBalance.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
@@ -4743,9 +4791,14 @@ const SumberJayaApp = () => {
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      <span className={`font-semibold ${item.saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        Rp {(item.saldo || 0).toLocaleString('id-ID')}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-center no-print">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                        item.status === 'approved' ? 'bg-green-100 text-green-700' :
                         item.status === 'rejected' ? 'bg-red-100 text-red-700' :
                         'bg-yellow-100 text-yellow-700'
                       }`}>
@@ -4793,7 +4846,7 @@ const SumberJayaApp = () => {
               <tfoot className="bg-gray-100 font-bold">
                 <tr className="bg-yellow-50">
                   <td colSpan="4" className="px-4 py-3 text-right">Saldo Awal (Sisa Saldo Kemarin)</td>
-                  <td colSpan="4" className="px-4 py-3 text-right text-purple-600 text-lg">
+                  <td colSpan="5" className="px-4 py-3 text-right text-purple-600 text-lg">
                     Rp {saldoAwal.toLocaleString('id-ID')}
                   </td>
                 </tr>
@@ -4801,11 +4854,11 @@ const SumberJayaApp = () => {
                   <td colSpan="4" className="px-4 py-3 text-right">Total Hari Ini (Approved)</td>
                   <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
                   <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
-                  <td colSpan="2" className="px-4 py-3"></td>
+                  <td colSpan="3" className="px-4 py-3"></td>
                 </tr>
                 <tr className="bg-blue-50">
                   <td colSpan="4" className="px-4 py-3 text-right">Saldo Akhir</td>
-                  <td colSpan="4" className="px-4 py-3 text-right text-blue-600 text-lg">
+                  <td colSpan="5" className="px-4 py-3 text-right text-blue-600 text-lg">
                     Rp {saldo.toLocaleString('id-ID')}
                   </td>
                 </tr>
