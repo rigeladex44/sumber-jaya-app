@@ -815,9 +815,19 @@ const SumberJayaApp = () => {
   // Handler Approve/Reject Kas - Hanya untuk user dengan akses 'detail-kas'
   const handleApproveKas = async (kasId) => {
     if (window.confirm('Approve transaksi ini?')) {
+      // Get transaction data before approving (for syncing Sisa Saldo)
+      const transaction = kasKecilData.find(item => item.id === kasId);
+
       try {
         await kasKecilService.updateStatus(kasId, 'approved');
         await loadKasKecilData(); // Refresh data
+
+        // Auto-sync Sisa Saldo for the approved transaction's date and PT
+        if (transaction) {
+          await syncSisaSaldoForDate(getLocalDateFromISO(transaction.tanggal), transaction.pt);
+          await loadKasKecilData(); // Reload to get updated Sisa Saldo
+        }
+
         alert('Transaksi berhasil di-approve!');
       } catch (error) {
         console.error('Error approving kas:', error);
@@ -829,9 +839,19 @@ const SumberJayaApp = () => {
   const handleRejectKas = async (kasId) => {
     const reason = prompt('Alasan reject:');
     if (reason) {
+      // Get transaction data before rejecting (for syncing Sisa Saldo)
+      const transaction = kasKecilData.find(item => item.id === kasId);
+
       try {
         await kasKecilService.updateStatus(kasId, 'rejected');
         await loadKasKecilData(); // Refresh data
+
+        // Auto-sync Sisa Saldo for the rejected transaction's date and PT
+        if (transaction) {
+          await syncSisaSaldoForDate(getLocalDateFromISO(transaction.tanggal), transaction.pt);
+          await loadKasKecilData(); // Reload to get updated Sisa Saldo
+        }
+
         alert('Transaksi berhasil di-reject!');
       } catch (error) {
         console.error('Error rejecting kas:', error);
@@ -1425,6 +1445,104 @@ const SumberJayaApp = () => {
 
   // Handler Save Arus Kas Manual Entry
 
+  // Auto-sync "Sisa Saldo" transaction for a specific date and PT
+  const syncSisaSaldoForDate = async (tanggal, ptCode) => {
+    try {
+      console.log(`🔄 Syncing Sisa Saldo for ${tanggal}, PT: ${ptCode}`);
+
+      // Get all transactions for this date and PT
+      const transactionsForDate = kasKecilData.filter(item => {
+        if (!item.tanggal) return false;
+        const itemDate = new Date(item.tanggal);
+        const targetDate = new Date(tanggal);
+        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+        const targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+        return itemDateOnly.getTime() === targetDateOnly.getTime() &&
+               item.pt === ptCode &&
+               item.status === 'approved' &&
+               !item.keterangan.toLowerCase().includes('sisa saldo'); // Exclude existing Sisa Saldo
+      });
+
+      // Calculate saldo akhir for this date
+      const masuk = transactionsForDate.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+      const keluar = transactionsForDate.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+
+      // Get saldo awal (from yesterday's Sisa Saldo)
+      const targetDateObj = new Date(tanggal + 'T00:00:00');
+      const yesterday = new Date(targetDateObj);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayDateOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+      const yesterdaySisaSaldo = kasKecilData.filter(item => {
+        if (!item.tanggal) return false;
+        const itemDate = new Date(item.tanggal);
+        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+        return itemDateOnly.getTime() === yesterdayDateOnly.getTime() &&
+               item.pt === ptCode &&
+               item.jenis === 'masuk' &&
+               item.status === 'approved' &&
+               item.keterangan.toLowerCase().includes('sisa saldo');
+      }).reduce((sum, item) => sum + (item.jumlah || 0), 0);
+
+      const saldoAkhir = yesterdaySisaSaldo + masuk - keluar;
+
+      console.log(`💰 Calculated Saldo Akhir for ${tanggal}, PT ${ptCode}:`, {
+        saldoAwal: yesterdaySisaSaldo,
+        masuk,
+        keluar,
+        saldoAkhir
+      });
+
+      // Find existing "Sisa Saldo" transaction for this date
+      const existingSisaSaldo = kasKecilData.find(item => {
+        if (!item.tanggal) return false;
+        const itemDate = new Date(item.tanggal);
+        const targetDate = new Date(tanggal);
+        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+        const targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+        return itemDateOnly.getTime() === targetDateOnly.getTime() &&
+               item.pt === ptCode &&
+               item.jenis === 'masuk' &&
+               item.keterangan.toLowerCase().includes('sisa saldo');
+      });
+
+      const keterangan = `Sisa Saldo tanggal ${tanggal}`;
+
+      if (existingSisaSaldo) {
+        // Update existing Sisa Saldo transaction
+        if (existingSisaSaldo.jumlah !== saldoAkhir) {
+          console.log(`📝 Updating Sisa Saldo from ${existingSisaSaldo.jumlah} to ${saldoAkhir}`);
+          await kasKecilService.update(existingSisaSaldo.id, {
+            tanggal,
+            pt: ptCode,
+            jenis: 'masuk',
+            jumlah: saldoAkhir,
+            keterangan,
+            kategori: 'SALDO'
+          });
+        }
+      } else {
+        // Create new Sisa Saldo transaction
+        console.log(`✨ Creating new Sisa Saldo: ${saldoAkhir}`);
+        await kasKecilService.create({
+          tanggal,
+          pt: ptCode,
+          jenis: 'masuk',
+          jumlah: saldoAkhir,
+          keterangan,
+          kategori: 'SALDO'
+        });
+      }
+
+      console.log(`✅ Sisa Saldo synced successfully for ${tanggal}, PT ${ptCode}`);
+    } catch (error) {
+      console.error(`❌ Error syncing Sisa Saldo for ${tanggal}, PT ${ptCode}:`, error);
+      // Don't throw error to prevent blocking the main operation
+    }
+  };
+
   // Handler Save Kas Kecil (untuk pembukuan kasir tunai)
   const handleSaveKasKecil = async () => {
     if (!formKasKecil.pt || !formKasKecil.jumlah || !formKasKecil.keterangan || !formKasKecil.kategori) {
@@ -1455,6 +1573,12 @@ const SumberJayaApp = () => {
       // Refresh data
       await loadKasKecilData();
 
+      // Auto-sync Sisa Saldo for this date and PT
+      await syncSisaSaldoForDate(kasKecilData.tanggal, kasKecilData.pt);
+
+      // Reload to get updated Sisa Saldo
+      await loadKasKecilData();
+
       // Reset form
       setFormKasKecil({ 
         tanggal: getLocalDateString(), 
@@ -1477,12 +1601,22 @@ const SumberJayaApp = () => {
   // Handler Delete Kas Kecil (only for today's entries)
   const handleDeleteKasKecil = async (kasKecilId, keterangan) => {
     if (!window.confirm(`Yakin ingin menghapus transaksi "${keterangan}"?`)) return;
-    
+
+    // Get the transaction data before deleting (for syncing Sisa Saldo)
+    const deletedTransaction = kasKecilData.find(item => item.id === kasKecilId);
+
     setIsLoadingKasKecil(true);
-    
+
     try {
       await kasKecilService.delete(kasKecilId);
       await loadKasKecilData();
+
+      // Auto-sync Sisa Saldo for the deleted transaction's date and PT
+      if (deletedTransaction) {
+        await syncSisaSaldoForDate(getLocalDateFromISO(deletedTransaction.tanggal), deletedTransaction.pt);
+        await loadKasKecilData(); // Reload to get updated Sisa Saldo
+      }
+
       alert('Data kas kecil berhasil dihapus!');
     } catch (error) {
       console.error('Error deleting kas kecil:', error);
@@ -1516,6 +1650,12 @@ const SumberJayaApp = () => {
       await kasKecilService.update(editingKasKecil.id, kasKecilData);
 
       // Refresh data
+      await loadKasKecilData();
+
+      // Auto-sync Sisa Saldo for this date and PT
+      await syncSisaSaldoForDate(kasKecilData.tanggal, kasKecilData.pt);
+
+      // Reload to get updated Sisa Saldo
       await loadKasKecilData();
 
       // Close modal and reset
