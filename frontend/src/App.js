@@ -1038,27 +1038,36 @@ const SumberJayaApp = () => {
       return;
     }
 
-    // Calculate running balance - START FROM YESTERDAY'S CLOSING BALANCE
-    // Filter data for dates before selected date (all transactions up to yesterday)
-    const beforeSelectedDate = kasKecilData.filter(item => {
+    // Calculate running balance - START FROM YESTERDAY'S "Sisa Saldo" TRANSACTION
+    // Find "Sisa Saldo" transaction from yesterday ONLY, not cumulative
+    const yesterday = new Date(selectedDateObj);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayDateOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+    // Find "Sisa Saldo" transaction from yesterday
+    const sisaSaldoTransactions = kasKecilData.filter(item => {
       if (!item.tanggal) return false;
+
+      // Check if transaction is from yesterday
       const itemDate = new Date(item.tanggal);
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-      return itemDateOnly < selectedDateObj;
+      if (itemDateOnly.getTime() !== yesterdayDateOnly.getTime()) return false;
+
+      // Check if it's a "Sisa Saldo" transaction (masuk, approved, keterangan contains "Sisa Saldo")
+      if (item.jenis !== 'masuk') return false;
+      if (item.status !== 'approved') return false;
+      if (!item.keterangan || !item.keterangan.toLowerCase().includes('sisa saldo')) return false;
+
+      // Filter by PT if selected
+      if (filterKasKecil.pt.length > 0 && !filterKasKecil.pt.includes(item.pt)) return false;
+
+      return true;
     });
 
-    // Filter by PT if selected
-    const filteredByPT = filterKasKecil.pt.length > 0
-      ? beforeSelectedDate.filter(item => filterKasKecil.pt.includes(item.pt))
-      : beforeSelectedDate;
+    // Get yesterday's "Sisa Saldo" amount
+    const yesterdaySisaSaldo = sisaSaldoTransactions.reduce((sum, item) => sum + (item.jumlah || 0), 0);
 
-    // Calculate yesterday's closing balance (only approved transactions)
-    const yesterdayMasuk = filteredByPT.filter(k => k.jenis === 'masuk' && k.status === 'approved')
-      .reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const yesterdayKeluar = filteredByPT.filter(k => k.jenis === 'keluar' && k.status === 'approved')
-      .reduce((sum, k) => sum + (k.jumlah || 0), 0);
-
-    let runningBalance = yesterdayMasuk - yesterdayKeluar; // Start from yesterday's closing balance
+    let runningBalance = yesterdaySisaSaldo; // Start from yesterday's "Sisa Saldo" transaction
 
     const dataWithBalance = displayData.map((item, index) => {
       // Only count approved transactions for balance
@@ -1080,8 +1089,8 @@ const SumberJayaApp = () => {
     const totalMasuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const totalKeluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
 
-    // Saldo Akhir = Saldo Awal (yesterday's closing) + Total Masuk - Total Keluar
-    const saldoAkhir = (yesterdayMasuk - yesterdayKeluar) + totalMasuk - totalKeluar;
+    // Saldo Akhir = Saldo Awal (yesterday's "Sisa Saldo") + Total Masuk - Total Keluar
+    const saldoAkhir = yesterdaySisaSaldo + totalMasuk - totalKeluar;
 
     // DEBUG: Alert untuk konfirmasi data sebelum print
     console.log('✅ PRINT START - Data Count:', displayData.length);
@@ -1308,7 +1317,7 @@ const SumberJayaApp = () => {
               <tbody>
                 <tr style="background: #fff9e6;">
                   <td colspan="6" class="text-right"><strong>Saldo Awal (Sisa Saldo Kemarin)</strong></td>
-                  <td class="text-right"><strong style="color: #9333ea;">Rp ${(yesterdayMasuk - yesterdayKeluar).toLocaleString('id-ID')}</strong></td>
+                  <td class="text-right"><strong style="color: #9333ea;">Rp ${yesterdaySisaSaldo.toLocaleString('id-ID')}</strong></td>
                 </tr>
                 ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
                   <tr>
@@ -4457,6 +4466,7 @@ const SumberJayaApp = () => {
     };
 
     // Calculate yesterday's closing balance (Saldo Awal)
+    // Find the "Sisa Saldo" transaction from yesterday ONLY, not cumulative
     const hitungSaldoAwal = () => {
       const selectedDate = filterKasKecil.tanggal || getLocalDateString();
       const selectedDateObj = new Date(selectedDate + 'T00:00:00');
@@ -4464,27 +4474,33 @@ const SumberJayaApp = () => {
       // Get yesterday's date
       const yesterday = new Date(selectedDateObj);
       yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayDateOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
 
-      // Filter data for dates before selected date (all transactions up to yesterday)
-      const beforeSelectedDate = kasKecilData.filter(item => {
+      // Find "Sisa Saldo" transaction from yesterday
+      const sisaSaldoTransactions = kasKecilData.filter(item => {
         if (!item.tanggal) return false;
+
+        // Check if transaction is from yesterday
         const itemDate = new Date(item.tanggal);
         const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-        return itemDateOnly < selectedDateObj;
+        if (itemDateOnly.getTime() !== yesterdayDateOnly.getTime()) return false;
+
+        // Check if it's a "Sisa Saldo" transaction (masuk, approved, keterangan contains "Sisa Saldo")
+        if (item.jenis !== 'masuk') return false;
+        if (item.status !== 'approved') return false;
+        if (!item.keterangan || !item.keterangan.toLowerCase().includes('sisa saldo')) return false;
+
+        // Filter by PT if selected
+        if (filterKasKecil.pt.length > 0 && !filterKasKecil.pt.includes(item.pt)) return false;
+
+        return true;
       });
 
-      // Filter by PT if selected
-      const filteredByPT = filterKasKecil.pt.length > 0
-        ? beforeSelectedDate.filter(item => filterKasKecil.pt.includes(item.pt))
-        : beforeSelectedDate;
+      // Return the sum of "Sisa Saldo" transactions from yesterday
+      // Usually should be only 1 transaction per PT
+      const saldoAwal = sisaSaldoTransactions.reduce((sum, item) => sum + (item.jumlah || 0), 0);
 
-      // Calculate yesterday's closing balance (only approved transactions)
-      const masuk = filteredByPT.filter(k => k.jenis === 'masuk' && k.status === 'approved')
-        .reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      const keluar = filteredByPT.filter(k => k.jenis === 'keluar' && k.status === 'approved')
-        .reduce((sum, k) => sum + (k.jumlah || 0), 0);
-
-      return masuk - keluar;
+      return saldoAwal;
     };
 
     // Use auto-filtered data (real-time)
