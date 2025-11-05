@@ -1316,10 +1316,6 @@ const SumberJayaApp = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr style="background: #fff9e6;">
-                  <td colspan="6" class="text-right"><strong>Saldo Awal (Sisa Saldo Kemarin)</strong></td>
-                  <td class="text-right"><strong style="color: #9333ea;">Rp ${yesterdaySisaSaldo.toLocaleString('id-ID')}</strong></td>
-                </tr>
                 ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
                   <tr>
                     <td class="text-center">${item.no}</td>
@@ -4879,12 +4875,6 @@ const SumberJayaApp = () => {
                 ))}
               </tbody>
               <tfoot className="bg-gray-100 font-bold">
-                <tr className="bg-yellow-50">
-                  <td colSpan="4" className="px-4 py-3 text-right">Saldo Awal (Sisa Saldo Kemarin)</td>
-                  <td colSpan="5" className="px-4 py-3 text-right text-purple-600 text-lg">
-                    Rp {saldoAwal.toLocaleString('id-ID')}
-                  </td>
-                </tr>
                 <tr>
                   <td colSpan="4" className="px-4 py-3 text-right">Total Hari Ini (Approved)</td>
                   <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
