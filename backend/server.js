@@ -1756,42 +1756,59 @@ app.get('/api/dashboard/stats', verifyToken, (req, res) => {
   const { pt } = req.query;
   const today = getLocalDate();
 
-  // Hitung tanggal 7 hari yang lalu
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const sevenDaysAgoStr = formatLocalDate(sevenDaysAgo);
-  
   // Query untuk stats
   const queries = {
-    // Kas Kecil: Saldo akumulasi dari SEMUA transaksi approved (bukan hanya hari ini)
-    kasHarian: `SELECT 
-      SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) - 
+    // Kas Kecil Hari Ini: Saldo akhir dari transaksi hari ini saja (masuk - keluar)
+    kasKecilHariIni: `SELECT
+      SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
       SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo
-      FROM kas_kecil ${pt ? 'WHERE pt_code = ?' : ''}`,
-    
+      FROM kas_kecil
+      WHERE tanggal = ? ${pt ? 'AND pt_code = ?' : ''}`,
+
+    // Pemasukan Kas Kecil Hari Ini
+    pemasukanHariIni: `SELECT SUM(jumlah) as total_pemasukan
+      FROM kas_kecil
+      WHERE jenis = 'masuk'
+        AND status = 'approved'
+        AND tanggal = ?
+        ${pt ? 'AND pt_code = ?' : ''}`,
+
+    // Pengeluaran Kas Kecil Hari Ini
+    pengeluaranHariIni: `SELECT SUM(jumlah) as total_pengeluaran
+      FROM kas_kecil
+      WHERE jenis = 'keluar'
+        AND status = 'approved'
+        AND tanggal = ?
+        ${pt ? 'AND pt_code = ?' : ''}`,
+
     penjualanHariIni: `SELECT SUM(qty) as total_qty, SUM(total) as total_nilai
       FROM penjualan WHERE tanggal = ? ${pt ? 'AND pt_code = ?' : ''}`,
-    
+
     pendingApproval: `SELECT COUNT(*) as total
-      FROM kas_kecil WHERE status = 'pending' ${pt ? 'AND pt_code = ?' : ''}`,
-    
-    pengeluaran7Hari: `SELECT SUM(jumlah) as total_pengeluaran
-      FROM kas_kecil 
-      WHERE jenis = 'keluar' 
-        AND status = 'approved' 
-        AND tanggal >= ? 
-        AND tanggal <= ? 
-        ${pt ? 'AND pt_code = ?' : ''}`
+      FROM kas_kecil WHERE status = 'pending' ${pt ? 'AND pt_code = ?' : ''}`
   };
-  
-  const paramsKas = pt ? [pt] : [];
+
+  const paramsKasKecil = pt ? [today, pt] : [today];
+  const paramsPemasukan = pt ? [today, pt] : [today];
+  const paramsPengeluaran = pt ? [today, pt] : [today];
   const paramsPenjualan = pt ? [today, pt] : [today];
   const paramsPending = pt ? [pt] : [];
-  const params7Days = pt ? [sevenDaysAgoStr, today, pt] : [sevenDaysAgoStr, today];
-  
+
   Promise.all([
     new Promise((resolve, reject) => {
-      db.query(queries.kasHarian, paramsKas, (err, results) => {
+      db.query(queries.kasKecilHariIni, paramsKasKecil, (err, results) => {
+        if (err) reject(err);
+        else resolve(results[0]);
+      });
+    }),
+    new Promise((resolve, reject) => {
+      db.query(queries.pemasukanHariIni, paramsPemasukan, (err, results) => {
+        if (err) reject(err);
+        else resolve(results[0]);
+      });
+    }),
+    new Promise((resolve, reject) => {
+      db.query(queries.pengeluaranHariIni, paramsPengeluaran, (err, results) => {
         if (err) reject(err);
         else resolve(results[0]);
       });
@@ -1807,21 +1824,16 @@ app.get('/api/dashboard/stats', verifyToken, (req, res) => {
         if (err) reject(err);
         else resolve(results[0]);
       });
-    }),
-    new Promise((resolve, reject) => {
-      db.query(queries.pengeluaran7Hari, params7Days, (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
-      });
     })
   ])
-  .then(([kas, penjualan, pending, pengeluaran7]) => {
+  .then(([kasKecil, pemasukan, pengeluaran, penjualan, pending]) => {
     res.json({
-      kasHarian: parseFloat(kas.saldo) || 0,
+      kasKecilSaldoAkhir: parseFloat(kasKecil.saldo) || 0,
+      kasKecilPemasukanHariIni: parseFloat(pemasukan.total_pemasukan) || 0,
+      kasKecilPengeluaranHariIni: parseFloat(pengeluaran.total_pengeluaran) || 0,
       penjualanQty: parseInt(penjualan.total_qty) || 0,
       penjualanNilai: parseFloat(penjualan.total_nilai) || 0,
-      pendingApproval: parseInt(pending.total) || 0,
-      pengeluaran7Hari: parseFloat(pengeluaran7.total_pengeluaran) || 0
+      pendingApproval: parseInt(pending.total) || 0
     });
   })
   .catch(err => {
