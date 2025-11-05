@@ -1090,8 +1090,8 @@ const SumberJayaApp = () => {
     const totalMasuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const totalKeluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
 
-    // Saldo Akhir = Saldo Awal (yesterday's "Sisa Saldo") + Total Masuk - Total Keluar
-    const saldoAkhir = yesterdaySisaSaldo + totalMasuk - totalKeluar;
+    // Saldo Akhir = Total Masuk - Total Keluar (today only)
+    const saldoAkhir = totalMasuk - totalKeluar;
 
     // DEBUG: Alert untuk konfirmasi data sebelum print
     console.log('✅ PRINT START - Data Count:', displayData.length);
@@ -4510,8 +4510,8 @@ const SumberJayaApp = () => {
     // Get opening balance (yesterday's closing balance)
     const saldoAwal = hitungSaldoAwal();
 
-    // Calculate closing balance = opening balance + today's masuk - today's keluar
-    const saldo = saldoAwal + masuk - keluar;
+    // Calculate closing balance = today's masuk - today's keluar only
+    const saldo = masuk - keluar;
 
     // Add running balance to display data
     // Start from 0 because "Sisa Saldo" transaction is already in displayData
