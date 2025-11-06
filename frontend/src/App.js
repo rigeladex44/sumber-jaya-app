@@ -28,22 +28,7 @@ const getLocalDateString = () => {
 // Handles timezone properly - parses ISO string and extracts local date
 const getLocalDateFromISO = (isoString) => {
   if (!isoString) return '';
-
-  // If already in YYYY-MM-DD format (10 chars), return as-is
-  if (typeof isoString === 'string' && isoString.length === 10 && isoString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    return isoString;
-  }
-
-  // Handle ISO datetime strings (with T and timezone)
-  // Extract just the date part if it's a full ISO string
-  if (typeof isoString === 'string' && isoString.includes('T')) {
-    return isoString.split('T')[0];
-  }
-
-  // Otherwise parse as date and extract local date components
   const date = new Date(isoString);
-  if (isNaN(date.getTime())) return ''; // Invalid date
-
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -652,11 +637,14 @@ const SumberJayaApp = () => {
       filtered = filtered.filter(k => pts.includes(k.pt));
     }
 
-    // Filter by date if selected (using string comparison to avoid timezone issues)
+    // Filter by date if selected
     if (filterDetailKas.tanggal) {
+      const selectedDate = new Date(filterDetailKas.tanggal + 'T00:00:00');
       filtered = filtered.filter(item => {
         if (!item.tanggal) return false;
-        return getLocalDateFromISO(item.tanggal) === filterDetailKas.tanggal;
+        const itemDate = new Date(item.tanggal);
+        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+        return itemDateOnly.getTime() === selectedDate.getTime();
       });
     }
 
@@ -973,6 +961,7 @@ const SumberJayaApp = () => {
   const getFilteredKasKecilData = () => {
     // Get selected date from filter (defaults to today)
     const selectedDate = filterKasKecil.tanggal || getLocalDateString();
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00'); // Parse as local date
 
     console.log('DEBUG Kas Kecil Filter:', {
       filterPT: filterKasKecil.pt,
@@ -988,10 +977,16 @@ const SumberJayaApp = () => {
       currentUserAccessPT: currentUserData?.accessPT
     });
 
-    // Filter data by selected date (using string comparison to avoid timezone issues)
+    // Filter data by selected date (berdasarkan tanggal item, bukan created_at)
     const dateFilteredData = kasKecilData.filter(item => {
       if (!item.tanggal) return false;
-      return getLocalDateFromISO(item.tanggal) === selectedDate;
+
+      // Parse tanggal item (handle both ISO string and date object)
+      const itemDate = new Date(item.tanggal);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+
+      // Compare date only (ignore time)
+      return itemDateOnly.getTime() === selectedDateObj.getTime();
     });
 
     console.log('DEBUG Date Filtered Data:', {
