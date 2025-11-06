@@ -1302,7 +1302,7 @@ const SumberJayaApp = () => {
           <body>
             <div class="report-header">
               <div class="report-title">LAPORAN KAS KECIL</div>
-              <div class="report-subtitle">Pembukuan Kas Fisik Tunai di Kasir (Cash Only)</div>
+              <div class="report-subtitle">${ptNames}</div>
               <div class="report-company">Sistem Sumber Jaya Grup Official</div>
             </div>
 
@@ -1317,10 +1317,6 @@ const SumberJayaApp = () => {
                 <div class="info-row">
                   <span class="info-label">Dicetak Oleh</span>
                   <span class="info-value">: ${currentUserData?.name || 'User'}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">PT</span>
-                  <span class="info-value">: ${ptNames}</span>
                 </div>
               </div>
             </div>
