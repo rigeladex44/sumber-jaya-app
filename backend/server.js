@@ -42,41 +42,93 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Database Connection Pool - Support Railway with Keep-Alive
-const dbConfig = process.env.MYSQLHOST
-  ? {
-      host: process.env.MYSQLHOST,
-      port: process.env.MYSQLPORT || 3306,
-      user: process.env.MYSQLUSER,
-      password: process.env.MYSQLPASSWORD,
-      database: process.env.MYSQLDATABASE || 'railway',
+let dbConfig;
+
+// Parse DATABASE_URL if provided (Railway's new format)
+if (process.env.DATABASE_URL) {
+  try {
+    const url = new URL(process.env.DATABASE_URL);
+    console.log('📡 Using DATABASE_URL for connection');
+    dbConfig = {
+      host: url.hostname,
+      port: parseInt(url.port) || 3306,
+      user: url.username,
+      password: url.password,
+      database: url.pathname.substring(1), // Remove leading '/'
       timezone: '+07:00', // WIB (Western Indonesian Time)
       // Connection Pool Settings
       connectionLimit: 10,           // Max concurrent connections
       waitForConnections: true,      // Queue requests when all connections busy
       queueLimit: 0,                 // Unlimited queue
       // Timeout Settings
-      connectTimeout: 10000,         // 10 seconds to establish connection
-      acquireTimeout: 10000,         // 10 seconds to get connection from pool
+      connectTimeout: 20000,         // 20 seconds to establish connection
+      acquireTimeout: 20000,         // 20 seconds to get connection from pool
       timeout: 60000,                // 60 seconds for query execution
       // Keep-Alive Settings (prevent idle disconnection)
       enableKeepAlive: true,
-      keepAliveInitialDelay: 10000   // Start keep-alive after 10s idle
-    }
-  : {
-      host: process.env.DB_HOST || '127.0.0.1',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'sumber_jaya_db',
-      timezone: '+07:00',
-      connectionLimit: 10,
-      waitForConnections: true,
-      queueLimit: 0,
-      connectTimeout: 10000,
-      acquireTimeout: 10000,
-      timeout: 60000,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 10000
+      keepAliveInitialDelay: 10000,  // Start keep-alive after 10s idle
+      // SSL/TLS Settings for Railway
+      ssl: {
+        rejectUnauthorized: false    // Required for Railway MySQL
+      }
     };
+  } catch (error) {
+    console.error('❌ Error parsing DATABASE_URL:', error);
+    console.log('⚠️ Falling back to individual environment variables');
+  }
+}
+
+// Fall back to individual variables (Railway old format or local dev)
+if (!dbConfig) {
+  dbConfig = process.env.MYSQLHOST
+    ? {
+        host: process.env.MYSQLHOST,
+        port: process.env.MYSQLPORT || 3306,
+        user: process.env.MYSQLUSER,
+        password: process.env.MYSQLPASSWORD,
+        database: process.env.MYSQLDATABASE || 'railway',
+        timezone: '+07:00', // WIB (Western Indonesian Time)
+        // Connection Pool Settings
+        connectionLimit: 10,           // Max concurrent connections
+        waitForConnections: true,      // Queue requests when all connections busy
+        queueLimit: 0,                 // Unlimited queue
+        // Timeout Settings
+        connectTimeout: 20000,         // 20 seconds to establish connection
+        acquireTimeout: 20000,         // 20 seconds to get connection from pool
+        timeout: 60000,                // 60 seconds for query execution
+        // Keep-Alive Settings (prevent idle disconnection)
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 10000,  // Start keep-alive after 10s idle
+        // SSL/TLS Settings for Railway
+        ssl: process.env.NODE_ENV === 'production' ? {
+          rejectUnauthorized: false
+        } : undefined
+      }
+    : {
+        host: process.env.DB_HOST || '127.0.0.1',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'sumber_jaya_db',
+        timezone: '+07:00',
+        connectionLimit: 10,
+        waitForConnections: true,
+        queueLimit: 0,
+        connectTimeout: 20000,
+        acquireTimeout: 20000,
+        timeout: 60000,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 10000
+      };
+}
+
+// Log connection configuration (without sensitive data)
+console.log('🔧 Database Config:', {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  user: dbConfig.user,
+  database: dbConfig.database,
+  ssl: !!dbConfig.ssl
+});
 
 // Create connection pool instead of single connection
 const db = mysql.createPool(dbConfig);
