@@ -4705,27 +4705,6 @@ const SumberJayaApp = () => {
             <h2 className="text-2xl font-bold text-gray-800">Kas Kecil</h2>
             <p className="text-sm text-gray-600">Pembukuan kas fisik tunai di kasir (Cash Only)</p>
           </div>
-          <div>
-            <button
-              onClick={async () => {
-                const startDate = prompt('Masukkan tanggal mulai recalculate (format: YYYY-MM-DD):', '2025-11-01');
-                if (startDate) {
-                  if (window.confirm(`Recalculate Saldo Run dari tanggal ${startDate}? Ini akan menghapus semua transaksi "Sisa Saldo" dari tanggal tersebut dan membuat ulang.`)) {
-                    try {
-                      const result = await kasKecilService.recalculateSaldo(startDate);
-                      alert(`✅ ${result.message}\n\nDates processed: ${result.datesProcessed}\nDeleted transactions: ${result.deletedTransactions}`);
-                      loadKasKecilData();
-                    } catch (error) {
-                      alert('❌ Error: ' + (error.response?.data?.message || error.message));
-                    }
-                  }
-                }
-              }}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium"
-            >
-              🔄 Recalculate Saldo Run
-            </button>
-          </div>
         </div>
 
 
