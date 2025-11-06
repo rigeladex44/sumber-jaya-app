@@ -41,39 +41,48 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Database Connection Pool - Support Railway with Keep-Alive
+// Database Connection Pool - Support Railway with Keep-Alive and Auto-Reconnect
 let dbConfig;
 
-// Parse DATABASE_URL if provided (Railway's new format)
-if (process.env.DATABASE_URL) {
+// Parse DATABASE_URL or MYSQL_URL if provided (Railway format)
+const connectionUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
+
+if (connectionUrl) {
   try {
-    const url = new URL(process.env.DATABASE_URL);
-    console.log('📡 Using DATABASE_URL for connection');
+    // Handle both mysql:// and mysql2:// protocols
+    const urlString = connectionUrl.replace('mysql://', 'mysql2://');
+    const url = new URL(urlString);
+    console.log('📡 Using connection URL for database');
     dbConfig = {
       host: url.hostname,
       port: parseInt(url.port) || 3306,
-      user: url.username,
-      password: url.password,
+      user: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password),
       database: url.pathname.substring(1), // Remove leading '/'
+      charset: 'utf8mb4',
       timezone: '+07:00', // WIB (Western Indonesian Time)
-      // Connection Pool Settings
-      connectionLimit: 10,           // Max concurrent connections
+      // Connection Pool Settings - Optimized for Railway
+      connectionLimit: 5,            // Reduced for Railway free tier
       waitForConnections: true,      // Queue requests when all connections busy
       queueLimit: 0,                 // Unlimited queue
-      // Timeout Settings
-      connectTimeout: 20000,         // 20 seconds to establish connection
-      acquireTimeout: 20000,         // 20 seconds to get connection from pool
+      // Timeout Settings - More aggressive for Railway
+      connectTimeout: 30000,         // 30 seconds to establish connection
+      acquireTimeout: 30000,         // 30 seconds to get connection from pool
       timeout: 60000,                // 60 seconds for query execution
       // Keep-Alive Settings (prevent idle disconnection)
       enableKeepAlive: true,
-      keepAliveInitialDelay: 10000,  // Start keep-alive after 10s idle
+      keepAliveInitialDelay: 0,      // Start keep-alive immediately
       // SSL/TLS Settings for Railway
       ssl: {
         rejectUnauthorized: false    // Required for Railway MySQL
-      }
+      },
+      // Multi-statement support
+      multipleStatements: false,
+      // Debugging
+      debug: false
     };
   } catch (error) {
-    console.error('❌ Error parsing DATABASE_URL:', error);
+    console.error('❌ Error parsing connection URL:', error);
     console.log('⚠️ Falling back to individual environment variables');
   }
 }
@@ -83,41 +92,42 @@ if (!dbConfig) {
   dbConfig = process.env.MYSQLHOST
     ? {
         host: process.env.MYSQLHOST,
-        port: process.env.MYSQLPORT || 3306,
+        port: parseInt(process.env.MYSQLPORT) || 3306,
         user: process.env.MYSQLUSER,
         password: process.env.MYSQLPASSWORD,
         database: process.env.MYSQLDATABASE || 'railway',
-        timezone: '+07:00', // WIB (Western Indonesian Time)
-        // Connection Pool Settings
-        connectionLimit: 10,           // Max concurrent connections
-        waitForConnections: true,      // Queue requests when all connections busy
-        queueLimit: 0,                 // Unlimited queue
-        // Timeout Settings
-        connectTimeout: 20000,         // 20 seconds to establish connection
-        acquireTimeout: 20000,         // 20 seconds to get connection from pool
-        timeout: 60000,                // 60 seconds for query execution
-        // Keep-Alive Settings (prevent idle disconnection)
+        charset: 'utf8mb4',
+        timezone: '+07:00',
+        connectionLimit: 5,
+        waitForConnections: true,
+        queueLimit: 0,
+        connectTimeout: 30000,
+        acquireTimeout: 30000,
+        timeout: 60000,
         enableKeepAlive: true,
-        keepAliveInitialDelay: 10000,  // Start keep-alive after 10s idle
-        // SSL/TLS Settings for Railway
-        ssl: process.env.NODE_ENV === 'production' ? {
+        keepAliveInitialDelay: 0,
+        ssl: {
           rejectUnauthorized: false
-        } : undefined
+        },
+        multipleStatements: false,
+        debug: false
       }
     : {
         host: process.env.DB_HOST || '127.0.0.1',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
         database: process.env.DB_NAME || 'sumber_jaya_db',
+        charset: 'utf8mb4',
         timezone: '+07:00',
         connectionLimit: 10,
         waitForConnections: true,
         queueLimit: 0,
-        connectTimeout: 20000,
-        acquireTimeout: 20000,
+        connectTimeout: 10000,
+        acquireTimeout: 10000,
         timeout: 60000,
         enableKeepAlive: true,
-        keepAliveInitialDelay: 10000
+        keepAliveInitialDelay: 10000,
+        multipleStatements: false
       };
 }
 
@@ -127,11 +137,52 @@ console.log('🔧 Database Config:', {
   port: dbConfig.port,
   user: dbConfig.user,
   database: dbConfig.database,
-  ssl: !!dbConfig.ssl
+  ssl: !!dbConfig.ssl,
+  connectionLimit: dbConfig.connectionLimit
 });
 
-// Create connection pool instead of single connection
-const db = mysql.createPool(dbConfig);
+// Create connection pool with promise wrapper
+const pool = mysql.createPool(dbConfig);
+const db = pool.promise ? pool : pool;
+
+// Wrapper function for safe query execution with retry logic
+const safeQuery = (sql, params) => {
+  return new Promise((resolve, reject) => {
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    const executeQuery = () => {
+      db.query(sql, params, (error, results) => {
+        if (error) {
+          // Check if error is connection-related
+          const isConnectionError =
+            error.code === 'PROTOCOL_CONNECTION_LOST' ||
+            error.code === 'ECONNRESET' ||
+            error.code === 'ETIMEDOUT' ||
+            error.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR' ||
+            error.fatal === true;
+
+          // Retry connection errors
+          if (isConnectionError && retryCount < maxRetries) {
+            retryCount++;
+            console.log(`⚠️ Connection error, retry ${retryCount}/${maxRetries}:`, error.code);
+            setTimeout(executeQuery, 1000 * retryCount); // Exponential backoff
+            return;
+          }
+
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      });
+    };
+
+    executeQuery();
+  });
+};
+
+// Export safeQuery for use in routes
+db.safeQuery = safeQuery;
 
 // Pool event handlers for monitoring and auto-reconnect
 db.on('connection', (connection) => {
@@ -2302,6 +2353,27 @@ const server = app.listen(PORT, HOST, () => {
     console.log(`🌐 Public URL configured for Railway`);
   }
 });
+
+// ==================== DATABASE HEALTH CHECK ====================
+
+// Periodic health check to keep Railway MySQL connection alive
+if (process.env.NODE_ENV === 'production') {
+  const healthCheckInterval = setInterval(() => {
+    db.query('SELECT 1', (err) => {
+      if (err) {
+        console.error('⚠️ Health check failed:', err.code);
+      } else {
+        console.log('💚 Database health check: OK');
+      }
+    });
+  }, 60000); // Check every 60 seconds
+
+  // Clear interval on shutdown
+  process.on('SIGTERM', () => clearInterval(healthCheckInterval));
+  process.on('SIGINT', () => clearInterval(healthCheckInterval));
+
+  console.log('💓 Database health check started (60s interval)');
+}
 
 // ==================== GRACEFUL SHUTDOWN HANDLER ====================
 
