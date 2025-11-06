@@ -637,14 +637,11 @@ const SumberJayaApp = () => {
       filtered = filtered.filter(k => pts.includes(k.pt));
     }
 
-    // Filter by date if selected
+    // Filter by date if selected (using string comparison to avoid timezone issues)
     if (filterDetailKas.tanggal) {
-      const selectedDate = new Date(filterDetailKas.tanggal + 'T00:00:00');
       filtered = filtered.filter(item => {
         if (!item.tanggal) return false;
-        const itemDate = new Date(item.tanggal);
-        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-        return itemDateOnly.getTime() === selectedDate.getTime();
+        return getLocalDateFromISO(item.tanggal) === filterDetailKas.tanggal;
       });
     }
 
