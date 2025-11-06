@@ -5079,7 +5079,11 @@ const SumberJayaApp = () => {
       });
     };
 
-    const { masuk, keluar, saldo } = hitungSaldoKas(selectedPT);
+    // Calculate totals from FILTERED data (per day, not all time)
+    const filteredData = getFilteredKasData(selectedPT);
+    const masuk = filteredData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + k.jumlah, 0);
+    const keluar = filteredData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + k.jumlah, 0);
+    const saldo = masuk - keluar;
     const hasApprovalAccess = currentUserData?.fiturAkses?.includes('detail-kas') || currentUserData?.role === 'Master User';
 
     return (
@@ -5088,7 +5092,7 @@ const SumberJayaApp = () => {
         <h2 className="text-2xl font-bold text-gray-800">Detail Kas Kecil</h2>
         <div className="flex gap-2 flex-wrap">
           <div className="relative">
-            <button 
+            <button
               className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white flex items-center gap-2"
               onClick={() => document.getElementById('pt-dropdown-detail').classList.toggle('hidden')}
             >
@@ -5098,8 +5102,8 @@ const SumberJayaApp = () => {
             <div id="pt-dropdown-detail" className="hidden absolute top-full mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[200px]">
               {currentUserData?.accessPT?.map(code => (
                 <label key={code} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={selectedPT.includes(code)}
                     onChange={() => handlePTChange(code)}
                     className="mr-2"
@@ -5124,7 +5128,7 @@ const SumberJayaApp = () => {
           <div>
             <h4 className="font-semibold text-blue-900 mb-1">Informasi Fitur Detail Kas</h4>
             <p className="text-sm text-blue-800">
-              Fitur ini khusus untuk melihat detail transaksi kas kecil dan melakukan approval/reject transaksi di atas Rp 300.000. 
+              Fitur ini khusus untuk melihat detail transaksi kas kecil dan melakukan approval/reject transaksi di atas Rp 300.000.
               {hasApprovalAccess ? ' Anda memiliki akses untuk approve/reject transaksi.' : ' Anda hanya bisa melihat data tanpa approval.'}
             </p>
           </div>
@@ -5151,9 +5155,9 @@ const SumberJayaApp = () => {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {getFilteredKasData(selectedPT).map(kas => (
+              {filteredData.map(kas => (
                 <tr key={kas.id}>
-                  <td className="px-4 py-3">{kas.tanggal}</td>
+                  <td className="px-4 py-3">{new Date(kas.tanggal).toLocaleDateString('id-ID')}</td>
                   <td className="px-4 py-3">{kas.pt}</td>
                   <td className="px-4 py-3">{kas.keterangan}</td>
                   <td className="px-4 py-3">
@@ -5178,7 +5182,7 @@ const SumberJayaApp = () => {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-1 rounded-full text-xs ${
-                      kas.status === 'approved' ? 'bg-green-100 text-green-700' : 
+                      kas.status === 'approved' ? 'bg-green-100 text-green-700' :
                       kas.status === 'rejected' ? 'bg-red-100 text-red-700' :
                       'bg-yellow-100 text-yellow-700'
                     }`}>
