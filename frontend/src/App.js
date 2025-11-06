@@ -4703,7 +4703,7 @@ const SumberJayaApp = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Kas Kecil</h2>
-            <p className="text-sm text-gray-600">Pembukuan kas fisik tunai di kasir (Cash Only)</p>
+            <p className="text-sm text-gray-600">Pembukuan Kas Kecil Tunai di Kasir</p>
           </div>
         </div>
 
@@ -5064,7 +5064,7 @@ const SumberJayaApp = () => {
     return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Detail Kas Kecil</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Approval Kas Kecil</h2>
         <div className="flex gap-2 flex-wrap">
           <div className="relative">
             <button
@@ -5230,7 +5230,7 @@ const SumberJayaApp = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Arus Kas</h2>
-            <p className="text-sm text-gray-600">Pencatatan manual arus kas (Cash & Cashless)</p>
+            <p className="text-sm text-gray-600">Pencatatan Arus Kas (Cash & Cashless)</p>
           </div>
         </div>
 
