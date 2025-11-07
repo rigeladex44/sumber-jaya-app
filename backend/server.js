@@ -144,7 +144,8 @@ console.log('🔧 Database Config:', {
 // Create connection pool with promise wrapper
 const pool = mysql.createPool(dbConfig);
 const promisePool = pool.promise();
-const db = promisePool;
+const db = pool; // Keep pool for callback-style queries (backward compatibility)
+db.promise = () => promisePool; // Add promise() method for async/await queries
 
 // Wrapper function for safe query execution with retry logic
 const safeQuery = async (sql, params) => {
@@ -154,7 +155,7 @@ const safeQuery = async (sql, params) => {
 
   while (retryCount <= maxRetries) {
     try {
-      const [results] = await db.query(sql, params);
+      const [results] = await promisePool.query(sql, params);
       return results;
     } catch (error) {
       lastError = error;
@@ -216,7 +217,7 @@ pool.on('enqueue', () => {
 (async () => {
   let connection;
   try {
-    connection = await db.getConnection();
+    connection = await promisePool.getConnection();
     console.log('✅ Database connection pool initialized successfully');
     console.log('📊 Pool config: Max connections =', dbConfig.connectionLimit);
     connection.release();
@@ -234,7 +235,7 @@ pool.on('enqueue', () => {
     `;
 
     try {
-      await db.query(createTableSQL);
+      await promisePool.query(createTableSQL);
       console.log('✅ feature_access table ready');
 
       // Insert default feature access for Master User (ID=1)
@@ -250,7 +251,7 @@ pool.on('enqueue', () => {
         (1, 'master-admin');
       `;
 
-      await db.query(insertSQL);
+      await promisePool.query(insertSQL);
       console.log('✅ Master User feature access configured');
     } catch (err) {
       console.error('⚠️ Error with feature_access table:', err.message);
@@ -266,18 +267,18 @@ pool.on('enqueue', () => {
         AND COLUMN_NAME = 'kategori'
       `;
 
-      const [results] = await db.query(checkKategoriColumn, [dbConfig.database]);
+      const [results] = await promisePool.query(checkKategoriColumn, [dbConfig.database]);
 
       if (results[0].count === 0) {
         console.log('🔄 Adding kategori column to kas_kecil table...');
         const addKategoriColumn = 'ALTER TABLE kas_kecil ADD COLUMN kategori VARCHAR(100) AFTER keterangan';
-        await db.query(addKategoriColumn);
+        await promisePool.query(addKategoriColumn);
         console.log('✅ Kategori column added to kas_kecil table');
 
         // Add index
         try {
           const addIndex = 'CREATE INDEX idx_kas_kecil_kategori ON kas_kecil(kategori)';
-          await db.query(addIndex);
+          await promisePool.query(addIndex);
           console.log('✅ Index added for kategori column');
         } catch (err) {
           console.log('⚠️ Index might already exist or error adding index');
@@ -309,7 +310,7 @@ pool.on('enqueue', () => {
         )
       `;
 
-      await db.query(createArusKasTable);
+      await promisePool.query(createArusKasTable);
       console.log('✅ Arus Kas table ready');
     } catch (err) {
       console.error('⚠️ Error creating arus_kas table:', err.message);
@@ -2356,7 +2357,7 @@ const server = app.listen(PORT, HOST, () => {
 if (process.env.NODE_ENV === 'production') {
   const healthCheckInterval = setInterval(async () => {
     try {
-      await db.query('SELECT 1');
+      await promisePool.query('SELECT 1');
       console.log('💚 Database health check: OK');
     } catch (err) {
       console.error('⚠️ Health check failed:', err.code);
