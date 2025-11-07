@@ -824,11 +824,11 @@ const SumberJayaApp = () => {
         await kasKecilService.updateStatus(kasId, 'approved');
         await loadKasKecilData(); // Refresh data
 
-        // Auto-sync Sisa Saldo for the approved transaction's date and PT
-        if (transaction) {
-          await syncSisaSaldoForDate(getLocalDateFromISO(transaction.tanggal), transaction.pt);
-          await loadKasKecilData(); // Reload to get updated Sisa Saldo
-        }
+        // Auto-sync Sisa Saldo removed - backend transferSaldo handles this automatically
+        // if (transaction) {
+        //   await syncSisaSaldoForDate(getLocalDateFromISO(transaction.tanggal), transaction.pt);
+        //   await loadKasKecilData(); // Reload to get updated Sisa Saldo
+        // }
 
         alert('Transaksi berhasil di-approve!');
       } catch (error) {
@@ -848,11 +848,11 @@ const SumberJayaApp = () => {
         await kasKecilService.updateStatus(kasId, 'rejected');
         await loadKasKecilData(); // Refresh data
 
-        // Auto-sync Sisa Saldo for the rejected transaction's date and PT
-        if (transaction) {
-          await syncSisaSaldoForDate(getLocalDateFromISO(transaction.tanggal), transaction.pt);
-          await loadKasKecilData(); // Reload to get updated Sisa Saldo
-        }
+        // Auto-sync Sisa Saldo removed - backend transferSaldo handles this automatically
+        // if (transaction) {
+        //   await syncSisaSaldoForDate(getLocalDateFromISO(transaction.tanggal), transaction.pt);
+        //   await loadKasKecilData(); // Reload to get updated Sisa Saldo
+        // }
 
         alert('Transaksi berhasil di-reject!');
       } catch (error) {
@@ -1571,11 +1571,9 @@ const SumberJayaApp = () => {
       // Refresh data
       await loadKasKecilData();
 
-      // Auto-sync Sisa Saldo for this date and PT
-      await syncSisaSaldoForDate(kasKecilData.tanggal, kasKecilData.pt);
-
-      // Reload to get updated Sisa Saldo
-      await loadKasKecilData();
+      // Auto-sync Sisa Saldo removed - backend transferSaldo handles this automatically
+      // await syncSisaSaldoForDate(kasKecilData.tanggal, kasKecilData.pt);
+      // await loadKasKecilData();
 
       // Reset form
       setFormKasKecil({ 
@@ -1609,11 +1607,11 @@ const SumberJayaApp = () => {
       await kasKecilService.delete(kasKecilId);
       await loadKasKecilData();
 
-      // Auto-sync Sisa Saldo for the deleted transaction's date and PT
-      if (deletedTransaction) {
-        await syncSisaSaldoForDate(getLocalDateFromISO(deletedTransaction.tanggal), deletedTransaction.pt);
-        await loadKasKecilData(); // Reload to get updated Sisa Saldo
-      }
+      // Auto-sync Sisa Saldo removed - backend transferSaldo handles this automatically
+      // if (deletedTransaction) {
+      //   await syncSisaSaldoForDate(getLocalDateFromISO(deletedTransaction.tanggal), deletedTransaction.pt);
+      //   await loadKasKecilData(); // Reload to get updated Sisa Saldo
+      // }
 
       alert('Data kas kecil berhasil dihapus!');
     } catch (error) {
@@ -1650,11 +1648,9 @@ const SumberJayaApp = () => {
       // Refresh data
       await loadKasKecilData();
 
-      // Auto-sync Sisa Saldo for this date and PT
-      await syncSisaSaldoForDate(kasKecilData.tanggal, kasKecilData.pt);
-
-      // Reload to get updated Sisa Saldo
-      await loadKasKecilData();
+      // Auto-sync Sisa Saldo removed - backend transferSaldo handles this automatically
+      // await syncSisaSaldoForDate(kasKecilData.tanggal, kasKecilData.pt);
+      // await loadKasKecilData();
 
       // Close modal and reset
       setShowEditKasKecilModal(false);
