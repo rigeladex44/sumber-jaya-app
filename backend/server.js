@@ -143,95 +143,100 @@ console.log('🔧 Database Config:', {
 
 // Create connection pool with promise wrapper
 const pool = mysql.createPool(dbConfig);
-const db = pool.promise ? pool : pool;
+const promisePool = pool.promise();
+const db = promisePool;
 
 // Wrapper function for safe query execution with retry logic
-const safeQuery = (sql, params) => {
-  return new Promise((resolve, reject) => {
-    const maxRetries = 3;
-    let retryCount = 0;
+const safeQuery = async (sql, params) => {
+  const maxRetries = 3;
+  let retryCount = 0;
+  let lastError;
 
-    const executeQuery = () => {
-      db.query(sql, params, (error, results) => {
-        if (error) {
-          // Check if error is connection-related
-          const isConnectionError =
-            error.code === 'PROTOCOL_CONNECTION_LOST' ||
-            error.code === 'ECONNRESET' ||
-            error.code === 'ETIMEDOUT' ||
-            error.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR' ||
-            error.fatal === true;
+  while (retryCount <= maxRetries) {
+    try {
+      const [results] = await db.query(sql, params);
+      return results;
+    } catch (error) {
+      lastError = error;
 
-          // Retry connection errors
-          if (isConnectionError && retryCount < maxRetries) {
-            retryCount++;
-            console.log(`⚠️ Connection error, retry ${retryCount}/${maxRetries}:`, error.code);
-            setTimeout(executeQuery, 1000 * retryCount); // Exponential backoff
-            return;
-          }
+      // Check if error is connection-related
+      const isConnectionError =
+        error.code === 'PROTOCOL_CONNECTION_LOST' ||
+        error.code === 'ECONNRESET' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR' ||
+        error.code === 'PROTOCOL_ENQUEUE_AFTER_QUIT' ||
+        error.code === 'ER_QUERY_INTERRUPTED' ||
+        error.fatal === true;
 
-          reject(error);
-        } else {
-          resolve(results);
-        }
-      });
-    };
+      // Retry connection errors
+      if (isConnectionError && retryCount < maxRetries) {
+        retryCount++;
+        const delayMs = 1000 * retryCount; // Exponential backoff
+        console.log(`⚠️ Connection error, retry ${retryCount}/${maxRetries} in ${delayMs}ms:`, error.code);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
 
-    executeQuery();
-  });
+      // Non-connection error or max retries reached
+      throw error;
+    }
+  }
+
+  throw lastError;
 };
 
 // Export safeQuery for use in routes
 db.safeQuery = safeQuery;
 
 // Pool event handlers for monitoring and auto-reconnect
-db.on('connection', (connection) => {
+// Note: Events are on the pool, not the promise wrapper
+pool.on('connection', (connection) => {
   console.log('✅ New database connection established (ID:', connection.threadId, ')');
+
+  // Set up connection-level error handling
+  connection.on('error', (err) => {
+    console.error('❌ Connection error on thread', connection.threadId, ':', err.code);
+  });
 });
 
-db.on('acquire', (connection) => {
+pool.on('acquire', (connection) => {
   console.log('🔄 Connection %d acquired from pool', connection.threadId);
 });
 
-db.on('release', (connection) => {
+pool.on('release', (connection) => {
   console.log('🔓 Connection %d released back to pool', connection.threadId);
 });
 
-db.on('enqueue', () => {
+pool.on('enqueue', () => {
   console.log('⏳ Waiting for available connection slot...');
 });
 
 // Test pool connectivity and initialize database
-db.getConnection((err, connection) => {
-  if (err) {
-    console.error('❌ Database pool connection failed:', err);
-    console.error('⚠️ Will retry connections on demand...');
-    return;
-  }
-  console.log('✅ Database connection pool initialized successfully');
-  console.log('📊 Pool config: Max connections =', dbConfig.connectionLimit);
+(async () => {
+  let connection;
+  try {
+    connection = await db.getConnection();
+    console.log('✅ Database connection pool initialized successfully');
+    console.log('📊 Pool config: Max connections =', dbConfig.connectionLimit);
+    connection.release();
 
-  // Release test connection back to pool
-  connection.release();
-  
-  // Auto-create feature_access table if not exists
-  const createTableSQL = `
-    CREATE TABLE IF NOT EXISTS feature_access (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      user_id INT NOT NULL,
-      feature_id VARCHAR(50) NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE KEY unique_user_feature (user_id, feature_id),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `;
-  
-  db.query(createTableSQL, (err) => {
-    if (err) {
-      console.error('⚠️ Error creating feature_access table:', err.message);
-    } else {
+    // Auto-create feature_access table if not exists
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS feature_access (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        feature_id VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_feature (user_id, feature_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `;
+
+    try {
+      await db.query(createTableSQL);
       console.log('✅ feature_access table ready');
-      
+
       // Insert default feature access for Master User (ID=1)
       const insertSQL = `
         INSERT IGNORE INTO feature_access (user_id, feature_id) VALUES
@@ -244,87 +249,78 @@ db.getConnection((err, connection) => {
         (1, 'laporan'),
         (1, 'master-admin');
       `;
-      
-      db.query(insertSQL, (err) => {
-        if (err) {
-          console.error('⚠️ Error inserting default feature access:', err.message);
-        } else {
-          console.log('✅ Master User feature access configured');
-        }
-      });
-    }
-  });
 
-  // Auto-migration: Add kategori column to kas_kecil if not exists
-  const checkKategoriColumn = `
-    SELECT COUNT(*) as count 
-    FROM INFORMATION_SCHEMA.COLUMNS 
-    WHERE TABLE_SCHEMA = '${dbConfig.database}' 
-    AND TABLE_NAME = 'kas_kecil' 
-    AND COLUMN_NAME = 'kategori'
-  `;
-  
-  db.query(checkKategoriColumn, (err, results) => {
-    if (err) {
-      console.error('❌ Error checking kategori column:', err);
-      return;
+      await db.query(insertSQL);
+      console.log('✅ Master User feature access configured');
+    } catch (err) {
+      console.error('⚠️ Error with feature_access table:', err.message);
     }
-    
-    if (results[0].count === 0) {
-      console.log('🔄 Adding kategori column to kas_kecil table...');
-      const addKategoriColumn = 'ALTER TABLE kas_kecil ADD COLUMN kategori VARCHAR(100) AFTER keterangan';
-      
-      db.query(addKategoriColumn, (err, result) => {
-        if (err) {
-          console.error('❌ Error adding kategori column:', err);
-        } else {
-          console.log('✅ Kategori column added to kas_kecil table');
-          
-          // Add index
+
+    // Auto-migration: Add kategori column to kas_kecil if not exists
+    try {
+      const checkKategoriColumn = `
+        SELECT COUNT(*) as count
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'kas_kecil'
+        AND COLUMN_NAME = 'kategori'
+      `;
+
+      const [results] = await db.query(checkKategoriColumn, [dbConfig.database]);
+
+      if (results[0].count === 0) {
+        console.log('🔄 Adding kategori column to kas_kecil table...');
+        const addKategoriColumn = 'ALTER TABLE kas_kecil ADD COLUMN kategori VARCHAR(100) AFTER keterangan';
+        await db.query(addKategoriColumn);
+        console.log('✅ Kategori column added to kas_kecil table');
+
+        // Add index
+        try {
           const addIndex = 'CREATE INDEX idx_kas_kecil_kategori ON kas_kecil(kategori)';
-          db.query(addIndex, (err, result) => {
-            if (err) {
-              console.log('⚠️  Index might already exist or error adding index');
-            } else {
-              console.log('✅ Index added for kategori column');
-            }
-          });
+          await db.query(addIndex);
+          console.log('✅ Index added for kategori column');
+        } catch (err) {
+          console.log('⚠️ Index might already exist or error adding index');
         }
-      });
-    } else {
-      console.log('✅ Kategori column already exists in kas_kecil table');
+      } else {
+        console.log('✅ Kategori column already exists in kas_kecil table');
+      }
+    } catch (err) {
+      console.error('❌ Error checking kategori column:', err);
     }
-  });
 
-  // Auto-migration: Create arus_kas table if not exists
-  const createArusKasTable = `
-    CREATE TABLE IF NOT EXISTS arus_kas (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      tanggal DATE NOT NULL,
-      pt_code VARCHAR(10) NOT NULL,
-      jenis ENUM('masuk', 'keluar') NOT NULL,
-      jumlah DECIMAL(15,2) NOT NULL,
-      keterangan TEXT,
-      kategori VARCHAR(100),
-      metode_bayar ENUM('cash', 'cashless') DEFAULT 'cashless',
-      created_by INT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      FOREIGN KEY (created_by) REFERENCES users(id),
-      FOREIGN KEY (pt_code) REFERENCES pt_list(code)
-    )
-  `;
+    // Auto-migration: Create arus_kas table if not exists
+    try {
+      const createArusKasTable = `
+        CREATE TABLE IF NOT EXISTS arus_kas (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          tanggal DATE NOT NULL,
+          pt_code VARCHAR(10) NOT NULL,
+          jenis ENUM('masuk', 'keluar') NOT NULL,
+          jumlah DECIMAL(15,2) NOT NULL,
+          keterangan TEXT,
+          kategori VARCHAR(100),
+          metode_bayar ENUM('cash', 'cashless') DEFAULT 'cashless',
+          created_by INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (created_by) REFERENCES users(id),
+          FOREIGN KEY (pt_code) REFERENCES pt_list(code)
+        )
+      `;
 
-  db.query(createArusKasTable, (err) => {
-    if (err) {
-      console.error('⚠️ Error creating arus_kas table:', err.message);
-    } else {
+      await db.query(createArusKasTable);
       console.log('✅ Arus Kas table ready');
+    } catch (err) {
+      console.error('⚠️ Error creating arus_kas table:', err.message);
     }
-  });
 
-  console.log('✅ Database tables initialized');
-});
+    console.log('✅ Database tables initialized');
+  } catch (err) {
+    console.error('❌ Database pool connection failed:', err);
+    console.error('⚠️ Will retry connections on demand...');
+  }
+})();
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'sumber_jaya_secret_key_2025';
@@ -2358,14 +2354,13 @@ const server = app.listen(PORT, HOST, () => {
 
 // Periodic health check to keep Railway MySQL connection alive
 if (process.env.NODE_ENV === 'production') {
-  const healthCheckInterval = setInterval(() => {
-    db.query('SELECT 1', (err) => {
-      if (err) {
-        console.error('⚠️ Health check failed:', err.code);
-      } else {
-        console.log('💚 Database health check: OK');
-      }
-    });
+  const healthCheckInterval = setInterval(async () => {
+    try {
+      await db.query('SELECT 1');
+      console.log('💚 Database health check: OK');
+    } catch (err) {
+      console.error('⚠️ Health check failed:', err.code);
+    }
   }, 60000); // Check every 60 seconds
 
   // Clear interval on shutdown
@@ -2378,22 +2373,22 @@ if (process.env.NODE_ENV === 'production') {
 // ==================== GRACEFUL SHUTDOWN HANDLER ====================
 
 // Handle graceful shutdown to close pool connections properly
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = async (signal) => {
   console.log(`\n⚠️ ${signal} signal received: closing HTTP server...`);
 
-  server.close(() => {
+  server.close(async () => {
     console.log('✅ HTTP server closed');
 
     // Close database pool connections gracefully
-    db.end((err) => {
-      if (err) {
-        console.error('❌ Error closing database pool:', err);
-        process.exit(1);
-      }
+    try {
+      await pool.end();
       console.log('✅ Database connection pool closed');
       console.log('👋 Server shutdown complete');
       process.exit(0);
-    });
+    } catch (err) {
+      console.error('❌ Error closing database pool:', err);
+      process.exit(1);
+    }
   });
 
   // Force shutdown after 10 seconds if graceful shutdown fails
