@@ -657,6 +657,7 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
           SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
         FROM kas_kecil
         WHERE tanggal <= ?
+        AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
         GROUP BY pt_code
         HAVING saldo_akhir > 0
       `;
@@ -743,10 +744,11 @@ app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
     // Step 2: Hitung saldo akhir kemarin per PT
     const saldoQuery = `
       SELECT pt_code,
-        SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) - 
+        SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
       FROM kas_kecil
       WHERE tanggal <= ?
+      AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
       GROUP BY pt_code
       HAVING saldo_akhir > 0
     `;
@@ -1025,11 +1027,11 @@ app.get('/api/kas-kecil/saldo', verifyToken, (req, res) => {
   const { pt } = req.query;
   
   let query = `
-    SELECT 
+    SELECT
       SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) as total_masuk,
       SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as total_keluar
     FROM kas_kecil
-    WHERE 1=1
+    WHERE keterangan NOT LIKE 'Sisa Saldo tanggal%'
   `;
   
   let params = [];
@@ -1863,7 +1865,9 @@ app.get('/api/dashboard/stats', verifyToken, (req, res) => {
       SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
       SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo
       FROM kas_kecil
-      WHERE tanggal = ? ${pt ? 'AND pt_code = ?' : ''}`,
+      WHERE tanggal = ?
+      AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
+      ${pt ? 'AND pt_code = ?' : ''}`,
 
     // Pemasukan Kas Kecil Hari Ini
     pemasukanHariIni: `SELECT SUM(jumlah) as total_pemasukan
@@ -1871,6 +1875,7 @@ app.get('/api/dashboard/stats', verifyToken, (req, res) => {
       WHERE jenis = 'masuk'
         AND status = 'approved'
         AND tanggal = ?
+        AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
         ${pt ? 'AND pt_code = ?' : ''}`,
 
     // Pengeluaran Kas Kecil Hari Ini
