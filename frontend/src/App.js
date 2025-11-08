@@ -427,32 +427,6 @@ const SumberJayaApp = () => {
     }
 
     try {
-      // Auto-recalculate Sisa Saldo once per day (untuk fix data historis)
-      if (!silent) {
-        try {
-          const today = getLocalDateString();
-          const lastRecalculate = localStorage.getItem('lastRecalculateDate');
-
-          if (lastRecalculate !== today) {
-            console.log('🔄 Auto-recalculate: Running daily recalculation...');
-
-            // Recalculate from beginning of current month
-            const startDate = new Date();
-            startDate.setDate(1); // First day of current month
-            const startDateStr = startDate.toISOString().split('T')[0];
-
-            await kasKecilService.recalculateSaldo(startDateStr);
-            localStorage.setItem('lastRecalculateDate', today);
-
-            console.log(`✅ Auto-recalculate completed from ${startDateStr}`);
-          } else {
-            console.log('✅ Auto-recalculate: Already done today, skipping...');
-          }
-        } catch (error) {
-          console.log('⚠️ Auto-recalculate skip:', error.response?.data?.message || error.message);
-        }
-      }
-
       // Auto-transfer saldo kemarin jika belum
       try {
         const transferResult = await kasKecilService.transferSaldo();
