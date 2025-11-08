@@ -372,6 +372,128 @@ const processTanggal = (tanggal) => {
   return tanggal.split('T')[0]; // Remove any timezone info
 };
 
+// Helper function to auto-recalculate Sisa Saldo from a specific date
+const autoRecalculateSisaSaldoFromDate = (startDate, userId, callback) => {
+  console.log(`🔄 Auto-recalculating Sisa Saldo from: ${startDate}`);
+
+  // Step 1: Delete all "Sisa Saldo" transactions from startDate+1 onwards
+  const nextDay = new Date(startDate);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const nextDayStr = formatLocalDate(nextDay);
+
+  const deleteQuery = `
+    DELETE FROM kas_kecil
+    WHERE tanggal >= ?
+    AND keterangan LIKE 'Sisa Saldo tanggal%'
+  `;
+
+  db.query(deleteQuery, [nextDayStr], (err, deleteResult) => {
+    if (err) {
+      console.error('❌ Error deleting old Sisa Saldo:', err);
+      return callback(err);
+    }
+
+    console.log(`✅ Deleted ${deleteResult.affectedRows} old Sisa Saldo transactions`);
+
+    // Step 2: Get all dates from nextDay to today
+    const today = getLocalDate();
+    const dates = [];
+    let currentDate = new Date(nextDayStr);
+    const todayDate = new Date(today);
+
+    while (currentDate <= todayDate) {
+      dates.push(formatLocalDate(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    if (dates.length === 0) {
+      console.log('✅ No dates to process');
+      return callback(null, { message: 'No dates to process', datesProcessed: 0 });
+    }
+
+    console.log(`📅 Processing ${dates.length} dates from ${nextDayStr} to ${today}`);
+
+    // Step 3: Process each date sequentially
+    let processedCount = 0;
+
+    const processDate = (dateIndex) => {
+      if (dateIndex >= dates.length) {
+        console.log('✅ Auto-recalculation complete!');
+        return callback(null, {
+          message: 'Auto-recalculation complete',
+          datesProcessed: processedCount,
+          deletedTransactions: deleteResult.affectedRows
+        });
+      }
+
+      const currentDateStr = dates[dateIndex];
+      const yesterday = new Date(currentDateStr);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = formatLocalDate(yesterday);
+
+      // Calculate closing balance for yesterday per PT
+      const saldoQuery = `
+        SELECT pt_code,
+          SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
+          SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
+        FROM kas_kecil
+        WHERE tanggal <= ?
+        AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
+        GROUP BY pt_code
+        HAVING saldo_akhir > 0
+      `;
+
+      db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
+        if (err) {
+          console.error(`❌ Error calculating saldo for ${yesterdayStr}:`, err);
+          return callback(err);
+        }
+
+        if (saldoResults.length === 0) {
+          // No saldo to transfer, continue to next date
+          processDate(dateIndex + 1);
+          return;
+        }
+
+        // Create "Sisa Saldo" transactions for each PT
+        const insertPromises = saldoResults.map(pt => {
+          return new Promise((resolve, reject) => {
+            const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
+            const insertQuery = `
+              INSERT INTO kas_kecil
+              (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
+              VALUES (?, ?, 'masuk', ?, ?, 'approved', ?, ?)
+            `;
+
+            db.query(
+              insertQuery,
+              [currentDateStr, pt.pt_code, pt.saldo_akhir, keterangan, userId, userId],
+              (err, result) => {
+                if (err) reject(err);
+                else resolve({ pt: pt.pt_code, saldo: pt.saldo_akhir, date: currentDateStr });
+              }
+            );
+          });
+        });
+
+        Promise.all(insertPromises)
+          .then(results => {
+            processedCount += results.length;
+            // Continue to next date
+            processDate(dateIndex + 1);
+          })
+          .catch(err => {
+            console.error(`❌ Error creating Sisa Saldo for ${currentDateStr}:`, err);
+            callback(err);
+          });
+      });
+    };
+
+    // Start processing from first date
+    processDate(0);
+  });
+};
+
 // ==================== AUTH ROUTES ====================
 
 // Login
@@ -582,7 +704,16 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
-    
+
+    // Auto-sync Sisa Saldo for dates after this transaction
+    autoRecalculateSisaSaldoFromDate(localTanggal, req.userId, (syncErr, syncResult) => {
+      if (syncErr) {
+        console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+      } else {
+        console.log('✅ Auto-sync completed:', syncResult);
+      }
+    });
+
     res.status(201).json({
       message: 'Kas kecil berhasil ditambahkan',
       id: result.insertId,
@@ -807,19 +938,20 @@ app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
   const { id } = req.params;
   const { status } = req.body; // 'approved' or 'rejected'
   
-  // Step 1: Get kas data to check PT
-  const getKasQuery = 'SELECT pt_code AS pt FROM kas_kecil WHERE id = ?';
-  
+  // Step 1: Get kas data to check PT and tanggal
+  const getKasQuery = 'SELECT pt_code AS pt, DATE_FORMAT(tanggal, "%Y-%m-%d") as tanggal FROM kas_kecil WHERE id = ?';
+
   db.query(getKasQuery, [id], (err, kasResults) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
-    
+
     if (kasResults.length === 0) {
       return res.status(404).json({ message: 'Data kas tidak ditemukan' });
     }
-    
+
     const kasPT = kasResults[0].pt;
+    const kasTanggal = kasResults[0].tanggal;
     
     // Step 2: Get user data and check access
     const getUserQuery = `
@@ -860,13 +992,22 @@ app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
       
       // Step 4: Update status if all validations pass
       const updateQuery = 'UPDATE kas_kecil SET status = ?, approved_by = ? WHERE id = ?';
-      
+
       db.query(updateQuery, [status, req.userId, id], (err, result) => {
         if (err) {
           return res.status(500).json({ message: 'Server error', error: err });
         }
-        
-        res.json({ 
+
+        // Auto-sync Sisa Saldo for dates after status change
+        autoRecalculateSisaSaldoFromDate(kasTanggal, req.userId, (syncErr, syncResult) => {
+          if (syncErr) {
+            console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+          } else {
+            console.log('✅ Auto-sync completed:', syncResult);
+          }
+        });
+
+        res.json({
           message: 'Status berhasil diupdate',
           status: status,
           pt: kasPT
@@ -934,8 +1075,21 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
       if (err) {
         return res.status(500).json({ message: 'Server error', error: err });
       }
-      
-      res.json({ 
+
+      // Auto-sync Sisa Saldo from the earlier date (original or new)
+      const oldDate = new Date(kasTanggal);
+      const newDate = new Date(localTanggal);
+      const earlierDate = oldDate < newDate ? kasTanggal : localTanggal;
+
+      autoRecalculateSisaSaldoFromDate(earlierDate, req.userId, (syncErr, syncResult) => {
+        if (syncErr) {
+          console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+        } else {
+          console.log('✅ Auto-sync completed:', syncResult);
+        }
+      });
+
+      res.json({
         message: 'Data kas berhasil diupdate',
         status: status
       });
@@ -1008,13 +1162,22 @@ app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
     
     function deleteTransaction() {
       const deleteQuery = 'DELETE FROM kas_kecil WHERE id = ?';
-      
+
       db.query(deleteQuery, [id], (err, result) => {
         if (err) {
           return res.status(500).json({ message: 'Server error', error: err });
         }
-        
-        res.json({ 
+
+        // Auto-sync Sisa Saldo for dates after deleted transaction
+        autoRecalculateSisaSaldoFromDate(kasTanggal, req.userId, (syncErr, syncResult) => {
+          if (syncErr) {
+            console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+          } else {
+            console.log('✅ Auto-sync completed:', syncResult);
+          }
+        });
+
+        res.json({
           message: 'Data kas berhasil dihapus'
         });
       });
