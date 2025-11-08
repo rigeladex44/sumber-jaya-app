@@ -638,7 +638,7 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
     params.push(status);
   }
 
-  query += ' ORDER BY kk.tanggal ASC, kk.id ASC';
+  query += ' ORDER BY kk.tanggal DESC, CASE WHEN kk.keterangan LIKE \'Sisa Saldo%\' THEN 0 ELSE 1 END ASC, kk.id ASC';
   
   db.query(query, params, (err, results) => {
     if (err) {
@@ -705,14 +705,14 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
       return res.status(500).json({ message: 'Server error', error: err });
     }
 
-    // Auto-sync Sisa Saldo for dates after this transaction
-    autoRecalculateSisaSaldoFromDate(localTanggal, req.userId, (syncErr, syncResult) => {
-      if (syncErr) {
-        console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-      } else {
-        console.log('✅ Auto-sync completed:', syncResult);
-      }
-    });
+    // Auto-sync disabled - data Sisa Saldo sudah diedit manual dan benar
+    // autoRecalculateSisaSaldoFromDate(localTanggal, req.userId, (syncErr, syncResult) => {
+    //   if (syncErr) {
+    //     console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+    //   } else {
+    //     console.log('✅ Auto-sync completed:', syncResult);
+    //   }
+    // });
 
     res.status(201).json({
       message: 'Kas kecil berhasil ditambahkan',
@@ -998,14 +998,14 @@ app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
           return res.status(500).json({ message: 'Server error', error: err });
         }
 
-        // Auto-sync Sisa Saldo for dates after status change
-        autoRecalculateSisaSaldoFromDate(kasTanggal, req.userId, (syncErr, syncResult) => {
-          if (syncErr) {
-            console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-          } else {
-            console.log('✅ Auto-sync completed:', syncResult);
-          }
-        });
+        // Auto-sync disabled - data Sisa Saldo sudah diedit manual dan benar
+        // autoRecalculateSisaSaldoFromDate(kasTanggal, req.userId, (syncErr, syncResult) => {
+        //   if (syncErr) {
+        //     console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+        //   } else {
+        //     console.log('✅ Auto-sync completed:', syncResult);
+        //   }
+        // });
 
         res.json({
           message: 'Status berhasil diupdate',
@@ -1076,18 +1076,18 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
         return res.status(500).json({ message: 'Server error', error: err });
       }
 
-      // Auto-sync Sisa Saldo from the earlier date (original or new)
-      const oldDate = new Date(kasTanggal);
-      const newDate = new Date(localTanggal);
-      const earlierDate = oldDate < newDate ? kasTanggal : localTanggal;
-
-      autoRecalculateSisaSaldoFromDate(earlierDate, req.userId, (syncErr, syncResult) => {
-        if (syncErr) {
-          console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-        } else {
-          console.log('✅ Auto-sync completed:', syncResult);
-        }
-      });
+      // Auto-sync disabled - data Sisa Saldo sudah diedit manual dan benar
+      // const oldDate = new Date(kasTanggal);
+      // const newDate = new Date(localTanggal);
+      // const earlierDate = oldDate < newDate ? kasTanggal : localTanggal;
+      //
+      // autoRecalculateSisaSaldoFromDate(earlierDate, req.userId, (syncErr, syncResult) => {
+      //   if (syncErr) {
+      //     console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+      //   } else {
+      //     console.log('✅ Auto-sync completed:', syncResult);
+      //   }
+      // });
 
       res.json({
         message: 'Data kas berhasil diupdate',
@@ -1168,14 +1168,14 @@ app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
           return res.status(500).json({ message: 'Server error', error: err });
         }
 
-        // Auto-sync Sisa Saldo for dates after deleted transaction
-        autoRecalculateSisaSaldoFromDate(kasTanggal, req.userId, (syncErr, syncResult) => {
-          if (syncErr) {
-            console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-          } else {
-            console.log('✅ Auto-sync completed:', syncResult);
-          }
-        });
+        // Auto-sync disabled - data Sisa Saldo sudah diedit manual dan benar
+        // autoRecalculateSisaSaldoFromDate(kasTanggal, req.userId, (syncErr, syncResult) => {
+        //   if (syncErr) {
+        //     console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+        //   } else {
+        //     console.log('✅ Auto-sync completed:', syncResult);
+        //   }
+        // });
 
         res.json({
           message: 'Data kas berhasil dihapus'
