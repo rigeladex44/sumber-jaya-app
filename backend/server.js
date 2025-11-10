@@ -748,15 +748,46 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
   });
 });
 
+// Delete all transactions for a specific month
+app.post('/api/kas-kecil/delete-month', verifyToken, (req, res) => {
+  const { yearMonth } = req.body; // Format: YYYY-MM
+
+  if (!yearMonth || !/^\d{4}-\d{2}$/.test(yearMonth)) {
+    return res.status(400).json({ message: 'yearMonth is required (format: YYYY-MM)' });
+  }
+
+  console.log('🗑️ Deleting all transactions for month:', yearMonth);
+
+  // Delete all transactions in the specified month
+  const deleteQuery = `
+    DELETE FROM kas_kecil
+    WHERE DATE_FORMAT(tanggal, '%Y-%m') = ?
+  `;
+
+  db.query(deleteQuery, [yearMonth], (err, deleteResult) => {
+    if (err) {
+      console.error('❌ Error deleting transactions:', err);
+      return res.status(500).json({ message: 'Server error deleting transactions', error: err });
+    }
+
+    console.log(`✅ Deleted ${deleteResult.affectedRows} transactions from ${yearMonth}`);
+
+    return res.json({
+      message: `Successfully deleted all transactions from ${yearMonth}`,
+      deletedCount: deleteResult.affectedRows
+    });
+  });
+});
+
 // Recalculate Saldo Run from specific date
 app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
-  const { startDate } = req.body; // Format: YYYY-MM-DD
+  const { startDate, skipFirstDate } = req.body; // Format: YYYY-MM-DD
 
   if (!startDate) {
     return res.status(400).json({ message: 'startDate is required (format: YYYY-MM-DD)' });
   }
 
-  console.log('🔄 Recalculating Saldo Run from:', startDate);
+  console.log('🔄 Recalculating Saldo Run from:', startDate, skipFirstDate ? '(skipping first date)' : '');
 
   // Step 1: Delete all "Sisa Saldo" transactions from startDate onwards
   const deleteQuery = `
@@ -801,6 +832,14 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
       }
 
       const currentDateStr = dates[dateIndex];
+
+      // Skip first date if requested (for manual input)
+      if (skipFirstDate && dateIndex === 0) {
+        console.log(`⏭️ Skipping first date ${currentDateStr} (manual input)`);
+        processDate(dateIndex + 1);
+        return;
+      }
+
       const yesterday = new Date(currentDateStr);
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = formatLocalDate(yesterday);

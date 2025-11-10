@@ -119,8 +119,13 @@ export const kasKecilService = {
     return response.data;
   },
 
-  recalculateSaldo: async (startDate) => {
-    const response = await api.post('/kas-kecil/recalculate-saldo', { startDate });
+  recalculateSaldo: async (startDate, skipFirstDate = false) => {
+    const response = await api.post('/kas-kecil/recalculate-saldo', { startDate, skipFirstDate });
+    return response.data;
+  },
+
+  deleteMonth: async (yearMonth) => {
+    const response = await api.post('/kas-kecil/delete-month', { yearMonth });
     return response.data;
   },
 
