@@ -438,13 +438,7 @@ const autoRecalculateSisaSaldoFromDate = (startDate, userId, callback) => {
 
       const totalSaldo = saldoResults[0]?.saldo_akhir || 0;
 
-      if (totalSaldo === 0) {
-        // No saldo to transfer, continue to next date
-        processDate(dateIndex + 1);
-        return;
-      }
-
-      // UPDATE existing or INSERT new "Sisa Saldo" (ONE entry for ALL PT combined)
+      // UPDATE existing or INSERT new "Sisa Saldo" (ONE entry for ALL PT combined, even if 0 to maintain chain)
       const primaryPT = process.env.PRIMARY_PT || 'SJE';
       const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
 
@@ -899,14 +893,7 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
 
         const totalSaldo = saldoResults[0]?.saldo_akhir || 0;
 
-        if (totalSaldo === 0) {
-          console.log(`⚠️ No saldo to transfer for ${currentDateStr} (total = 0)`);
-          // Continue to next date
-          processDate(dateIndex + 1);
-          return;
-        }
-
-        // Create ONE "Sisa Saldo" transaction for ALL PT combined
+        // Create ONE "Sisa Saldo" transaction for ALL PT combined (even if 0 to maintain carryover chain)
         // Saved to primary PT (SJE) - can be configured via env variable
         const primaryPT = process.env.PRIMARY_PT || 'SJE';
         const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
@@ -987,14 +974,7 @@ app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
 
       const totalSaldo = saldoResults[0]?.saldo_akhir || 0;
 
-      if (totalSaldo === 0) {
-        return res.json({
-          message: 'Tidak ada saldo untuk ditransfer',
-          transferred: false
-        });
-      }
-
-      // Step 3: Create ONE transaksi transfer saldo (ALL PT combined to primary PT)
+      // Step 3: Create ONE transaksi transfer saldo (ALL PT combined to primary PT, even if 0 to maintain chain)
       const primaryPT = process.env.PRIMARY_PT || 'SJE';
       const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
 
