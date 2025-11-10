@@ -4910,9 +4910,31 @@ const SumberJayaApp = () => {
 
         {/* Transaction Table */}
         <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-4 border-b">
-            <h3 className="text-lg font-semibold">Riwayat Transaksi Kas Kecil</h3>
-            <p className="text-sm text-gray-600">Transaksi tunai (cash) di kasir</p>
+          <div className="p-4 border-b flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Riwayat Transaksi Kas Kecil</h3>
+              <p className="text-sm text-gray-600">Transaksi tunai (cash) di kasir</p>
+            </div>
+            <button
+              onClick={async () => {
+                if (!window.confirm('Recalculate semua Sisa Saldo dari awal bulan (2025-11-01)?\n\nIni akan memperbaiki semua data Sisa Saldo yang salah.')) return;
+
+                try {
+                  setIsLoadingKasKecil(true);
+                  const startDate = '2025-11-01';
+                  const result = await kasKecilService.recalculateSaldo(startDate);
+                  alert(`✅ Recalculate berhasil!\n\nDates processed: ${result.datesProcessed}\nDeleted: ${result.deletedTransactions} entries`);
+                  await loadKasKecilData();
+                } catch (error) {
+                  alert('❌ Recalculate gagal: ' + (error.response?.data?.message || error.message));
+                } finally {
+                  setIsLoadingKasKecil(false);
+                }
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition no-print"
+            >
+              🔄 Recalculate Saldo
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
