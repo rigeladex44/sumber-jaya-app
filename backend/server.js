@@ -427,8 +427,9 @@ const autoRecalculateSisaSaldoFromDate = (startDate, userId, callback) => {
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
       FROM kas_kecil
       WHERE tanggal = ?
+      AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
       GROUP BY pt_code
-      HAVING saldo_akhir > 0
+      HAVING saldo_akhir != 0
     `;
 
     db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
@@ -461,19 +462,24 @@ const autoRecalculateSisaSaldoFromDate = (startDate, userId, callback) => {
             if (err) return reject(err);
 
             if (existing.length > 0) {
-              // ALREADY EXISTS - UPDATE jumlah only
+              // ALREADY EXISTS - UPDATE jenis and jumlah
               const oldJumlah = existing[0].jumlah;
+              const oldJenis = existing[0].jenis;
 
-              if (parseFloat(oldJumlah) !== parseFloat(pt.saldo_akhir)) {
+              // Determine correct jenis and jumlah based on saldo sign
+              const newJenis = pt.saldo_akhir >= 0 ? 'masuk' : 'keluar';
+              const newJumlah = Math.abs(pt.saldo_akhir);
+
+              if (parseFloat(oldJumlah) !== parseFloat(newJumlah) || oldJenis !== newJenis) {
                 const updateQuery = `
                   UPDATE kas_kecil
-                  SET jumlah = ?, updated_at = NOW()
+                  SET jenis = ?, jumlah = ?, updated_at = NOW()
                   WHERE id = ?
                 `;
 
-                db.query(updateQuery, [pt.saldo_akhir, existing[0].id], (err) => {
+                db.query(updateQuery, [newJenis, newJumlah, existing[0].id], (err) => {
                   if (err) return reject(err);
-                  console.log(`  📝 Updated: ${currentDateStr} ${pt.pt_code} from ${oldJumlah} to ${pt.saldo_akhir}`);
+                  console.log(`  📝 Updated: ${currentDateStr} ${pt.pt_code} from ${oldJenis} ${oldJumlah} to ${newJenis} ${newJumlah}`);
                   updatedCount++;
                   resolve({ action: 'updated', pt: pt.pt_code, date: currentDateStr });
                 });
@@ -483,18 +489,22 @@ const autoRecalculateSisaSaldoFromDate = (startDate, userId, callback) => {
               }
             } else {
               // DOESN'T EXIST - INSERT new
+              // Determine jenis and jumlah based on saldo sign
+              const jenis = pt.saldo_akhir >= 0 ? 'masuk' : 'keluar';
+              const jumlah = Math.abs(pt.saldo_akhir);
+
               const insertQuery = `
                 INSERT INTO kas_kecil
                 (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
-                VALUES (?, ?, 'masuk', ?, ?, 'approved', ?, ?)
+                VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
               `;
 
               db.query(
                 insertQuery,
-                [currentDateStr, pt.pt_code, pt.saldo_akhir, keterangan, userId, userId],
+                [currentDateStr, pt.pt_code, jenis, jumlah, keterangan, userId, userId],
                 (err, result) => {
                   if (err) return reject(err);
-                  console.log(`  ➕ Inserted: ${currentDateStr} ${pt.pt_code} = ${pt.saldo_akhir}`);
+                  console.log(`  ➕ Inserted: ${currentDateStr} ${pt.pt_code} = ${jenis} ${jumlah}`);
                   insertedCount++;
                   resolve({ action: 'inserted', pt: pt.pt_code, date: currentDateStr });
                 }
@@ -887,7 +897,7 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
         WHERE tanggal = ?
         AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
         GROUP BY pt_code
-        HAVING saldo_akhir > 0
+        HAVING saldo_akhir != 0
       `;
 
       db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
@@ -907,15 +917,20 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
         const insertPromises = saldoResults.map(pt => {
           return new Promise((resolve, reject) => {
             const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
+
+            // Determine jenis and jumlah based on saldo sign
+            const jenis = pt.saldo_akhir >= 0 ? 'masuk' : 'keluar';
+            const jumlah = Math.abs(pt.saldo_akhir);
+
             const insertQuery = `
               INSERT INTO kas_kecil
               (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
-              VALUES (?, ?, 'masuk', ?, ?, 'approved', ?, ?)
+              VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
             `;
 
             db.query(
               insertQuery,
-              [currentDateStr, pt.pt_code, pt.saldo_akhir, keterangan, req.userId, req.userId],
+              [currentDateStr, pt.pt_code, jenis, jumlah, keterangan, req.userId, req.userId],
               (err, result) => {
                 if (err) reject(err);
                 else resolve({ pt: pt.pt_code, saldo: pt.saldo_akhir, date: currentDateStr });
@@ -976,8 +991,9 @@ app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
       FROM kas_kecil
       WHERE tanggal = ?
+      AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
       GROUP BY pt_code
-      HAVING saldo_akhir > 0
+      HAVING saldo_akhir != 0
     `;
     
     db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
@@ -996,15 +1012,20 @@ app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
       const insertPromises = saldoResults.map(pt => {
         return new Promise((resolve, reject) => {
           const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
+
+          // Determine jenis and jumlah based on saldo sign
+          const jenis = pt.saldo_akhir >= 0 ? 'masuk' : 'keluar';
+          const jumlah = Math.abs(pt.saldo_akhir);
+
           const insertQuery = `
-            INSERT INTO kas_kecil 
-            (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by) 
-            VALUES (?, ?, 'masuk', ?, ?, 'approved', ?, ?)
+            INSERT INTO kas_kecil
+            (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
+            VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
           `;
-          
+
           db.query(
-            insertQuery, 
-            [today, pt.pt_code, pt.saldo_akhir, keterangan, req.userId, req.userId],
+            insertQuery,
+            [today, pt.pt_code, jenis, jumlah, keterangan, req.userId, req.userId],
             (err, result) => {
               if (err) reject(err);
               else resolve({ pt: pt.pt_code, saldo: pt.saldo_akhir });
