@@ -878,13 +878,13 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
 
       console.log(`🔄 Processing date: ${currentDateStr}, yesterday: ${yesterdayStr}`);
 
-      // Calculate closing balance for yesterday per PT
+      // Calculate closing balance for yesterday per PT (ONLY yesterday's transactions, not cumulative)
       const saldoQuery = `
         SELECT pt_code,
           SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
           SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
         FROM kas_kecil
-        WHERE tanggal <= ?
+        WHERE tanggal = ?
         AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
         GROUP BY pt_code
         HAVING saldo_akhir > 0
