@@ -878,7 +878,7 @@ app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
         SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
       FROM kas_kecil
-      WHERE tanggal <= ?
+      WHERE tanggal = ?
       GROUP BY pt_code
       HAVING saldo_akhir > 0
     `;
