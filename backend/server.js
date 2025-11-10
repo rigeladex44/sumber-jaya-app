@@ -420,16 +420,14 @@ const autoRecalculateSisaSaldoFromDate = (startDate, userId, callback) => {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = formatLocalDate(yesterday);
 
-    // Calculate closing balance for yesterday per PT (ONLY yesterday's transactions)
+    // Calculate TOTAL closing balance for yesterday (ALL PT combined, not per PT)
     const saldoQuery = `
-      SELECT pt_code,
+      SELECT
         SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
       FROM kas_kecil
       WHERE tanggal = ?
       AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
-      GROUP BY pt_code
-      HAVING saldo_akhir != 0
     `;
 
     db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
@@ -438,91 +436,86 @@ const autoRecalculateSisaSaldoFromDate = (startDate, userId, callback) => {
         return callback(err);
       }
 
-      if (saldoResults.length === 0) {
+      const totalSaldo = saldoResults[0]?.saldo_akhir || 0;
+
+      if (totalSaldo === 0) {
         // No saldo to transfer, continue to next date
         processDate(dateIndex + 1);
         return;
       }
 
-      // For each PT, UPDATE existing or INSERT new "Sisa Saldo"
-      const upsertPromises = saldoResults.map(pt => {
-        return new Promise((resolve, reject) => {
-          const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
+      // UPDATE existing or INSERT new "Sisa Saldo" (ONE entry for ALL PT combined)
+      const primaryPT = process.env.PRIMARY_PT || 'SJE';
+      const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
 
-          // Check if Sisa Saldo already exists for this date & PT
-          const checkQuery = `
-            SELECT id, jumlah
-            FROM kas_kecil
-            WHERE tanggal = ?
-            AND pt_code = ?
-            AND keterangan = ?
+      // Determine jenis and jumlah based on total saldo sign
+      const newJenis = totalSaldo >= 0 ? 'masuk' : 'keluar';
+      const newJumlah = Math.abs(totalSaldo);
+
+      // Check if Sisa Saldo already exists for this date & primary PT
+      const checkQuery = `
+        SELECT id, jenis, jumlah
+        FROM kas_kecil
+        WHERE tanggal = ?
+        AND pt_code = ?
+        AND keterangan = ?
+      `;
+
+      db.query(checkQuery, [currentDateStr, primaryPT, keterangan], (err, existing) => {
+        if (err) {
+          console.error(`❌ Error checking existing Sisa Saldo:`, err);
+          return callback(err);
+        }
+
+        if (existing.length > 0) {
+          // ALREADY EXISTS - UPDATE jenis and jumlah if different
+          const oldJumlah = existing[0].jumlah;
+          const oldJenis = existing[0].jenis;
+
+          if (parseFloat(oldJumlah) !== parseFloat(newJumlah) || oldJenis !== newJenis) {
+            const updateQuery = `
+              UPDATE kas_kecil
+              SET jenis = ?, jumlah = ?, updated_at = NOW()
+              WHERE id = ?
+            `;
+
+            db.query(updateQuery, [newJenis, newJumlah, existing[0].id], (err) => {
+              if (err) {
+                console.error(`❌ Error updating Sisa Saldo:`, err);
+                return callback(err);
+              }
+              console.log(`  📝 Updated: ${currentDateStr} ${primaryPT} from ${oldJenis} ${oldJumlah} to ${newJenis} ${newJumlah} (total all PT)`);
+              updatedCount++;
+              processDate(dateIndex + 1);
+            });
+          } else {
+            // Already correct, skip
+            console.log(`  ⏭️ Skipped: ${currentDateStr} ${primaryPT} already correct`);
+            processDate(dateIndex + 1);
+          }
+        } else {
+          // DOESN'T EXIST - INSERT new
+          const insertQuery = `
+            INSERT INTO kas_kecil
+            (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
+            VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
           `;
 
-          db.query(checkQuery, [currentDateStr, pt.pt_code, keterangan], (err, existing) => {
-            if (err) return reject(err);
-
-            if (existing.length > 0) {
-              // ALREADY EXISTS - UPDATE jenis and jumlah
-              const oldJumlah = existing[0].jumlah;
-              const oldJenis = existing[0].jenis;
-
-              // Determine correct jenis and jumlah based on saldo sign
-              const newJenis = pt.saldo_akhir >= 0 ? 'masuk' : 'keluar';
-              const newJumlah = Math.abs(pt.saldo_akhir);
-
-              if (parseFloat(oldJumlah) !== parseFloat(newJumlah) || oldJenis !== newJenis) {
-                const updateQuery = `
-                  UPDATE kas_kecil
-                  SET jenis = ?, jumlah = ?, updated_at = NOW()
-                  WHERE id = ?
-                `;
-
-                db.query(updateQuery, [newJenis, newJumlah, existing[0].id], (err) => {
-                  if (err) return reject(err);
-                  console.log(`  📝 Updated: ${currentDateStr} ${pt.pt_code} from ${oldJenis} ${oldJumlah} to ${newJenis} ${newJumlah}`);
-                  updatedCount++;
-                  resolve({ action: 'updated', pt: pt.pt_code, date: currentDateStr });
-                });
-              } else {
-                // Already correct, skip
-                resolve({ action: 'skipped', pt: pt.pt_code, date: currentDateStr });
+          db.query(
+            insertQuery,
+            [currentDateStr, primaryPT, newJenis, newJumlah, keterangan, userId, userId],
+            (err, result) => {
+              if (err) {
+                console.error(`❌ Error inserting Sisa Saldo:`, err);
+                return callback(err);
               }
-            } else {
-              // DOESN'T EXIST - INSERT new
-              // Determine jenis and jumlah based on saldo sign
-              const jenis = pt.saldo_akhir >= 0 ? 'masuk' : 'keluar';
-              const jumlah = Math.abs(pt.saldo_akhir);
-
-              const insertQuery = `
-                INSERT INTO kas_kecil
-                (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
-                VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
-              `;
-
-              db.query(
-                insertQuery,
-                [currentDateStr, pt.pt_code, jenis, jumlah, keterangan, userId, userId],
-                (err, result) => {
-                  if (err) return reject(err);
-                  console.log(`  ➕ Inserted: ${currentDateStr} ${pt.pt_code} = ${jenis} ${jumlah}`);
-                  insertedCount++;
-                  resolve({ action: 'inserted', pt: pt.pt_code, date: currentDateStr });
-                }
-              );
+              console.log(`  ➕ Inserted: ${currentDateStr} ${primaryPT} = ${newJenis} ${newJumlah} (total all PT)`);
+              insertedCount++;
+              processDate(dateIndex + 1);
             }
-          });
-        });
+          );
+        }
       });
-
-      Promise.all(upsertPromises)
-        .then(() => {
-          // Continue to next date
-          processDate(dateIndex + 1);
-        })
-        .catch(err => {
-          console.error(`❌ Error syncing Sisa Saldo for ${currentDateStr}:`, err);
-          callback(err);
-        });
     });
   };
 
@@ -888,16 +881,14 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
 
       console.log(`🔄 Processing date: ${currentDateStr}, yesterday: ${yesterdayStr}`);
 
-      // Calculate closing balance for yesterday per PT (ONLY yesterday's transactions, not cumulative)
+      // Calculate TOTAL closing balance for yesterday (ALL PT combined, not per PT)
       const saldoQuery = `
-        SELECT pt_code,
+        SELECT
           SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
           SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
         FROM kas_kecil
         WHERE tanggal = ?
         AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
-        GROUP BY pt_code
-        HAVING saldo_akhir != 0
       `;
 
       db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
@@ -906,49 +897,44 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
           return res.status(500).json({ message: 'Server error calculating saldo', error: err });
         }
 
-        if (saldoResults.length === 0) {
-          console.log(`⚠️ No saldo to transfer for ${currentDateStr}`);
+        const totalSaldo = saldoResults[0]?.saldo_akhir || 0;
+
+        if (totalSaldo === 0) {
+          console.log(`⚠️ No saldo to transfer for ${currentDateStr} (total = 0)`);
           // Continue to next date
           processDate(dateIndex + 1);
           return;
         }
 
-        // Create "Sisa Saldo" transactions for each PT
-        const insertPromises = saldoResults.map(pt => {
-          return new Promise((resolve, reject) => {
-            const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
+        // Create ONE "Sisa Saldo" transaction for ALL PT combined
+        // Saved to primary PT (SJE) - can be configured via env variable
+        const primaryPT = process.env.PRIMARY_PT || 'SJE';
+        const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
 
-            // Determine jenis and jumlah based on saldo sign
-            const jenis = pt.saldo_akhir >= 0 ? 'masuk' : 'keluar';
-            const jumlah = Math.abs(pt.saldo_akhir);
+        // Determine jenis and jumlah based on total saldo sign
+        const jenis = totalSaldo >= 0 ? 'masuk' : 'keluar';
+        const jumlah = Math.abs(totalSaldo);
 
-            const insertQuery = `
-              INSERT INTO kas_kecil
-              (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
-              VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
-            `;
+        const insertQuery = `
+          INSERT INTO kas_kecil
+          (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
+          VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
+        `;
 
-            db.query(
-              insertQuery,
-              [currentDateStr, pt.pt_code, jenis, jumlah, keterangan, req.userId, req.userId],
-              (err, result) => {
-                if (err) reject(err);
-                else resolve({ pt: pt.pt_code, saldo: pt.saldo_akhir, date: currentDateStr });
-              }
-            );
-          });
-        });
+        db.query(
+          insertQuery,
+          [currentDateStr, primaryPT, jenis, jumlah, keterangan, req.userId, req.userId],
+          (err, result) => {
+            if (err) {
+              console.error(`❌ Error creating Sisa Saldo for ${currentDateStr}:`, err);
+              return res.status(500).json({ message: 'Error creating Sisa Saldo transaction', error: err });
+            }
 
-        Promise.all(insertPromises)
-          .then(results => {
-            console.log(`✅ Created ${results.length} Sisa Saldo transactions for ${currentDateStr}`);
+            console.log(`✅ Created Sisa Saldo for ${currentDateStr}: ${primaryPT} ${jenis} ${jumlah} (total all PT)`);
             // Continue to next date
             processDate(dateIndex + 1);
-          })
-          .catch(err => {
-            console.error(`❌ Error creating Sisa Saldo for ${currentDateStr}:`, err);
-            res.status(500).json({ message: 'Error creating Sisa Saldo transactions', error: err });
-          });
+          }
+        );
       });
     };
 
@@ -984,68 +970,62 @@ app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
       });
     }
     
-    // Step 2: Hitung saldo akhir kemarin per PT
+    // Step 2: Hitung TOTAL saldo akhir kemarin (ALL PT combined)
     const saldoQuery = `
-      SELECT pt_code,
+      SELECT
         SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
       FROM kas_kecil
       WHERE tanggal = ?
       AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
-      GROUP BY pt_code
-      HAVING saldo_akhir != 0
     `;
-    
+
     db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
       if (err) {
         return res.status(500).json({ message: 'Server error', error: err });
       }
-      
-      if (saldoResults.length === 0) {
-        return res.json({ 
+
+      const totalSaldo = saldoResults[0]?.saldo_akhir || 0;
+
+      if (totalSaldo === 0) {
+        return res.json({
           message: 'Tidak ada saldo untuk ditransfer',
-          transferred: false 
+          transferred: false
         });
       }
-      
-      // Step 3: Create transaksi transfer saldo untuk setiap PT
-      const insertPromises = saldoResults.map(pt => {
-        return new Promise((resolve, reject) => {
-          const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
 
-          // Determine jenis and jumlah based on saldo sign
-          const jenis = pt.saldo_akhir >= 0 ? 'masuk' : 'keluar';
-          const jumlah = Math.abs(pt.saldo_akhir);
+      // Step 3: Create ONE transaksi transfer saldo (ALL PT combined to primary PT)
+      const primaryPT = process.env.PRIMARY_PT || 'SJE';
+      const keterangan = `Sisa Saldo tanggal ${yesterdayStr}`;
 
-          const insertQuery = `
-            INSERT INTO kas_kecil
-            (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
-            VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
-          `;
+      // Determine jenis and jumlah based on total saldo sign
+      const jenis = totalSaldo >= 0 ? 'masuk' : 'keluar';
+      const jumlah = Math.abs(totalSaldo);
 
-          db.query(
-            insertQuery,
-            [today, pt.pt_code, jenis, jumlah, keterangan, req.userId, req.userId],
-            (err, result) => {
-              if (err) reject(err);
-              else resolve({ pt: pt.pt_code, saldo: pt.saldo_akhir });
-            }
-          );
-        });
-      });
-      
-      Promise.all(insertPromises)
-        .then(results => {
+      const insertQuery = `
+        INSERT INTO kas_kecil
+        (tanggal, pt_code, jenis, jumlah, keterangan, status, created_by, approved_by)
+        VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)
+      `;
+
+      db.query(
+        insertQuery,
+        [today, primaryPT, jenis, jumlah, keterangan, req.userId, req.userId],
+        (err, result) => {
+          if (err) {
+            return res.status(500).json({ message: 'Server error inserting transfer', error: err });
+          }
+
           res.json({
             message: 'Saldo berhasil ditransfer',
             transferred: true,
-            count: results.length,
-            details: results
+            primaryPT: primaryPT,
+            totalSaldo: totalSaldo,
+            jenis: jenis,
+            jumlah: jumlah
           });
-        })
-        .catch(err => {
-          res.status(500).json({ message: 'Error saat transfer saldo', error: err });
-        });
+        }
+      );
     });
   });
 });
