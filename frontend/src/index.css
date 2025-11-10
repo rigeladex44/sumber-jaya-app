@@ -21,3 +21,25 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+@media (max-width: 640px) {
+  .mobile-content table {
+    font-size: 0.75rem;
+  }
+
+  .mobile-content th,
+  .mobile-content td {
+    padding: 0.5rem;
+  }
+
+  .mobile-content input,
+  .mobile-content select,
+  .mobile-content textarea {
+    font-size: 0.875rem;
+  }
+
+  .mobile-content h2,
+  .mobile-content h3 {
+    line-height: 1.35;
+  }
+}
