@@ -420,14 +420,13 @@ const autoRecalculateSisaSaldoFromDate = (startDate, userId, callback) => {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = formatLocalDate(yesterday);
 
-    // Calculate TOTAL closing balance for yesterday (ALL PT combined, not per PT)
+    // Calculate TOTAL closing balance for yesterday (ALL PT combined, including opening balance)
     const saldoQuery = `
       SELECT
         SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
       FROM kas_kecil
       WHERE tanggal = ?
-      AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
     `;
 
     db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
@@ -875,14 +874,13 @@ app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
 
       console.log(`🔄 Processing date: ${currentDateStr}, yesterday: ${yesterdayStr}`);
 
-      // Calculate TOTAL closing balance for yesterday (ALL PT combined, not per PT)
+      // Calculate TOTAL closing balance for yesterday (ALL PT combined, including opening balance)
       const saldoQuery = `
         SELECT
           SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
           SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
         FROM kas_kecil
         WHERE tanggal = ?
-        AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
       `;
 
       db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
@@ -957,14 +955,13 @@ app.post('/api/kas-kecil/transfer-saldo', verifyToken, (req, res) => {
       });
     }
     
-    // Step 2: Hitung TOTAL saldo akhir kemarin (ALL PT combined)
+    // Step 2: Hitung TOTAL saldo akhir kemarin (ALL PT combined, including opening balance)
     const saldoQuery = `
       SELECT
         SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_akhir
       FROM kas_kecil
       WHERE tanggal = ?
-      AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
     `;
 
     db.query(saldoQuery, [yesterdayStr], (err, saldoResults) => {
@@ -1262,16 +1259,16 @@ app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
   });
 });
 
-// Get Saldo Kas
+// Get Saldo Kas (TOTAL balance including opening balance carryover)
 app.get('/api/kas-kecil/saldo', verifyToken, (req, res) => {
   const { pt } = req.query;
-  
+
   let query = `
     SELECT
       SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) as total_masuk,
       SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as total_keluar
     FROM kas_kecil
-    WHERE keterangan NOT LIKE 'Sisa Saldo tanggal%'
+    WHERE 1=1
   `;
   
   let params = [];
