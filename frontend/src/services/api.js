@@ -129,6 +129,11 @@ export const kasKecilService = {
     return response.data;
   },
 
+  deleteSisaSaldo: async (startDate) => {
+    const response = await api.post('/kas-kecil/delete-sisa-saldo', { startDate });
+    return response.data;
+  },
+
   getSaldo: async (pt = null) => {
     const response = await api.get('/kas-kecil/saldo', {
       params: pt ? { pt } : {}

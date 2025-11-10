@@ -779,6 +779,38 @@ app.post('/api/kas-kecil/delete-month', verifyToken, (req, res) => {
   });
 });
 
+// Delete only "Sisa Saldo" entries from a specific date onwards
+app.post('/api/kas-kecil/delete-sisa-saldo', verifyToken, (req, res) => {
+  const { startDate } = req.body; // Format: YYYY-MM-DD
+
+  if (!startDate) {
+    return res.status(400).json({ message: 'startDate is required (format: YYYY-MM-DD)' });
+  }
+
+  console.log('🗑️ Deleting Sisa Saldo entries from:', startDate);
+
+  // Delete all "Sisa Saldo" transactions from startDate onwards
+  const deleteQuery = `
+    DELETE FROM kas_kecil
+    WHERE tanggal >= ?
+    AND keterangan LIKE 'Sisa Saldo tanggal%'
+  `;
+
+  db.query(deleteQuery, [startDate], (err, deleteResult) => {
+    if (err) {
+      console.error('❌ Error deleting Sisa Saldo:', err);
+      return res.status(500).json({ message: 'Server error deleting Sisa Saldo', error: err });
+    }
+
+    console.log(`✅ Deleted ${deleteResult.affectedRows} Sisa Saldo entries from ${startDate}`);
+
+    return res.json({
+      message: `Successfully deleted Sisa Saldo entries from ${startDate}`,
+      deletedCount: deleteResult.affectedRows
+    });
+  });
+});
+
 // Recalculate Saldo Run from specific date
 app.post('/api/kas-kecil/recalculate-saldo', verifyToken, (req, res) => {
   const { startDate, skipFirstDate } = req.body; // Format: YYYY-MM-DD
