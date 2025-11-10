@@ -2245,14 +2245,14 @@ const SumberJayaApp = () => {
   ];
 
   const mainMenuItems = [
-    { id: 'beranda', label: 'Beranda', icon: Home },
-    { id: 'kas-kecil', label: 'Kas Kecil', icon: BookOpen },
-    { id: 'arus-kas', label: 'Arus Kas', icon: TrendingUp },
-    { id: 'detail-kas', label: 'Detail Kas', icon: AlertCircle },
-    { id: 'penjualan', label: 'Penjualan', icon: ShoppingCart },
-    { id: 'laporan', label: 'Laporan', icon: BarChart3 },
-    { id: 'master-kategori', label: 'Master Kategori', icon: Tags },
-    { id: 'master-admin', label: 'Admin', icon: Users }
+    { id: 'beranda', label: 'Beranda', shortLabel: 'Beranda', icon: Home },
+    { id: 'kas-kecil', label: 'Kas Kecil', shortLabel: 'Kas', icon: BookOpen },
+    { id: 'arus-kas', label: 'Arus Kas', shortLabel: 'Arus', icon: TrendingUp },
+    { id: 'detail-kas', label: 'Detail Kas', shortLabel: 'Detail', icon: AlertCircle },
+    { id: 'penjualan', label: 'Penjualan', shortLabel: 'Jual', icon: ShoppingCart },
+    { id: 'laporan', label: 'Laporan', shortLabel: 'Laporan', icon: BarChart3 },
+    { id: 'master-kategori', label: 'Master Kategori', shortLabel: 'Kategori', icon: Tags },
+    { id: 'master-admin', label: 'Admin', shortLabel: 'Admin', icon: Users }
   ];
 
   const handleLogin = async () => {
@@ -3080,15 +3080,15 @@ const SumberJayaApp = () => {
     };
 
     return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-5 md:space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg md:rounded-xl p-4 md:p-6 lg:p-8 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 lg:p-8 text-white shadow-lg">
           <div>
-          <h2 className="text-xl md:text-2xl lg:text-3xl font-bold mb-1">Selamat Datang, {currentUserData?.name}!</h2>
-          <p className="text-gray-300 text-sm md:text-base lg:text-lg">{currentUserData?.role} - SUMBER JAYA GRUP</p>
+          <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1">Selamat Datang, {currentUserData?.name}!</h2>
+          <p className="text-gray-300 text-xs sm:text-sm md:text-base lg:text-lg">{currentUserData?.role} - SUMBER JAYA GRUP</p>
           </div>
 
-        <div className="mt-3 md:mt-4 flex items-center gap-2 md:gap-4 text-xs md:text-sm">
+        <div className="mt-3 md:mt-4 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm">
           <div className="flex items-center gap-2">
             <Calendar size={14} className="md:hidden" />
             <Calendar size={16} className="hidden md:block" />
@@ -3098,18 +3098,18 @@ const SumberJayaApp = () => {
       </div>
 
       {/* Summary Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {hasKasKecilAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-blue-600">
+          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-blue-600">
             <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-xs md:text-sm text-gray-600">Kas Kecil</p>
+              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Kas Kecil</p>
               <DollarSign className="text-blue-600" size={20} />
             </div>
             {isLoadingStats ? (
               <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
             ) : (
               <>
-                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">
                   Rp {dashboardStats.kasKecilSaldoAkhir.toLocaleString('id-ID')}
                 </p>
                 <p className="text-xs text-gray-500 mt-1 md:mt-2">Saldo akhir hari ini</p>
@@ -3119,16 +3119,16 @@ const SumberJayaApp = () => {
         )}
 
         {hasKasKecilAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-green-500">
+          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-green-500">
             <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-xs md:text-sm text-gray-600">Pemasukan Hari Ini</p>
+              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Pemasukan Hari Ini</p>
               <TrendingUp className="text-green-500" size={20} />
             </div>
             {isLoadingStats ? (
               <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
             ) : (
               <>
-                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-green-600">
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">
                   Rp {dashboardStats.kasKecilPemasukanHariIni.toLocaleString('id-ID')}
                 </p>
                 <p className="text-xs text-green-600 mt-1 md:mt-2 font-medium">Kas Kecil approved</p>
@@ -3138,16 +3138,16 @@ const SumberJayaApp = () => {
         )}
 
         {hasPenjualanAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-gray-700">
+          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-gray-700">
             <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-xs md:text-sm text-gray-600">Penjualan Hari Ini</p>
+              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Penjualan Hari Ini</p>
               <ShoppingCart className="text-gray-700" size={20} />
             </div>
             {isLoadingStats ? (
               <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
             ) : (
               <>
-                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
                   {dashboardStats.penjualanQty.toLocaleString('id-ID')} Tabung
                 </p>
                 <p className="text-xs text-gray-500 mt-1 md:mt-2">
@@ -3159,17 +3159,17 @@ const SumberJayaApp = () => {
         )}
 
         {hasDetailKasAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-yellow-500 cursor-pointer hover:shadow-lg transition-shadow"
+          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-yellow-500 cursor-pointer hover:shadow-lg transition-shadow"
                onClick={() => setActiveMenu('detail-kas')}>
             <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-xs md:text-sm text-gray-600">Pending Approval</p>
+              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Pending Approval</p>
               <AlertCircle className="text-yellow-500" size={20} />
             </div>
             {isLoadingStats ? (
               <p className="text-lg md:text-2xl font-bold text-gray-400">...</p>
             ) : (
               <>
-                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">{dashboardStats.pendingApproval}</p>
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">{dashboardStats.pendingApproval}</p>
                 <p className="text-xs text-yellow-600 mt-1 md:mt-2 font-medium">
                   {dashboardStats.pendingApproval > 0 ? 'Klik untuk approve/reject' : 'Semua sudah disetujui'}
                 </p>
@@ -3179,16 +3179,16 @@ const SumberJayaApp = () => {
         )}
 
         {hasKasKecilAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md border-l-4 border-red-500">
+          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-red-500">
             <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-xs md:text-sm text-gray-600">Pengeluaran Hari Ini</p>
+              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Pengeluaran Hari Ini</p>
               <TrendingDown className="text-red-500" size={20} />
             </div>
             {isLoadingStats ? (
               <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
             ) : (
               <>
-                <p className="text-xl md:text-2xl lg:text-3xl font-bold text-red-600">
+                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600">
                   Rp {dashboardStats.kasKecilPengeluaranHariIni.toLocaleString('id-ID')}
                 </p>
                 <p className="text-xs text-red-600 mt-1 md:mt-2 font-medium">Kas Kecil approved</p>
@@ -3399,15 +3399,15 @@ const SumberJayaApp = () => {
       </div>
 
       {/* PT Access List */}
-      <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-md">
+      <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md">
         <h3 className="text-base md:text-lg font-bold text-gray-800 mb-3 md:mb-4">PT Yang Dapat Diakses</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
           {currentUserData?.accessPT?.map(code => {
             const pt = ptList.find(p => p.code === code);
             return (
-              <div key={code} className="border-2 border-gray-300 bg-gray-50 rounded-lg p-3 md:p-4 hover:border-gray-900 hover:bg-gray-100 transition-all">
-                <p className="font-bold text-gray-800 text-base md:text-lg">{pt?.code}</p>
-                <p className="text-xs text-gray-600 mt-1">{pt?.name}</p>
+              <div key={code} className="border-2 border-gray-300 bg-gray-50 rounded-lg p-3 sm:p-4 hover:border-gray-900 hover:bg-gray-100 transition-all">
+                <p className="font-bold text-gray-800 text-sm sm:text-base md:text-lg">{pt?.code}</p>
+                <p className="text-[11px] sm:text-xs text-gray-600 mt-1 leading-snug">{pt?.name}</p>
               </div>
             );
           })}
@@ -3533,12 +3533,12 @@ const SumberJayaApp = () => {
   };
 
   const renderPenjualan = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">Entri Penjualan Gas LPG 3 Kg</h2>
+    <div className="space-y-5 md:space-y-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Entri Penjualan Gas LPG 3 Kg</h2>
 
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border-l-4 border-green-500">
-        <div className="flex items-center gap-4">
-          <div className="bg-green-100 p-4 rounded-lg">
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 sm:p-5 md:p-6 border-l-4 border-green-500">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="bg-green-100 p-3 sm:p-4 rounded-lg">
             <ShoppingCart className="text-green-600" size={32} />
           </div>
           <div>
@@ -3548,9 +3548,9 @@ const SumberJayaApp = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-6 shadow-md">
-        <h3 className="text-lg font-bold mb-4">Form Input Penjualan</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-lg p-4 sm:p-5 md:p-6 shadow-md">
+        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Form Input Penjualan</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Tanggal</label>
             <input 
@@ -4380,7 +4380,7 @@ const SumberJayaApp = () => {
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Nama Lengkap</label>
                   <input
@@ -4493,7 +4493,7 @@ const SumberJayaApp = () => {
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Nama Lengkap</label>
                   <input
@@ -4707,7 +4707,7 @@ const SumberJayaApp = () => {
         {/* Input Form */}
         <div className="bg-white rounded-lg p-6 shadow-md no-print">
           <h3 className="text-lg font-bold mb-4">Input Transaksi Kas Kecil</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Tanggal *</label>
               <input 
@@ -4803,7 +4803,7 @@ const SumberJayaApp = () => {
             </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {/* PT Filter - Multi Select */}
             <div>
               <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
@@ -5236,7 +5236,7 @@ const SumberJayaApp = () => {
         {/* Input Form */}
         <div className="bg-white rounded-lg p-6 shadow-md no-print">
           <h3 className="text-lg font-bold mb-4">Input Transaksi Arus Kas</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Tanggal *</label>
               <input
@@ -5396,7 +5396,7 @@ const SumberJayaApp = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               {/* PT Filter - Multi Select */}
               <div>
                 <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
@@ -5607,7 +5607,7 @@ const SumberJayaApp = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Tanggal *</label>
                     <input
@@ -5771,7 +5771,7 @@ const SumberJayaApp = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col md:pb-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
         <header className="hidden md:block bg-white shadow-sm sticky top-0 z-30">
           <div className="px-6 py-4">
             <div className="flex items-center gap-8">
@@ -5869,14 +5869,14 @@ const SumberJayaApp = () => {
           </div>
         </header>
 
-        <header className="md:hidden bg-white shadow-sm sticky top-0 z-30">
-          <div className="px-4 py-4">
+        <header className="md:hidden bg-white/95 backdrop-blur shadow-sm sticky top-0 z-30">
+          <div className="px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img 
-                  src="/images/logo.png" 
-                  alt="Logo" 
-                  className="w-12 h-12 object-contain rounded-lg bg-white p-1"
+                <img
+                  src="/images/logo.png"
+                  alt="Logo"
+                  className="w-11 h-11 object-contain rounded-lg bg-white p-1"
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
@@ -5886,8 +5886,8 @@ const SumberJayaApp = () => {
                   SJ
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-800">SUMBER JAYA GRUP</h1>
-                  <p className="text-xs text-gray-600">Sistem Manajemen Keuangan</p>
+                  <h1 className="text-lg font-semibold text-gray-800 leading-tight">SUMBER JAYA GRUP</h1>
+                  <p className="text-[11px] text-gray-500">Sistem Manajemen Keuangan</p>
                 </div>
               </div>
               <div className="relative">
@@ -5933,23 +5933,23 @@ const SumberJayaApp = () => {
           </div>
         </header>
 
-        <main className="flex-1 pb-20 md:pb-0">
-          <div className="max-w-7xl mx-auto p-4 md:p-6">
+        <main className="flex-1 pb-24 md:pb-0">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 space-y-5 md:space-y-6 mobile-content">
             {renderContent()}
           </div>
         </main>
 
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
-          <div className="flex justify-around items-center py-2">
+        <nav className="md:hidden fixed inset-x-0 bottom-0 bg-white/95 backdrop-blur border-t shadow-lg z-50">
+          <div className="flex justify-around items-end px-2 py-2 gap-1 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
             {(() => {
-              const filteredItems = mainMenuItems.filter(item => 
+              const filteredItems = mainMenuItems.filter(item =>
                 currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User'
               );
-              
+
               // Dynamic icon size based on number of features
-              const iconSize = filteredItems.length <= 3 ? 32 : 
-                              filteredItems.length <= 5 ? 28 : 24;
-              
+              const iconSize = filteredItems.length <= 3 ? 26 :
+                              filteredItems.length <= 5 ? 24 : 22;
+
               return filteredItems.map(item => {
                 const ItemIcon = item.icon;
                 const isActive = activeMenu === item.id;
@@ -5957,13 +5957,19 @@ const SumberJayaApp = () => {
                   <button
                     key={item.id}
                     onClick={() => setActiveMenu(item.id)}
-                    className={`flex items-center justify-center p-3 rounded-xl transition-all ${
-                      isActive 
-                        ? 'bg-blue-600 text-white shadow-lg scale-110' 
+                    type="button"
+                    aria-label={item.label}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-lg scale-105'
                         : 'text-gray-500 hover:bg-gray-100'
                     }`}
                   >
                     <ItemIcon size={iconSize} strokeWidth={2.5} />
+                    <span className="mt-1 text-[11px] font-semibold leading-none">
+                      {item.shortLabel || item.label}
+                    </span>
                   </button>
                 );
               });
@@ -6163,7 +6169,7 @@ const SumberJayaApp = () => {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Tanggal</label>
                     <input 
@@ -6305,7 +6311,7 @@ const SumberJayaApp = () => {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Tanggal</label>
                     <input 
