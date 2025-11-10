@@ -4910,51 +4910,69 @@ const SumberJayaApp = () => {
 
         {/* Transaction Table */}
         <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-4 border-b flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Riwayat Transaksi Kas Kecil</h3>
-              <p className="text-sm text-gray-600">Transaksi tunai (cash) di kasir</p>
+          <div className="p-4 border-b">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <h3 className="text-lg font-semibold">Riwayat Transaksi Kas Kecil</h3>
+                <p className="text-sm text-gray-600">Transaksi tunai (cash) di kasir</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('⚠️ RESET NOVEMBER 2025?\n\n1. Hapus semua transaksi OKTOBER 2025\n2. Hapus semua "Sisa Saldo" NOVEMBER 2025\n\nSetelah ini, input manual transaksi 01/11, lalu klik "Recalculate".\n\nData yang dihapus TIDAK BISA dikembalikan!')) return;
+
+                    try {
+                      setIsLoadingKasKecil(true);
+
+                      // Step 1: Delete October
+                      const oct = await kasKecilService.deleteMonth('2025-10');
+                      console.log(`Deleted ${oct.deletedCount} October transactions`);
+
+                      // Step 2: Delete all "Sisa Saldo" in November (only delete, no recalculate)
+                      const nov = await kasKecilService.deleteSisaSaldo('2025-11-01');
+                      console.log(`Deleted ${nov.deletedCount} Sisa Saldo entries`);
+
+                      alert(`✅ Reset berhasil!\n\n✓ Hapus Oktober: ${oct.deletedCount} transaksi\n✓ Hapus Sisa Saldo Nov: ${nov.deletedCount} entries\n\n📝 LANGKAH SELANJUTNYA:\n1. Input transaksi manual di 01/11/2025\n2. Klik "Recalculate Saldo"`);
+                      await loadKasKecilData();
+                    } catch (error) {
+                      alert('❌ Reset gagal: ' + (error.response?.data?.message || error.message));
+                    } finally {
+                      setIsLoadingKasKecil(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition no-print font-medium"
+                >
+                  🔄 Reset Nov 2025
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('Recalculate Sisa Saldo dari 02/11/2025?\n\n✓ Tanggal 01/11 akan di-skip (data manual Anda tetap aman)\n✓ Tanggal 02/11 akan dapat "Sisa Saldo tanggal 2025-11-01" dari closing balance 01/11\n✓ Tanggal 03/11 dst dihitung otomatis\n\nPastikan data 01/11 sudah diinput!')) return;
+
+                    try {
+                      setIsLoadingKasKecil(true);
+                      const startDate = '2025-11-01';
+                      const result = await kasKecilService.recalculateSaldo(startDate, true); // skipFirstDate = true
+                      alert(`✅ Recalculate berhasil!\n\n✓ Skip 01/11 (manual input preserved)\n✓ Processed: ${result.datesProcessed - 1} dates (02/11 - today)\n✓ Deleted old entries: ${result.deletedTransactions}`);
+                      await loadKasKecilData();
+                    } catch (error) {
+                      alert('❌ Recalculate gagal: ' + (error.response?.data?.message || error.message));
+                    } finally {
+                      setIsLoadingKasKecil(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition no-print"
+                >
+                  🔄 Recalculate Saldo
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={async () => {
-                  if (!window.confirm('⚠️ HAPUS semua transaksi Oktober 2025?\n\nData yang dihapus TIDAK BISA dikembalikan!')) return;
-
-                  try {
-                    setIsLoadingKasKecil(true);
-                    const result = await kasKecilService.deleteMonth('2025-10');
-                    alert(`✅ Berhasil menghapus ${result.deletedCount} transaksi dari Oktober 2025`);
-                    await loadKasKecilData();
-                  } catch (error) {
-                    alert('❌ Delete gagal: ' + (error.response?.data?.message || error.message));
-                  } finally {
-                    setIsLoadingKasKecil(false);
-                  }
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition no-print"
-              >
-                🗑️ Hapus Okt 2025
-              </button>
-              <button
-                onClick={async () => {
-                  if (!window.confirm('Recalculate Sisa Saldo dari 02/11/2025?\n\nTanggal 01/11 akan di-skip (input manual).\nTanggal 02/11 dst akan dihitung otomatis.')) return;
-
-                  try {
-                    setIsLoadingKasKecil(true);
-                    const startDate = '2025-11-01';
-                    const result = await kasKecilService.recalculateSaldo(startDate, true); // skipFirstDate = true
-                    alert(`✅ Recalculate berhasil!\n\nDates processed: ${result.datesProcessed}\nSkipped 01/11 (manual input)\nDeleted old entries: ${result.deletedTransactions}`);
-                    await loadKasKecilData();
-                  } catch (error) {
-                    alert('❌ Recalculate gagal: ' + (error.response?.data?.message || error.message));
-                  } finally {
-                    setIsLoadingKasKecil(false);
-                  }
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition no-print"
-              >
-                🔄 Recalculate Saldo
-              </button>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+              <p className="font-semibold text-yellow-800 mb-1">📋 Cara Reset & Start Fresh dari November:</p>
+              <ol className="list-decimal list-inside text-yellow-700 space-y-1 ml-2">
+                <li><strong>Klik "Reset Nov 2025"</strong> → Hapus Oktober & Sisa Saldo November</li>
+                <li><strong>Input manual transaksi 01/11/2025</strong> → Buat saldo akhir yang benar (misal: Rp 511.000)</li>
+                <li><strong>Klik "Recalculate Saldo"</strong> → Sistem hitung otomatis dari 02/11 s/d hari ini</li>
+              </ol>
             </div>
           </div>
           <div className="overflow-x-auto">
