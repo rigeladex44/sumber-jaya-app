@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut,
   Download, Calendar, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Search, Tags, Edit, Trash2, BookOpen
@@ -219,7 +219,8 @@ const SumberJayaApp = () => {
       console.log('⏹️ Kas Kecil auto-refresh: DEACTIVATED');
       clearInterval(refreshInterval);
     };
-  }, [isLoggedIn, activeMenu]); // Re-run when menu changes
+    // eslint-disable-next-line no-use-before-define
+  }, [isLoggedIn, activeMenu, loadKasKecilData]); // Re-run when menu changes
 
   // Auto-refresh for Arus Kas menu - sync data every 30 seconds
   useEffect(() => {
@@ -243,7 +244,8 @@ const SumberJayaApp = () => {
       console.log('⏹️ Arus Kas auto-refresh: DEACTIVATED');
       clearInterval(refreshInterval);
     };
-  }, [isLoggedIn, activeMenu]); // Re-run when menu changes
+    // eslint-disable-next-line no-use-before-define
+  }, [isLoggedIn, activeMenu, loadSubKategoriData, loadArusKasData]); // Re-run when menu changes
 
   // Auto-refresh for Penjualan menu - sync data every 30 seconds
   useEffect(() => {
@@ -264,7 +266,8 @@ const SumberJayaApp = () => {
       console.log('⏹️ Penjualan auto-refresh: DEACTIVATED');
       clearInterval(refreshInterval);
     };
-  }, [isLoggedIn, activeMenu]); // Re-run when menu changes
+    // eslint-disable-next-line no-use-before-define
+  }, [isLoggedIn, activeMenu, loadPenjualanData]); // Re-run when menu changes
 
   // Auto-refresh for Master Kategori menu
   useEffect(() => {
@@ -278,7 +281,8 @@ const SumberJayaApp = () => {
     return () => {
       console.log('⏹️ Master Kategori: Menu exited');
     };
-  }, [isLoggedIn, activeMenu]); // Re-run when menu changes
+    // eslint-disable-next-line no-use-before-define
+  }, [isLoggedIn, activeMenu, loadSubKategoriData]); // Re-run when menu changes
 
 
   // Data Management State
@@ -331,7 +335,7 @@ const SumberJayaApp = () => {
   });
 
   // Load Users from API
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     if (!isLoggedIn) return;
 
     try {
@@ -340,10 +344,10 @@ const SumberJayaApp = () => {
     } catch (error) {
       console.error('Error loading users:', error);
     }
-  };
+  }, [isLoggedIn]);
 
   // Load Sub Kategori Data from API
-  const loadSubKategoriData = async () => {
+  const loadSubKategoriData = useCallback(async () => {
     if (!isLoggedIn) return;
 
     setIsLoadingSubKategori(true);
@@ -356,7 +360,7 @@ const SumberJayaApp = () => {
     } finally {
       setIsLoadingSubKategori(false);
     }
-  };
+  }, [isLoggedIn]);
 
   // Handle Add Sub Kategori
   const handleAddSubKategori = async (e) => {
@@ -418,7 +422,7 @@ const SumberJayaApp = () => {
   };
 
   // Load Kas Kecil Data from API (untuk pembukuan kasir tunai)
-  const loadKasKecilData = async (filters = {}, silent = false) => {
+  const loadKasKecilData = useCallback(async (filters = {}, silent = false) => {
     if (!isLoggedIn) return;
 
     // Only show loading indicator if not silent refresh
@@ -462,10 +466,10 @@ const SumberJayaApp = () => {
         setIsLoadingKasKecil(false);
       }
     }
-  };
+  }, [isLoggedIn]);
   
   // Load Penjualan Data from API
-  const loadPenjualanData = async (filters = {}) => {
+  const loadPenjualanData = useCallback(async (filters = {}) => {
     if (!isLoggedIn) return;
 
     try {
@@ -474,10 +478,10 @@ const SumberJayaApp = () => {
     } catch (error) {
       console.error('Error loading penjualan:', error);
     }
-  };
+  }, [isLoggedIn]);
 
   // Load Arus Kas Data from API (Manual Cash Flow - No Approval)
-  const loadArusKasData = async (filters = {}, silent = false) => {
+  const loadArusKasData = useCallback(async (filters = {}, silent = false) => {
     if (!isLoggedIn) return;
 
     // Only show loading indicator if not silent refresh
@@ -508,7 +512,7 @@ const SumberJayaApp = () => {
         setIsLoadingArusKas(false);
       }
     }
-  };
+  }, [isLoggedIn]);
 
   // Load data when logged in
   useEffect(() => {
@@ -518,8 +522,7 @@ const SumberJayaApp = () => {
       loadPenjualanData();
       loadUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
+  }, [isLoggedIn, loadKasKecilData, loadArusKasData, loadPenjualanData, loadUsers]);
 
   // Auto set selectedPT to all user's PT when currentUserData changes
   useEffect(() => {
@@ -539,7 +542,7 @@ const SumberJayaApp = () => {
         setShowLaporanPreview(true);
       }
     }
-  }, [activeMenu]);
+  }, [activeMenu, loadArusKasData, loadSubKategoriData, selectedPT.length]);
 
   // Helper: Get today's date in YYYY-MM-DD format (Asia/Jakarta timezone)
   const getTodayDate = () => {
