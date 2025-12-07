@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut,
-  Download, Plus, AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Tags, BookOpen
+  AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Tags, BookOpen
 } from 'lucide-react';
 import {
   authService,
@@ -56,7 +56,6 @@ const SumberJayaApp = () => {
   const [loginError, setLoginError] = useState('');
   const [activeMenu, setActiveMenu] = useState('beranda');
   const [selectedPT, setSelectedPT] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(''); // Filter tanggal untuk Arus Kas Komprehensif
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   // Get current month in YYYY-MM format
@@ -73,7 +72,6 @@ const SumberJayaApp = () => {
     const savedUser = sessionStorage.getItem('currentUserData');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [showLaporanPreview, setShowLaporanPreview] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -90,7 +88,6 @@ const SumberJayaApp = () => {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isLoadingKas, setIsLoadingKas] = useState(false);
   const [isLoadingPenjualan, setIsLoadingPenjualan] = useState(false);
   
   // Form Edit Profile
@@ -109,6 +106,127 @@ const SumberJayaApp = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
+  // Load Users from API
+  const loadUsers = useCallback(async () => {
+    if (!isLoggedIn) return;
+
+    try {
+      const data = await userService.getAll();
+      setUserList(data);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  }, [isLoggedIn]);
+
+  // Load Sub Kategori Data from API
+  const loadSubKategoriData = useCallback(async () => {
+    if (!isLoggedIn) return;
+
+    setIsLoadingSubKategori(true);
+    try {
+      const data = await subKategoriService.getAll();
+      setSubKategoriData(data);
+    } catch (error) {
+      console.error('Error loading sub kategori:', error);
+      alert('Gagal memuat data sub kategori!');
+    } finally {
+      setIsLoadingSubKategori(false);
+    }
+  }, [isLoggedIn]);
+
+  // Load Kas Kecil Data from API (untuk pembukuan kasir tunai)
+  const loadKasKecilData = useCallback(async (filters = {}, silent = false) => {
+    if (!isLoggedIn) return;
+
+    // Only show loading indicator if not silent refresh
+    if (!silent) {
+      setIsLoadingKasKecil(true);
+    }
+
+    try {
+      // Auto-transfer saldo kemarin jika belum
+      try {
+        const transferResult = await kasKecilService.transferSaldo();
+        if (transferResult.transferred) {
+          console.log(`✅ Saldo ditransfer: ${transferResult.count} PT`);
+        }
+      } catch (error) {
+        console.log('Transfer saldo skip:', error.response?.data?.message || error.message);
+      }
+
+      // Load data kas kecil
+      const data = await kasKecilService.getAll(filters);
+
+      console.log('DEBUG Load Kas Kecil Data:', {
+        dataCount: data.length,
+        sampleData: data.slice(0, 2).map(item => ({
+          id: item.id,
+          tanggal: item.tanggal,
+          tanggalLocal: getLocalDateFromISO(item.tanggal),
+          pt: item.pt,
+          keterangan: item.keterangan
+        })),
+        localDate: getLocalDateString(),
+        silentRefresh: silent
+      });
+
+      setKasKecilData(data);
+    } catch (error) {
+      console.error('Error loading kas kecil:', error);
+      // Don't alert on load error, just log it
+    } finally {
+      if (!silent) {
+        setIsLoadingKasKecil(false);
+      }
+    }
+  }, [isLoggedIn]);
+  
+  // Load Penjualan Data from API
+  const loadPenjualanData = useCallback(async (filters = {}) => {
+    if (!isLoggedIn) return;
+
+    try {
+      const data = await penjualanService.getAll(filters);
+      setPenjualanData(data);
+    } catch (error) {
+      console.error('Error loading penjualan:', error);
+    }
+  }, [isLoggedIn]);
+
+  // Load Arus Kas Data from API (Manual Cash Flow - No Approval)
+  const loadArusKasData = useCallback(async (filters = {}, silent = false) => {
+    if (!isLoggedIn) return;
+
+    // Only show loading indicator if not silent refresh
+    if (!silent) {
+      setIsLoadingArusKas(true);
+    }
+
+    try {
+      const data = await arusKasService.getAll(filters);
+
+      console.log('DEBUG Load Arus Kas Data:', {
+        dataCount: data.length,
+        sampleData: data.slice(0, 2).map(item => ({
+          id: item.id,
+          tanggal: item.tanggal,
+          pt: item.pt,
+          kategori: item.kategori,
+          metode_bayar: item.metode_bayar
+        })),
+        silentRefresh: silent
+      });
+
+      setArusKasData(data);
+    } catch (error) {
+      console.error('Error loading arus kas:', error);
+    } finally {
+      if (!silent) {
+        setIsLoadingArusKas(false);
+      }
+    }
+  }, [isLoggedIn]);
+
   // Inactivity Timer: Auto-logout setelah 3 jam tidak aktif
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -343,34 +461,6 @@ const SumberJayaApp = () => {
     urutan: 0
   });
 
-  // Load Users from API
-  const loadUsers = useCallback(async () => {
-    if (!isLoggedIn) return;
-
-    try {
-      const data = await userService.getAll();
-      setUserList(data);
-    } catch (error) {
-      console.error('Error loading users:', error);
-    }
-  }, [isLoggedIn]);
-
-  // Load Sub Kategori Data from API
-  const loadSubKategoriData = useCallback(async () => {
-    if (!isLoggedIn) return;
-
-    setIsLoadingSubKategori(true);
-    try {
-      const data = await subKategoriService.getAll();
-      setSubKategoriData(data);
-    } catch (error) {
-      console.error('Error loading sub kategori:', error);
-      alert('Gagal memuat data sub kategori!');
-    } finally {
-      setIsLoadingSubKategori(false);
-    }
-  }, [isLoggedIn]);
-
   // Handle Add Sub Kategori
   const handleAddSubKategori = async (e) => {
     e.preventDefault();
@@ -430,99 +520,6 @@ const SumberJayaApp = () => {
     }
   };
 
-  // Load Kas Kecil Data from API (untuk pembukuan kasir tunai)
-  const loadKasKecilData = useCallback(async (filters = {}, silent = false) => {
-    if (!isLoggedIn) return;
-
-    // Only show loading indicator if not silent refresh
-    if (!silent) {
-      setIsLoadingKasKecil(true);
-    }
-
-    try {
-      // Auto-transfer saldo kemarin jika belum
-      try {
-        const transferResult = await kasKecilService.transferSaldo();
-        if (transferResult.transferred) {
-          console.log(`✅ Saldo ditransfer: ${transferResult.count} PT`);
-        }
-      } catch (error) {
-        console.log('Transfer saldo skip:', error.response?.data?.message || error.message);
-      }
-
-      // Load data kas kecil
-      const data = await kasKecilService.getAll(filters);
-
-      console.log('DEBUG Load Kas Kecil Data:', {
-        dataCount: data.length,
-        sampleData: data.slice(0, 2).map(item => ({
-          id: item.id,
-          tanggal: item.tanggal,
-          tanggalLocal: getLocalDateFromISO(item.tanggal),
-          pt: item.pt,
-          keterangan: item.keterangan
-        })),
-        localDate: getLocalDateString(),
-        silentRefresh: silent
-      });
-
-      setKasKecilData(data);
-    } catch (error) {
-      console.error('Error loading kas kecil:', error);
-      // Don't alert on load error, just log it
-    } finally {
-      if (!silent) {
-        setIsLoadingKasKecil(false);
-      }
-    }
-  }, [isLoggedIn]);
-  
-  // Load Penjualan Data from API
-  const loadPenjualanData = useCallback(async (filters = {}) => {
-    if (!isLoggedIn) return;
-
-    try {
-      const data = await penjualanService.getAll(filters);
-      setPenjualanData(data);
-    } catch (error) {
-      console.error('Error loading penjualan:', error);
-    }
-  }, [isLoggedIn]);
-
-  // Load Arus Kas Data from API (Manual Cash Flow - No Approval)
-  const loadArusKasData = useCallback(async (filters = {}, silent = false) => {
-    if (!isLoggedIn) return;
-
-    // Only show loading indicator if not silent refresh
-    if (!silent) {
-      setIsLoadingArusKas(true);
-    }
-
-    try {
-      const data = await arusKasService.getAll(filters);
-
-      console.log('DEBUG Load Arus Kas Data:', {
-        dataCount: data.length,
-        sampleData: data.slice(0, 2).map(item => ({
-          id: item.id,
-          tanggal: item.tanggal,
-          pt: item.pt,
-          kategori: item.kategori,
-          metode_bayar: item.metode_bayar
-        })),
-        silentRefresh: silent
-      });
-
-      setArusKasData(data);
-    } catch (error) {
-      console.error('Error loading arus kas:', error);
-    } finally {
-      if (!silent) {
-        setIsLoadingArusKas(false);
-      }
-    }
-  }, [isLoggedIn]);
-
   // Load data when logged in
   useEffect(() => {
     if (isLoggedIn) {
@@ -546,12 +543,8 @@ const SumberJayaApp = () => {
       // Reload data Arus Kas dan Sub Kategori untuk memastikan data terbaru
       loadArusKasData();
       loadSubKategoriData();
-
-      if (selectedPT.length > 0) {
-        setShowLaporanPreview(true);
-      }
     }
-  }, [activeMenu, loadArusKasData, loadSubKategoriData, selectedPT.length]);
+  }, [activeMenu, loadArusKasData, loadSubKategoriData]);
 
   // Helper: Get today's date in YYYY-MM-DD format (Asia/Jakarta timezone)
   const getTodayDate = () => {
@@ -559,16 +552,7 @@ const SumberJayaApp = () => {
   };
   
   // Form State
-  const [formKas, setFormKas] = useState({
-    tanggal: getLocalDateString(),
-    pt: '',
-    jenis: 'keluar',
-    jumlah: '',
-    keterangan: ''
-  });
 
-  const [showEditKasModal, setShowEditKasModal] = useState(false);
-  const [editingKas, setEditingKas] = useState(null);
 
   // Search State
   const [searchDate, setSearchDate] = useState('');
@@ -634,75 +618,7 @@ const SumberJayaApp = () => {
     }
   };
 
-  const hitungSaldoKas = (pts = []) => {
-    const filtered = pts.length > 0 ? kasKecilData.filter(k => pts.includes(k.pt)) : kasKecilData;
-    const masuk = filtered.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + k.jumlah, 0);
-    const keluar = filtered.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + k.jumlah, 0);
-    return { masuk, keluar, saldo: masuk - keluar };
-  };
 
-  const getFilteredKasData = (pts = []) => {
-    let filtered = kasKecilData;
-
-    // Filter by PT if selected
-    if (pts.length > 0) {
-      filtered = filtered.filter(k => pts.includes(k.pt));
-    }
-
-    // Filter by date if selected
-    if (filterDetailKas.tanggal) {
-      const selectedDate = new Date(filterDetailKas.tanggal + 'T00:00:00');
-      filtered = filtered.filter(item => {
-        if (!item.tanggal) return false;
-        const itemDate = new Date(item.tanggal);
-        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-        return itemDateOnly.getTime() === selectedDate.getTime();
-      });
-    }
-
-    return filtered;
-  };
-
-  const handleSaveKas = async () => {
-    if (!formKas.pt || !formKas.jumlah || !formKas.keterangan) {
-      alert('Mohon lengkapi semua field!');
-      return;
-    }
-    
-    setIsLoadingKas(true);
-    
-    try {
-      const kasData = {
-        tanggal: formKas.tanggal,
-        pt: formKas.pt,
-        jenis: formKas.jenis,
-      jumlah: parseFloat(formKas.jumlah),
-        keterangan: formKas.keterangan
-      };
-      
-      await kasKecilService.create(kasData);
-
-      // Refresh data
-      await loadKasKecilData();
-
-      // Reset form
-      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
-      
-      const needsApproval = formKas.jenis === 'keluar' && parseFloat(formKas.jumlah) >= 300000;
-      if (needsApproval) {
-        alert('Data kas berhasil disimpan! Status: Menunggu approval karena pengeluaran >= Rp 300.000');
-      } else if (formKas.jenis === 'masuk') {
-        alert('Data kas berhasil disimpan! Pemasukan langsung disetujui.');
-      } else {
-        alert('Data kas berhasil disimpan! Pengeluaran langsung disetujui.');
-      }
-    } catch (error) {
-      console.error('Error saving kas:', error);
-      alert('Gagal menyimpan data kas: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setIsLoadingKas(false);
-    }
-  };
 
   const handleSaveUser = async () => {
     if (!formUser.nama || !formUser.username || !formUser.password || !formUser.jabatan || !formUser.aksesPT || formUser.aksesPT.length === 0) {
@@ -829,18 +745,9 @@ const SumberJayaApp = () => {
   // Handler Approve/Reject Kas - Hanya untuk user dengan akses 'detail-kas'
   const handleApproveKas = async (kasId) => {
     if (window.confirm('Approve transaksi ini?')) {
-      // Get transaction data before approving (for syncing Sisa Saldo)
-      const transaction = kasKecilData.find(item => item.id === kasId);
-
       try {
         await kasKecilService.updateStatus(kasId, 'approved');
         await loadKasKecilData(); // Refresh data
-
-        // Auto-sync Sisa Saldo removed - backend transferSaldo handles this automatically
-        // if (transaction) {
-        //   await syncSisaSaldoForDate(getLocalDateFromISO(transaction.tanggal), transaction.pt);
-        //   await loadKasKecilData(); // Reload to get updated Sisa Saldo
-        // }
 
         alert('Transaksi berhasil di-approve!');
       } catch (error) {
@@ -853,18 +760,9 @@ const SumberJayaApp = () => {
   const handleRejectKas = async (kasId) => {
     const reason = prompt('Alasan reject:');
     if (reason) {
-      // Get transaction data before rejecting (for syncing Sisa Saldo)
-      const transaction = kasKecilData.find(item => item.id === kasId);
-
       try {
         await kasKecilService.updateStatus(kasId, 'rejected');
         await loadKasKecilData(); // Refresh data
-
-        // Auto-sync Sisa Saldo removed - backend transferSaldo handles this automatically
-        // if (transaction) {
-        //   await syncSisaSaldoForDate(getLocalDateFromISO(transaction.tanggal), transaction.pt);
-        //   await loadKasKecilData(); // Reload to get updated Sisa Saldo
-        // }
 
         alert('Transaksi berhasil di-reject!');
       } catch (error) {
@@ -874,94 +772,7 @@ const SumberJayaApp = () => {
     }
   };
 
-  const handleOpenEditKas = (kas) => {
-    setEditingKas(kas);
-    setFormKas({
-      tanggal: getLocalDateFromISO(kas.tanggal),
-      pt: kas.pt,
-      jenis: kas.jenis,
-      jumlah: kas.jumlah,
-      keterangan: kas.keterangan
-    });
-    setShowEditKasModal(true);
-  };
 
-  const handleUpdateKas = async () => {
-    if (!formKas.pt || !formKas.jumlah || !formKas.keterangan) {
-      alert('Mohon lengkapi semua field!');
-      return;
-    }
-    
-    setIsLoadingKas(true);
-    
-    try {
-      const kasData = {
-        tanggal: formKas.tanggal,
-        pt: formKas.pt,
-        jenis: formKas.jenis,
-        jumlah: parseFloat(formKas.jumlah),
-        keterangan: formKas.keterangan
-      };
-      
-      await kasKecilService.update(editingKas.id, kasData);
-
-      // Refresh data
-      await loadKasKecilData();
-
-      // Close modal & reset
-      setShowEditKasModal(false);
-      setEditingKas(null);
-      setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
-      
-      alert('Data kas berhasil diupdate!');
-    } catch (error) {
-      console.error('Error updating kas:', error);
-      alert('Gagal update data kas: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setIsLoadingKas(false);
-    }
-  };
-
-  const handleDeleteKas = async (kasId, kasKeterangan) => {
-    if (window.confirm(`Hapus transaksi: "${kasKeterangan}"?\n\nData yang sudah dihapus tidak dapat dikembalikan!`)) {
-      try {
-        await kasKecilService.delete(kasId);
-        await loadKasKecilData(); // Refresh data
-        alert('Transaksi berhasil dihapus!');
-      } catch (error) {
-        console.error('Error deleting kas:', error);
-        alert('Gagal menghapus transaksi: ' + (error.response?.data?.message || error.message));
-      }
-    }
-  };
-
-  // Search Kas Kecil by Date
-  const handleSearchKas = async () => {
-    if (!searchDate) {
-      alert('Mohon pilih tanggal untuk pencarian!');
-      return;
-    }
-
-    try {
-      const filters = {
-        tanggal_dari: searchDate,
-        tanggal_sampai: searchDate
-      };
-      
-      const results = await kasKecilService.getAll(filters);
-      setSearchResults(results);
-      setShowSearchResults(true);
-      
-      if (results.length === 0) {
-        alert(`Tidak ada transaksi pada tanggal ${searchDate}`);
-      } else {
-        alert(`Ditemukan ${results.length} transaksi pada tanggal ${searchDate}`);
-      }
-    } catch (error) {
-      console.error('Error searching kas:', error);
-      alert('Gagal mencari transaksi: ' + (error.response?.data?.message || error.message));
-    }
-  };
 
   const handleCloseSearchResults = () => {
     setShowSearchResults(false);
@@ -1072,35 +883,7 @@ const SumberJayaApp = () => {
       return;
     }
 
-    // Calculate running balance - START FROM YESTERDAY'S "Sisa Saldo" TRANSACTION
-    // Find "Sisa Saldo" transaction from yesterday ONLY, not cumulative
-    const yesterday = new Date(selectedDateObj);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayDateOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-
-    // Find "Sisa Saldo" transaction from yesterday
-    const sisaSaldoTransactions = kasKecilData.filter(item => {
-      if (!item.tanggal) return false;
-
-      // Check if transaction is from yesterday
-      const itemDate = new Date(item.tanggal);
-      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-      if (itemDateOnly.getTime() !== yesterdayDateOnly.getTime()) return false;
-
-      // Check if it's a "Sisa Saldo" transaction (masuk, approved, keterangan contains "Sisa Saldo")
-      if (item.jenis !== 'masuk') return false;
-      if (item.status !== 'approved') return false;
-      if (!item.keterangan || !item.keterangan.toLowerCase().includes('sisa saldo')) return false;
-
-      // Filter by PT if selected
-      if (filterKasKecil.pt.length > 0 && !filterKasKecil.pt.includes(item.pt)) return false;
-
-      return true;
-    });
-
-    // Get yesterday's "Sisa Saldo" amount
-    const yesterdaySisaSaldo = sisaSaldoTransactions.reduce((sum, item) => sum + (item.jumlah || 0), 0);
-
+    // Calculate running balance
     // Start from 0 because "Sisa Saldo" transaction is already in displayData as first transaction
     let runningBalance = 0;
 
@@ -1455,103 +1238,7 @@ const SumberJayaApp = () => {
 
   // Handler Save Arus Kas Manual Entry
 
-  // Auto-sync "Sisa Saldo" transaction for a specific date and PT
-  const syncSisaSaldoForDate = async (tanggal, ptCode) => {
-    try {
-      console.log(`🔄 Syncing Sisa Saldo for ${tanggal}, PT: ${ptCode}`);
 
-      // Get all transactions for this date and PT
-      const transactionsForDate = kasKecilData.filter(item => {
-        if (!item.tanggal) return false;
-        const itemDate = new Date(item.tanggal);
-        const targetDate = new Date(tanggal);
-        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-        const targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-
-        return itemDateOnly.getTime() === targetDateOnly.getTime() &&
-               item.pt === ptCode &&
-               item.status === 'approved' &&
-               !item.keterangan.toLowerCase().includes('sisa saldo'); // Exclude existing Sisa Saldo
-      });
-
-      // Calculate saldo akhir for this date
-      const masuk = transactionsForDate.filter(k => k.jenis === 'masuk').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      const keluar = transactionsForDate.filter(k => k.jenis === 'keluar').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-
-      // Get saldo awal (from yesterday's Sisa Saldo)
-      const targetDateObj = new Date(tanggal + 'T00:00:00');
-      const yesterday = new Date(targetDateObj);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayDateOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-
-      const yesterdaySisaSaldo = kasKecilData.filter(item => {
-        if (!item.tanggal) return false;
-        const itemDate = new Date(item.tanggal);
-        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-        return itemDateOnly.getTime() === yesterdayDateOnly.getTime() &&
-               item.pt === ptCode &&
-               item.jenis === 'masuk' &&
-               item.status === 'approved' &&
-               item.keterangan.toLowerCase().includes('sisa saldo');
-      }).reduce((sum, item) => sum + (item.jumlah || 0), 0);
-
-      const saldoAkhir = yesterdaySisaSaldo + masuk - keluar;
-
-      console.log(`💰 Calculated Saldo Akhir for ${tanggal}, PT ${ptCode}:`, {
-        saldoAwal: yesterdaySisaSaldo,
-        masuk,
-        keluar,
-        saldoAkhir
-      });
-
-      // Find existing "Sisa Saldo" transaction for this date
-      const existingSisaSaldo = kasKecilData.find(item => {
-        if (!item.tanggal) return false;
-        const itemDate = new Date(item.tanggal);
-        const targetDate = new Date(tanggal);
-        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-        const targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-
-        return itemDateOnly.getTime() === targetDateOnly.getTime() &&
-               item.pt === ptCode &&
-               item.jenis === 'masuk' &&
-               item.keterangan.toLowerCase().includes('sisa saldo');
-      });
-
-      const keterangan = `Sisa Saldo tanggal ${tanggal}`;
-
-      if (existingSisaSaldo) {
-        // Update existing Sisa Saldo transaction
-        if (existingSisaSaldo.jumlah !== saldoAkhir) {
-          console.log(`📝 Updating Sisa Saldo from ${existingSisaSaldo.jumlah} to ${saldoAkhir}`);
-          await kasKecilService.update(existingSisaSaldo.id, {
-            tanggal,
-            pt: ptCode,
-            jenis: 'masuk',
-            jumlah: saldoAkhir,
-            keterangan,
-            kategori: 'SALDO'
-          });
-        }
-      } else {
-        // Create new Sisa Saldo transaction
-        console.log(`✨ Creating new Sisa Saldo: ${saldoAkhir}`);
-        await kasKecilService.create({
-          tanggal,
-          pt: ptCode,
-          jenis: 'masuk',
-          jumlah: saldoAkhir,
-          keterangan,
-          kategori: 'SALDO'
-        });
-      }
-
-      console.log(`✅ Sisa Saldo synced successfully for ${tanggal}, PT ${ptCode}`);
-    } catch (error) {
-      console.error(`❌ Error syncing Sisa Saldo for ${tanggal}, PT ${ptCode}:`, error);
-      // Don't throw error to prevent blocking the main operation
-    }
-  };
 
   // Handler Save Kas Kecil (untuk pembukuan kasir tunai)
   const handleSaveKasKecil = async () => {
@@ -1611,19 +1298,11 @@ const SumberJayaApp = () => {
     if (!window.confirm(`Yakin ingin menghapus transaksi "${keterangan}"?`)) return;
 
     // Get the transaction data before deleting (for syncing Sisa Saldo)
-    const deletedTransaction = kasKecilData.find(item => item.id === kasKecilId);
-
     setIsLoadingKasKecil(true);
 
     try {
       await kasKecilService.delete(kasKecilId);
       await loadKasKecilData();
-
-      // Auto-sync Sisa Saldo removed - backend transferSaldo handles this automatically
-      // if (deletedTransaction) {
-      //   await syncSisaSaldoForDate(getLocalDateFromISO(deletedTransaction.tanggal), deletedTransaction.pt);
-      //   await loadKasKecilData(); // Reload to get updated Sisa Saldo
-      // }
 
       alert('Data kas kecil berhasil dihapus!');
     } catch (error) {
@@ -2402,19 +2081,6 @@ const SumberJayaApp = () => {
 
   const handleExportPDF = (type = 'kas') => {
     const content = document.getElementById('content-to-export');
-    const tanggal = new Date().toLocaleDateString('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    const hari = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-    const tanggalOnly = new Date().toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
 
     const monthYear = selectedMonth.split('-');
     const bulanNama = new Date(selectedMonth + '-01').toLocaleDateString('id-ID', { month: 'long' });
@@ -2425,7 +2091,6 @@ const SumberJayaApp = () => {
 
     let headerTitle = '';
     let headerSubtitle = '';
-    let ptInfo = '';
 
     if (type === 'kas') {
       headerTitle = 'LAPORAN KAS KECIL';
@@ -2439,7 +2104,6 @@ const SumberJayaApp = () => {
         : ptList.map(p => p.name).join(' - ');
 
       headerSubtitle = selectedPTNames; // PT names for display below title
-      ptInfo = selectedPT.length > 0 ? selectedPT.join(' - ') : 'Semua PT'; // PT codes
     } else if (type === 'labarugi') {
       headerTitle = 'LAPORAN LABA RUGI';
 
@@ -2450,10 +2114,8 @@ const SumberJayaApp = () => {
           const pt = ptList.find(p => p.code === code);
           return pt ? pt.name : code;
         }).join(' - ');
-        ptInfo = selectedPT.join(', ');
       } else {
         ptNamesForLabaRugi = 'Semua PT';
-        ptInfo = 'Semua PT';
       }
 
       headerSubtitle = `${ptNamesForLabaRugi}`;
@@ -3164,23 +2826,6 @@ const SumberJayaApp = () => {
 
   // Render Kas Kecil Page (untuk pembukuan kasir tunai - Cash Only)
   const renderKasKecil = () => {
-    const handlePTChange = (ptCode) => {
-      setSelectedPT(prev => {
-        if (prev.includes(ptCode)) {
-          return prev.filter(p => p !== ptCode);
-        } else {
-          return [...prev, ptCode];
-        }
-      });
-    };
-
-    // Calculate totals from kas kecil data
-    const hitungKasKecil = (pts = []) => {
-      const filtered = pts.length > 0 ? kasKecilData.filter(k => pts.includes(k.pt)) : kasKecilData;
-      const masuk = filtered.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      const keluar = filtered.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-      return { masuk, keluar, saldo: masuk - keluar };
-    };
 
     // Calculate yesterday's closing balance (Saldo Awal)
     // Find the "Sisa Saldo" transaction from yesterday ONLY, not cumulative
@@ -4562,137 +4207,7 @@ const SumberJayaApp = () => {
           </div>
         )}
 
-        {/* Modal Edit Kas */}
-        {showEditKasModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-gray-800">Edit Transaksi Kas</h3>
-                <button 
-                  onClick={() => {
-                    setShowEditKasModal(false);
-                    setEditingKas(null);
-                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
-                  }}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <span className="text-2xl">&times;</span>
-                </button>
-              </div>
 
-              <div className="p-6 space-y-4">
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                  <p className="text-sm text-blue-800">
-                    <strong>Info:</strong> Hanya transaksi hari ini yang bisa diedit.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Tanggal</label>
-                    <input 
-                      type="date" 
-                      value={formKas.tanggal}
-                      onChange={(e) => setFormKas({...formKas, tanggal: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">PT *</label>
-                    <select 
-                      value={formKas.pt}
-                      onChange={(e) => setFormKas({...formKas, pt: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option value="">Pilih PT</option>
-                      {currentUserData?.accessPT?.map(code => (
-                        <option key={code} value={code}>{code}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Jenis Transaksi *</label>
-                    <select 
-                      value={formKas.jenis}
-                      onChange={(e) => setFormKas({...formKas, jenis: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option value="keluar">Pengeluaran</option>
-                      <option value="masuk">Pemasukan</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
-                    <input 
-                      type="number" 
-                      value={formKas.jumlah}
-                      onChange={(e) => setFormKas({...formKas, jumlah: e.target.value})}
-                      placeholder="0" 
-                      className="w-full px-4 py-2 border rounded-lg" 
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-2">Keterangan *</label>
-                    <textarea 
-                      rows={3}
-                      value={formKas.keterangan}
-                      onChange={(e) => setFormKas({...formKas, keterangan: e.target.value})}
-                      placeholder="Masukkan keterangan transaksi" 
-                      className="w-full px-4 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Metode Pembayaran</label>
-                    <select 
-                      value={formKas.metodeBayar}
-                      onChange={(e) => setFormKas({...formKas, metodeBayar: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option value="cash">Cash (Tunai)</option>
-                      <option value="cashless">Cashless (Non-Tunai)</option>
-                    </select>
-                  </div>
-                  {formKas.metodeBayar === 'cashless' && (
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Kategori Pengeluaran</label>
-                      <select 
-                        value={formKas.kategori}
-                        onChange={(e) => setFormKas({...formKas, kategori: e.target.value})}
-                        className="w-full px-4 py-2 border rounded-lg"
-                        required={formKas.metodeBayar === 'cashless'}
-                      >
-                        <option value="">Pilih Kategori</option>
-                        {kategoriPengeluaran.map(kategori => (
-                          <option key={kategori} value={kategori}>{kategori}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-3 p-6 border-t bg-gray-50">
-                <button
-                  onClick={handleUpdateKas}
-                  disabled={isLoadingKas}
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:bg-gray-400"
-                >
-                  {isLoadingKas ? 'Menyimpan...' : 'Update Transaksi'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowEditKasModal(false);
-                    setEditingKas(null);
-                    setFormKas({ tanggal: getTodayDate(), pt: '', jenis: 'keluar', jumlah: '', keterangan: '' });
-                  }}
-                  className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modal Kas Kecil */}
         {showEditKasKecilModal && (
