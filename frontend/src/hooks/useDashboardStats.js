@@ -42,8 +42,9 @@ export const useDashboardStats = (isLoggedIn, activeMenu) => {
 
     fetchDashboardStats();
 
-    // Refresh stats every 30 seconds
-    const interval = setInterval(fetchDashboardStats, 30000);
+    // Refresh stats every 30 seconds using constant
+    const AUTO_REFRESH_INTERVAL = 30000;
+    const interval = setInterval(fetchDashboardStats, AUTO_REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
   }, [isLoggedIn, activeMenu]);

@@ -2,8 +2,9 @@
  * Detail Kas Page Component
  * Displays transaction details with approval/rejection functionality
  */
-import React, { useState } from 'react';
+import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { filterKasData, calculateKasTotals } from '../../utils/dataFilters';
 
 const DetailKas = ({
   kasKecilData,
@@ -22,33 +23,9 @@ const DetailKas = ({
     onPTChange(newSelectedPT);
   };
 
-  const getFilteredKasData = (pts = []) => {
-    let filtered = kasKecilData;
-
-    // Filter by PT if selected
-    if (pts.length > 0) {
-      filtered = filtered.filter(k => pts.includes(k.pt));
-    }
-
-    // Filter by date if selected
-    if (filterDetailKas.tanggal) {
-      const selectedDate = new Date(filterDetailKas.tanggal + 'T00:00:00');
-      filtered = filtered.filter(item => {
-        if (!item.tanggal) return false;
-        const itemDate = new Date(item.tanggal);
-        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-        return itemDateOnly.getTime() === selectedDate.getTime();
-      });
-    }
-
-    return filtered;
-  };
-
-  // Calculate totals from FILTERED data (per day, not all time)
-  const filteredData = getFilteredKasData(selectedPT);
-  const masuk = filteredData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + k.jumlah, 0);
-  const keluar = filteredData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + k.jumlah, 0);
-  const saldo = masuk - keluar;
+  // Filter and calculate totals using shared utilities
+  const filteredData = filterKasData(kasKecilData, selectedPT, filterDetailKas.tanggal);
+  const { masuk, keluar, saldo } = calculateKasTotals(filteredData);
   const hasApprovalAccess = currentUserData?.fiturAkses?.includes('detail-kas') || currentUserData?.role === 'Master User';
 
   return (
