@@ -2701,6 +2701,9 @@ const SumberJayaApp = () => {
               <p className="text-[10px] text-gray-600 text-center">
                 © 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click
               </p>
+              <p className="text-[10px] text-gray-500 text-center mt-1">
+                Version {APP_VERSION}
+              </p>
             </div>
           </div>
         </div>
