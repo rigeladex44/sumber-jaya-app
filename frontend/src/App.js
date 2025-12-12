@@ -24,6 +24,9 @@ import LaporanPage from './pages/Laporan';
 import PenjualanPage from './pages/Penjualan';
 import SearchResultsModal from './components/modals/SearchResultsModal';
 
+// Import constants
+import { APP_VERSION } from './utils/constants';
+
 // Helper: Get today's date in YYYY-MM-DD format (timezone-aware untuk WIB)
 const getLocalDateString = () => {
   const today = new Date();
@@ -3853,7 +3856,7 @@ const SumberJayaApp = () => {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">SUMBER JAYA GRUP</h1>
-                  <p className="text-xs text-gray-600">Sistem Sumber Jaya Grup Official</p>
+                  <p className="text-xs text-gray-600">Sistem Sumber Jaya Grup Official • v{APP_VERSION}</p>
                 </div>
               </div>
 
@@ -4037,6 +4040,9 @@ const SumberJayaApp = () => {
                 );
               });
             })()}
+          </div>
+          <div className="text-center py-1 bg-gray-50 pb-[calc(env(safe-area-inset-bottom)+0.25rem)]">
+            <p className="text-[9px] text-gray-400">v{APP_VERSION}</p>
           </div>
         </nav>
 
