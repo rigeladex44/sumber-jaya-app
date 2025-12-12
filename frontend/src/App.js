@@ -2626,13 +2626,13 @@ const SumberJayaApp = () => {
               <img 
                 src="/images/logo.png" 
                 alt="Logo" 
-                className="h-40 w-40 object-contain"
+                className="h-200 w-200 object-contain"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
                 }}
               />
-              <div className="bg-white bg-opacity-20 w-40 h-40 rounded-full items-center justify-center hidden">
+              <div className="bg-white bg-opacity-20 w-150 h-150 rounded-full items-center justify-center hidden">
                 <Lock size={80} />
               </div>
             </div>
