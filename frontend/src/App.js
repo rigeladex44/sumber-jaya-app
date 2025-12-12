@@ -3846,7 +3846,7 @@ const SumberJayaApp = () => {
                 <img 
                   src="/images/logo.png" 
                   alt="Logo" 
-                  className="w-16 h-16 object-contain"
+                  className="w-16 h-16 object-contain rounded-lg bg-white p-1"
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
@@ -3939,7 +3939,7 @@ const SumberJayaApp = () => {
                 <img
                   src="/images/logo.png"
                   alt="Logo"
-                  className="w-14 h-14 object-contain"
+                  className="w-14 h-14 object-contain rounded-lg bg-white p-1"
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
