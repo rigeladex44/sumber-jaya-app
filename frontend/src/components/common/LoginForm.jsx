@@ -22,7 +22,7 @@ const LoginForm = ({
       <div 
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: "url('/images/background.jpg')",
+          backgroundImage: "url('/images/background.png')",
           filter: 'brightness(0.3)'
         }}
       />
