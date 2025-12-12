@@ -61,7 +61,7 @@ const LoginForm = ({
                 type="text"
                 value={username}
                 onChange={(e) => onUsernameChange(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-80 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                 placeholder="Masukkan username"
                 onKeyPress={(e) => e.key === 'Enter' && onLogin()}
               />
@@ -74,7 +74,7 @@ const LoginForm = ({
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => onPasswordChange(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-80 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                   placeholder="Masukkan password"
                   onKeyPress={(e) => e.key === 'Enter' && onLogin()}
                 />
