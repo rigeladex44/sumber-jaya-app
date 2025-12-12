@@ -43,7 +43,7 @@ const LoginForm = ({
         </div>
       </div>
       
-      <div className="relative bg-white bg-opacity-50 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
+      <div className="relative bg-white bg-opacity-50 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
         <div className="p-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2>
           
@@ -101,7 +101,7 @@ const LoginForm = ({
             </button>
           </div>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          <div className="mt-6 p-4 bg-gray-50 bg-opacity-50 rounded-lg">
             <p className="text-[10px] text-gray-600 text-center">
               © 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click
             </p>
