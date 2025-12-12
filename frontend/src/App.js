@@ -2621,7 +2621,6 @@ const SumberJayaApp = () => {
         />
         
         <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden z-10">
-          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black p-8 text-white text-center">
             <div className="flex items-center justify-center mb-4">
               <img 
                 src="/images/logo.png" 
@@ -2632,7 +2631,7 @@ const SumberJayaApp = () => {
                   e.target.nextSibling.style.display = 'flex';
                 }}
               />
-              <div className="bg-white bg-opacity-20 w-150 h-150 rounded-full items-center justify-center hidden">
+              <div className="bg-white bg-opacity-20 w-40 h-40 rounded-full items-center justify-center hidden">
                 <Lock size={80} />
               </div>
             </div>
