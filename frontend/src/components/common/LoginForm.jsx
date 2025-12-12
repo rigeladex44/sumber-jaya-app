@@ -40,7 +40,7 @@ const LoginForm = ({
           }}
         />
         <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '800px', height: '800px' }}>
-          <Lock size={80} />
+          <Lock size={320} />
         </div>
       </div>
       
