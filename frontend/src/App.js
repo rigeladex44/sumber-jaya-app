@@ -2611,7 +2611,7 @@ const SumberJayaApp = () => {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 relative bg-gray-900">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 relative bg-gray-900">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -2620,24 +2620,24 @@ const SumberJayaApp = () => {
           }}
         />
         
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden z-10">
-          <div className="p-8 text-center">
-            <div className="flex items-center justify-center mb-4">
-              <img 
-                src="/images/logo.png" 
-                alt="Logo" 
-                className="h-40 w-40 object-contain"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-              <div className="bg-white bg-opacity-20 w-40 h-40 rounded-full items-center justify-center hidden">
-                <Lock size={80} />
-              </div>
-            </div>
+        {/* Logo outside the form container */}
+        <div className="relative z-10 mb-6">
+          <img 
+            src="/images/logo.png" 
+            alt="Logo" 
+            className="object-contain"
+            style={{ width: '200px', height: '200px' }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+          <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '200px', height: '200px' }}>
+            <Lock size={80} />
           </div>
-          
+        </div>
+        
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
           <div className="p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2>
             
