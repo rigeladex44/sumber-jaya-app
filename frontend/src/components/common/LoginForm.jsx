@@ -28,7 +28,7 @@ const LoginForm = ({
       />
       
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden z-10">
-        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black p-8 text-white text-center">
+        <div className="p-8 text-center">
           <div className="flex items-center justify-center mb-4">
             <img 
               src="/images/logo.png" 

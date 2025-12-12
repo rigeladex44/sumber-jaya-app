@@ -2621,11 +2621,12 @@ const SumberJayaApp = () => {
         />
         
         <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden z-10">
+          <div className="p-8 text-center">
             <div className="flex items-center justify-center mb-4">
               <img 
                 src="/images/logo.png" 
                 alt="Logo" 
-                className="h-200 w-200 object-contain"
+                className="h-40 w-40 object-contain"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
