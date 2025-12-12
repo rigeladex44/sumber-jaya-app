@@ -33,18 +33,16 @@ const LoginForm = ({
             <img 
               src="/images/logo.png" 
               alt="Logo" 
-              className="h-20 w-20 object-contain"
+              className="h-40 w-40 object-contain"
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.nextSibling.style.display = 'flex';
               }}
             />
-            <div className="bg-white bg-opacity-20 w-20 h-20 rounded-full items-center justify-center hidden">
-              <Lock size={40} />
+            <div className="bg-white bg-opacity-20 w-40 h-40 rounded-full items-center justify-center hidden">
+              <Lock size={80} />
             </div>
           </div>
-          <h1 className="text-3xl font-bold mb-2">SUMBER JAYA GRUP</h1>
-          <p className="text-gray-300">Sistem Sumber Jaya Grup Official</p>
         </div>
         
         <div className="p-8">
