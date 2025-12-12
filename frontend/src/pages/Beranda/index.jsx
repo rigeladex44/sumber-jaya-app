@@ -68,7 +68,7 @@ const Beranda = ({
       <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 lg:p-8 text-white shadow-lg">
           <div>
           <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1">Selamat Datang, {currentUserData?.name}!</h2>
-          <p className="text-gray-300 text-xs sm:text-sm md:text-base lg:text-lg">{currentUserData?.role} - SUMBER JAYA GRUP</p>
+          <p className="text-gray-300 text-xs sm:text-sm md:text-base lg:text-lg">{currentUserData?.role}</p>
           </div>
 
         <div className="mt-3 md:mt-4 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm">
