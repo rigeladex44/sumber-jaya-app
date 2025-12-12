@@ -2615,8 +2615,7 @@ const SumberJayaApp = () => {
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('/images/background.png')",
-            filter: 'brightness(0.3)'
+            backgroundImage: "url('/images/background.png')"
           }}
         />
         
@@ -3933,7 +3932,7 @@ const SumberJayaApp = () => {
           </div>
         </header>
 
-        <header className="md:hidden bg-white/95 backdrop-blur shadow-sm sticky top-0 z-30">
+        <header className="md:hidden bg-white/95 shadow-sm sticky top-0 z-30">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -4000,7 +3999,7 @@ const SumberJayaApp = () => {
           </div>
         </main>
 
-        <nav className="md:hidden fixed inset-x-0 bottom-0 bg-white/95 backdrop-blur border-t shadow-lg z-50">
+        <nav className="md:hidden fixed inset-x-0 bottom-0 bg-white/95 border-t shadow-lg z-50">
           <div className="flex justify-around items-end px-2 py-2 gap-1 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
             {(() => {
               const filteredItems = mainMenuItems.filter(item =>
