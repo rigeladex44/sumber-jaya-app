@@ -2632,8 +2632,8 @@ const SumberJayaApp = () => {
               e.target.nextSibling.style.display = 'flex';
             }}
           />
-          <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '300px', height: 'auto' }}>
-            <Lock size={120} />
+          <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '300px', height: '108px' }}>
+            <Lock size={80} />
           </div>
         </div>
         
@@ -3853,7 +3853,7 @@ const SumberJayaApp = () => {
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '64px', height: 'auto' }}>
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '64px', height: '23px' }}>
                   SJ
                 </div>
               </div>
@@ -3947,7 +3947,7 @@ const SumberJayaApp = () => {
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '56px', height: 'auto' }}>
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '56px', height: '20px' }}>
                   SJ
                 </div>
               </div>

@@ -39,8 +39,8 @@ const LoginForm = ({
             e.target.nextSibling.style.display = 'flex';
           }}
         />
-        <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '300px', height: 'auto' }}>
-          <Lock size={120} />
+        <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '300px', height: '108px' }}>
+          <Lock size={80} />
         </div>
       </div>
       
