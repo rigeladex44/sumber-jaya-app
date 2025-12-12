@@ -2621,6 +2621,7 @@ const SumberJayaApp = () => {
         />
         
         <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden z-10">
+          <div className="p-8 text-center">
             <div className="flex items-center justify-center mb-4">
               <img 
                 src="/images/logo.png" 
