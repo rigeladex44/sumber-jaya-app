@@ -2626,7 +2626,7 @@ const SumberJayaApp = () => {
               <img 
                 src="/images/logo.png" 
                 alt="Logo" 
-                className="h-200 w-200 object-contain"
+                className="h-40 w-40 object-contain"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
