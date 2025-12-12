@@ -4,6 +4,11 @@
  */
 
 /**
+ * Application version
+ */
+export const APP_VERSION = '1.0.0';
+
+/**
  * List of PT (Perusahaan) entities
  */
 export const PT_LIST = [
