@@ -33,14 +33,14 @@ const LoginForm = ({
           src="/images/logo.png" 
           alt="Logo" 
           className="object-contain"
-          style={{ width: '800px', height: '800px' }}
+          style={{ width: '300px', height: 'auto' }}
           onError={(e) => {
             e.target.style.display = 'none';
             e.target.nextSibling.style.display = 'flex';
           }}
         />
-        <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '800px', height: '800px' }}>
-          <Lock size={320} />
+        <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '300px', height: 'auto' }}>
+          <Lock size={120} />
         </div>
       </div>
       

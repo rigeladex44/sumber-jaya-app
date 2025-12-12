@@ -2626,14 +2626,14 @@ const SumberJayaApp = () => {
             src="/images/logo.png" 
             alt="Logo" 
             className="object-contain"
-            style={{ width: '800px', height: '800px' }}
+            style={{ width: '300px', height: 'auto' }}
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.nextSibling.style.display = 'flex';
             }}
           />
-          <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '800px', height: '800px' }}>
-            <Lock size={320} />
+          <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '300px', height: 'auto' }}>
+            <Lock size={120} />
           </div>
         </div>
         
@@ -3846,13 +3846,14 @@ const SumberJayaApp = () => {
                 <img 
                   src="/images/logo.png" 
                   alt="Logo" 
-                  className="w-16 h-16 object-contain rounded-lg bg-white p-1"
+                  className="object-contain rounded-lg bg-white p-1"
+                  style={{ width: '64px', height: 'auto' }}
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="w-16 h-16 bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden">
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '64px', height: 'auto' }}>
                   SJ
                 </div>
               </div>
@@ -3939,13 +3940,14 @@ const SumberJayaApp = () => {
                 <img
                   src="/images/logo.png"
                   alt="Logo"
-                  className="w-14 h-14 object-contain rounded-lg bg-white p-1"
+                  className="object-contain rounded-lg bg-white p-1"
+                  style={{ width: '56px', height: 'auto' }}
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="w-14 h-14 bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden">
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '56px', height: 'auto' }}>
                   SJ
                 </div>
               </div>
