@@ -75,8 +75,7 @@ const Beranda = ({
             <img 
               src="/images/logo.png" 
               alt="Logo Sumber Jaya" 
-              className="object-contain rounded-lg bg-white bg-opacity-10 p-2"
-              style={{ width: '80px', height: 'auto', maxWidth: '80px' }}
+              className="w-20 max-w-20 h-auto object-contain rounded-lg bg-white bg-opacity-10 p-2"
               onError={(e) => {
                 e.target.style.display = 'none';
               }}
