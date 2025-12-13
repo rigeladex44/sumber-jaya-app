@@ -43,7 +43,7 @@ const LoginForm = ({
         </div>
       </div>
       
-      <div className="relative bg-white bg-opacity-40 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
+      <div className="relative bg-white bg-opacity-60 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
         <div className="p-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2>
           
@@ -61,7 +61,7 @@ const LoginForm = ({
                 type="text"
                 value={username}
                 onChange={(e) => onUsernameChange(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-80 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-60 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                 placeholder="Masukkan username"
                 onKeyPress={(e) => e.key === 'Enter' && onLogin()}
               />
@@ -74,7 +74,7 @@ const LoginForm = ({
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => onPasswordChange(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-80 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-60 shadow-[0_0_15px_rgba(59,130,246,0.3)]"
                   placeholder="Masukkan password"
                   onKeyPress={(e) => e.key === 'Enter' && onLogin()}
                 />
@@ -101,7 +101,7 @@ const LoginForm = ({
             </button>
           </div>
 
-          <div className="mt-6 p-4 bg-gray-50 bg-opacity-50 rounded-lg">
+          <div className="mt-6 p-4 bg-white bg-opacity-60 rounded-lg">
             <p className="text-[10px] text-gray-600 text-center">
               © 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click
             </p>
