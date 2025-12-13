@@ -3846,13 +3846,13 @@ const SumberJayaApp = () => {
                   src="/images/logo.png" 
                   alt="Logo" 
                   className="object-contain rounded-lg bg-white p-1"
-                  style={{ width: '150px', height: 'auto' }}
+                  style={{ width: '250px', height: 'auto' }}
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '150px', height: '54px' }}>
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '250px', height: '90px' }}>
                   SJ
                 </div>
               </div>
@@ -3940,13 +3940,13 @@ const SumberJayaApp = () => {
                   src="/images/logo.png"
                   alt="Logo"
                   className="object-contain rounded-lg bg-white p-1"
-                  style={{ width: '130px', height: 'auto' }}
+                  style={{ width: '230px', height: 'auto' }}
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '130px', height: '46px' }}>
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '230px', height: '82px' }}>
                   SJ
                 </div>
               </div>
