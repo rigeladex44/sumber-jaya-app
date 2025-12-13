@@ -2636,7 +2636,7 @@ const SumberJayaApp = () => {
           </div>
         </div>
         
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
+        <div className="relative bg-white/30 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
           <div className="p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2>
             
