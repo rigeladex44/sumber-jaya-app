@@ -2636,9 +2636,9 @@ const SumberJayaApp = () => {
           </div>
         </div>
         
-        <div className="relative bg-white/30 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
+        <div className="relative bg-white bg-opacity-60 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
           <div className="p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Login</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2>
             
             {loginError && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
@@ -2649,25 +2649,25 @@ const SumberJayaApp = () => {
 
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Username</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-60"
                   placeholder="Masukkan username"
                   onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                 <div className="relative">
                 <input
                     type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-60"
                   placeholder="Masukkan password"
                   onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                 />
@@ -2694,7 +2694,7 @@ const SumberJayaApp = () => {
               </button>
             </div>
 
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-6 p-4 bg-white bg-opacity-60 rounded-lg">
               <p className="text-[10px] text-gray-600 text-center">
                 © 2025 Sumber Jaya Grup Official | Powered by Rigeel One Click
               </p>
