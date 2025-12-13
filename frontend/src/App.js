@@ -2638,7 +2638,7 @@ const SumberJayaApp = () => {
         
         <div className="relative bg-white/30 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
           <div className="p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Login</h2>
             
             {loginError && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
@@ -2649,7 +2649,7 @@ const SumberJayaApp = () => {
 
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Username</label>
                 <input
                   type="text"
                   value={username}
@@ -2661,7 +2661,7 @@ const SumberJayaApp = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Password</label>
                 <div className="relative">
                 <input
                     type={showPassword ? "text" : "password"}
