@@ -3852,7 +3852,7 @@ const SumberJayaApp = () => {
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '150px', height: '29px' }}>
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '150px', height: '54px' }}>
                   SJ
                 </div>
               </div>
@@ -3946,7 +3946,7 @@ const SumberJayaApp = () => {
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '130px', height: '25px' }}>
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '130px', height: '46px' }}>
                   SJ
                 </div>
               </div>
