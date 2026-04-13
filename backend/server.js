@@ -1112,60 +1112,69 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
     const kasData = kasResults[0];
     const kasTanggal = formatLocalDate(kasData.tanggal);
     
-    // Step 2: Validasi - hanya bisa edit transaksi hari ini
-    if (kasTanggal !== today) {
-      return res.status(403).json({ 
-        message: 'Hanya bisa mengedit transaksi hari ini',
-        kasDate: kasTanggal,
-        today: today
-      });
-    }
-    
-    // Step 3: Validasi - hanya creator yang bisa edit
-    if (kasData.created_by !== req.userId) {
-      return res.status(403).json({ message: 'Anda tidak memiliki akses untuk mengedit transaksi ini' });
-    }
-    
-    // Step 4: Update transaksi
-    // Re-calculate status based on new jenis and jumlah
-    let status = 'approved';
-    let approved_by = req.userId;
-    
-    if (jenis === 'keluar' && parseFloat(jumlah) >= 300000) {
-      status = 'pending';
-      approved_by = null;
-    }
-    
-    // Force tanggal to be treated as local date (no timezone conversion)
-    const localTanggal = processTanggal(tanggal);
-    
-    const updateQuery = `
-      UPDATE kas_kecil 
-      SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, status = ?, approved_by = ?
-      WHERE id = ?
-    `;
-    
-    db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategori || null, status, approved_by, id], (err, result) => {
+    const checkUserQuery = 'SELECT role FROM users WHERE id = ?';
+    db.query(checkUserQuery, [req.userId], (err, userResults) => {
       if (err) {
         return res.status(500).json({ message: 'Server error', error: err });
       }
 
-      // Smart auto-sync - UPDATE existing Sisa Saldo (preserves manual edits)
-      const oldDate = new Date(kasTanggal);
-      const newDate = new Date(localTanggal);
-      const earlierDate = oldDate < newDate ? kasTanggal : localTanggal;
+      const isMasterUser = userResults.length > 0 && userResults[0].role === 'Master User';
 
-      autoRecalculateSisaSaldoFromDate(earlierDate, req.userId, (syncErr, syncResult) => {
-        if (syncErr) {
-          console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-        } else {
-          console.log('✅ Auto-sync completed:', syncResult);
+      // Step 2: Validasi - hanya bisa edit transaksi hari ini (kecuali Master User)
+      if (!isMasterUser && kasTanggal !== today) {
+        return res.status(403).json({ 
+          message: 'Hanya bisa mengedit transaksi hari ini',
+          kasDate: kasTanggal,
+          today: today
+        });
+      }
+      
+      // Step 3: Validasi - hanya creator yang bisa edit (kecuali Master User)
+      if (!isMasterUser && kasData.created_by !== req.userId) {
+        return res.status(403).json({ message: 'Anda tidak memiliki akses untuk mengedit transaksi ini' });
+      }
+      
+      // Step 4: Update transaksi
+      // Re-calculate status based on new jenis and jumlah
+      let status = 'approved';
+      let approved_by = req.userId;
+      
+      if (jenis === 'keluar' && parseFloat(jumlah) >= 300000) {
+        status = 'pending';
+        approved_by = null;
+      }
+      
+      // Force tanggal to be treated as local date (no timezone conversion)
+      const localTanggal = processTanggal(tanggal);
+      
+      const updateQuery = `
+        UPDATE kas_kecil 
+        SET tanggal = ?, pt_code = ?, jenis = ?, jumlah = ?, keterangan = ?, kategori = ?, status = ?, approved_by = ?
+        WHERE id = ?
+      `;
+      
+      db.query(updateQuery, [localTanggal, pt, jenis, jumlah, keterangan, kategori || null, status, approved_by, id], (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
         }
-      });
 
-      res.json({
-        message: 'Data kas berhasil diupdate',
-        status: status
+        // Smart auto-sync - UPDATE existing Sisa Saldo (preserves manual edits)
+        const oldDate = new Date(kasTanggal);
+        const newDate = new Date(localTanggal);
+        const earlierDate = oldDate < newDate ? kasTanggal : localTanggal;
+
+        autoRecalculateSisaSaldoFromDate(earlierDate, req.userId, (syncErr, syncResult) => {
+          if (syncErr) {
+            console.error('⚠️ Auto-sync error (non-critical):', syncErr);
+          } else {
+            console.log('✅ Auto-sync completed:', syncResult);
+          }
+        });
+
+        res.json({
+          message: 'Data kas berhasil diupdate',
+          status: status
+        });
       });
     });
   });
