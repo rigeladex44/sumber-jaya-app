@@ -3,6 +3,7 @@ import {
   Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut,
   AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Tags, BookOpen
 } from 'lucide-react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import {
   authService,
   kasKecilService,
@@ -26,7 +27,6 @@ import SearchResultsModal from './components/modals/SearchResultsModal';
 
 // Import constants
 import { APP_VERSION } from './utils/constants';
-
 // Helper: Get today's date in YYYY-MM-DD format (timezone-aware untuk WIB)
 const getLocalDateString = () => {
   const today = new Date();
@@ -3838,6 +3838,7 @@ const SumberJayaApp = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="min-h-screen flex flex-col md:pb-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
+        <SpeedInsights />
         <header className="hidden md:block bg-white shadow-sm sticky top-0 z-30">
           <div className="px-6 py-4">
             <div className="flex items-center gap-8">
