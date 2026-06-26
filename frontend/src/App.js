@@ -2625,13 +2625,13 @@ const SumberJayaApp = () => {
             src="/images/logo.png" 
             alt="Logo" 
             className="object-contain"
-            style={{ width: '300px', height: 'auto' }}
+            style={{ width: '200px', height: 'auto' }}
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.nextSibling.style.display = 'flex';
             }}
           />
-          <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '300px', height: '108px' }}>
+          <div className="bg-white bg-opacity-20 rounded-full items-center justify-center hidden" style={{ width: '200px', height: '72px' }}>
             <Lock size={80} />
           </div>
         </div>
@@ -3836,156 +3836,143 @@ const SumberJayaApp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="min-h-screen flex flex-col md:pb-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
-        <SpeedInsights />
-        <header className="hidden md:block bg-white shadow-sm sticky top-0 z-30">
-          <div className="px-6 py-4">
-            <div className="flex items-center gap-8">
-              <div className="flex items-center gap-4">
-                <img 
-                  src="/images/logo.png" 
-                  alt="Logo" 
-                  className="object-contain rounded-lg bg-white p-1"
-                  style={{ width: '250px', height: 'auto' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '250px', height: '90px' }}>
-                  SJ
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 flex-1">
-                {mainMenuItems
-                  .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User')
-                  .map(item => {
-                    const ItemIcon = item.icon;
-                    const isActive = activeMenu === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => setActiveMenu(item.id)}
-                        className={`relative p-3.5 rounded-2xl transition-all ${
-                          isActive 
-                            ? 'bg-gray-800 text-white shadow-md' 
-                            : 'bg-gray-50 text-gray-500 hover:bg-gray-200 hover:text-gray-900'
-                        }`}
-                        title={item.label}
-                      >
-                        <ItemIcon size={24} strokeWidth={2.5} />
-                        {isActive && (
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                        )}
-                      </button>
-                    );
-                  })}
-              </div>
-
-              <div className="flex items-center gap-4 ml-auto">
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-800">{currentUserData?.name || 'User'}</p>
-                  <p className="text-xs text-gray-600">{currentUserData?.role || 'Role'}</p>
-                </div>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
-                    className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center font-bold hover:shadow-lg transition-all"
-                  >
-                    {currentUserData?.name?.charAt(0) || 'U'}
-                  </button>
-                  {showProfileMenu && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-                      <div className="px-4 py-3 border-b border-gray-200">
-                        <p className="text-sm font-semibold text-gray-800">{currentUserData?.name}</p>
-                        <p className="text-xs text-gray-600">{currentUserData?.role}</p>
-                        <p className="text-xs text-gray-500 mt-1">@{currentUserData?.username}</p>
-                      </div>
-                      <button 
-                        onClick={handleOpenEditProfile}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2"
-                      >
-                        <Users size={16} />
-                        <span>Edit Profil</span>
-                      </button>
-                      <button 
-                        onClick={handleOpenChangePassword}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2"
-                      >
-                        <Lock size={16} />
-                        <span>Ganti Password</span>
-                      </button>
-                      <div className="border-t border-gray-200 mt-2"></div>
-                      <button 
-                        onClick={handleLogout}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                      >
-                        <LogOut size={16} />
-                        <span>Logout</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col md:flex-row">
+      <SpeedInsights />
+      
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-72 bg-white shadow-xl h-screen sticky top-0 z-40 overflow-y-auto">
+        <div className="p-4 border-b flex justify-center items-center">
+          <img 
+            src="/images/logo.png" 
+            alt="Logo" 
+            className="object-contain w-full max-w-[260px]"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+          <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '260px', height: '94px' }}>
+            SJ
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {mainMenuItems
+            .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User')
+            .map(item => {
+              const ItemIcon = item.icon;
+              const isActive = activeMenu === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveMenu(item.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                    isActive 
+                      ? 'bg-blue-600 text-white shadow-md' 
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  <ItemIcon size={22} strokeWidth={2.5} />
+                  <span className="font-semibold text-sm">{item.label}</span>
+                </button>
+              );
+            })}
+        </div>
+        
+        <div className="p-4 border-t bg-gray-50">
+          <div className="flex items-center gap-3 mb-4 px-2">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center font-bold shadow-md"
+            >
+              {currentUserData?.name?.charAt(0) || 'U'}
+            </button>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-sm font-bold text-gray-800 truncate">{currentUserData?.name || 'User'}</p>
+              <p className="text-xs text-gray-500 truncate">{currentUserData?.role || 'Role'}</p>
             </div>
           </div>
-        </header>
+          <div className="space-y-1">
+            <button 
+              onClick={handleOpenEditProfile}
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-white rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Users size={16} />
+              <span>Edit Profil</span>
+            </button>
+            <button 
+              onClick={handleOpenChangePassword}
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-white rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Lock size={16} />
+              <span>Ganti Password</span>
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors mt-2"
+            >
+              <LogOut size={16} />
+              <span className="font-semibold">Logout</span>
+            </button>
+          </div>
+        </div>
+      </aside>
 
-        <header className="md:hidden bg-white/95 shadow-sm sticky top-0 z-30">
+      {/* Main Content Wrapper */}
+      <div className="flex-1 flex flex-col min-w-0 md:pb-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] relative">
+
+        <header className="md:hidden bg-white/80 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-30">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img
                   src="/images/logo.png"
                   alt="Logo"
-                  className="object-contain rounded-lg bg-white p-1"
-                  style={{ width: '230px', height: 'auto' }}
+                  className="object-contain drop-shadow-sm"
+                  style={{ width: '250px', maxWidth: '65vw', height: 'auto' }}
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
-                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '230px', height: '82px' }}>
+                <div className="bg-gradient-to-br from-gray-800 to-black rounded-lg items-center justify-center text-white font-bold text-xl shadow-lg hidden" style={{ width: '250px', maxWidth: '65vw', height: '54px' }}>
                   SJ
                 </div>
               </div>
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center font-bold hover:shadow-lg transition-all"
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-white flex items-center justify-center font-bold shadow-md active:scale-95 transition-all ring-2 ring-white"
                 >
                   {currentUserData?.name?.charAt(0) || 'U'}
                 </button>
                 {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-3 border-b border-gray-200">
-                      <p className="text-sm font-semibold text-gray-800">{currentUserData?.name}</p>
-                      <p className="text-xs text-gray-600">{currentUserData?.role}</p>
-                      <p className="text-xs text-gray-500 mt-1">@{currentUserData?.username}</p>
+                  <div className="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                      <p className="text-sm font-bold text-gray-800">{currentUserData?.name}</p>
+                      <p className="text-xs font-medium text-gray-500">{currentUserData?.role}</p>
                     </div>
                     <button 
                       onClick={handleOpenEditProfile}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2"
+                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 active:bg-blue-100 flex items-center gap-3 transition-colors"
                     >
-                      <Users size={16} />
-                      <span>Edit Profil</span>
+                      <Users size={16} className="text-gray-400" />
+                      <span className="font-medium">Edit Profil</span>
                     </button>
                     <button 
                       onClick={handleOpenChangePassword}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-2"
+                      className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 active:bg-blue-100 flex items-center gap-3 transition-colors"
                     >
-                      <Lock size={16} />
-                      <span>Ganti Password</span>
+                      <Lock size={16} className="text-gray-400" />
+                      <span className="font-medium">Ganti Password</span>
                     </button>
-                    <div className="border-t border-gray-200 mt-2"></div>
+                    <div className="h-px bg-gray-100 my-1"></div>
                     <button 
                       onClick={handleLogout}
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 active:bg-red-100 flex items-center gap-3 transition-colors"
                     >
-                      <LogOut size={16} />
-                      <span>Logout</span>
+                      <LogOut size={16} className="text-red-400" />
+                      <span className="font-bold">Logout</span>
                     </button>
                   </div>
                 )}
@@ -4000,44 +3987,47 @@ const SumberJayaApp = () => {
           </div>
         </main>
 
-        <nav className="md:hidden fixed inset-x-0 bottom-0 bg-white/95 border-t shadow-lg z-50">
-          <div className="flex justify-around items-end px-2 py-2 gap-1 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
-            {(() => {
-              const filteredItems = mainMenuItems.filter(item =>
-                currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User'
-              );
-
-              // Dynamic icon size based on number of features
-              const iconSize = filteredItems.length <= 3 ? 26 :
-                              filteredItems.length <= 5 ? 24 : 22;
-
-              return filteredItems.map(item => {
-                const ItemIcon = item.icon;
-                const isActive = activeMenu === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveMenu(item.id)}
-                    type="button"
-                    aria-label={item.label}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={`flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-lg scale-105'
-                        : 'text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    <ItemIcon size={iconSize} strokeWidth={2.5} />
-                    <span className="mt-1 text-[11px] font-semibold leading-none">
-                      {item.shortLabel || item.label}
-                    </span>
-                  </button>
+        <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 pb-[env(safe-area-inset-bottom)] pointer-events-none">
+          <div className="px-4 pb-4 pointer-events-auto">
+            <div className="bg-white/90 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-3xl p-2 flex justify-around items-center">
+              {(() => {
+                const filteredItems = mainMenuItems.filter(item =>
+                  currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User'
                 );
-              });
-            })()}
-          </div>
-          <div className="text-center py-1 bg-gray-50 pb-[calc(env(safe-area-inset-bottom)+0.25rem)]">
-            <p className="text-[9px] text-gray-400">v{APP_VERSION}</p>
+
+                const iconSize = filteredItems.length <= 3 ? 24 :
+                                filteredItems.length <= 5 ? 22 : 20;
+
+                return filteredItems.map(item => {
+                  const ItemIcon = item.icon;
+                  const isActive = activeMenu === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveMenu(item.id)}
+                      type="button"
+                      aria-label={item.label}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`relative flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all duration-300 ${
+                        isActive
+                          ? 'text-blue-600'
+                          : 'text-gray-400 hover:text-gray-600 active:scale-95'
+                      }`}
+                    >
+                      {isActive && (
+                        <div className="absolute inset-0 bg-blue-50 rounded-2xl scale-100 transition-transform duration-300"></div>
+                      )}
+                      <div className="relative z-10 flex flex-col items-center gap-1">
+                        <ItemIcon size={iconSize} strokeWidth={isActive ? 2.5 : 2} className={`transition-transform duration-300 ${isActive ? '-translate-y-0.5' : ''}`} />
+                        <span className={`text-[10px] font-bold tracking-tight transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+                          {item.shortLabel || item.label}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
           </div>
         </nav>
 

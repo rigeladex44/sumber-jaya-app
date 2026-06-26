@@ -65,95 +65,106 @@ const Beranda = ({
   return (
     <div className="space-y-5 md:space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 lg:p-8 text-white shadow-lg">
-        <div>
-          <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1">Selamat Datang, {currentUserData?.name}!</h2>
-          <p className="text-gray-300 text-xs sm:text-sm md:text-base lg:text-lg">{currentUserData?.role}</p>
+      <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-2xl p-6 lg:p-8 text-white shadow-xl overflow-hidden border border-gray-800">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-blue-500 opacity-10 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-purple-500 opacity-10 blur-3xl pointer-events-none"></div>
+        <div className="relative z-10">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold mb-2 tracking-tight">Selamat Datang, {currentUserData?.name}!</h2>
+          <p className="text-gray-400 text-sm md:text-base font-medium">{currentUserData?.role}</p>
         </div>
 
-        <div className="mt-3 md:mt-4 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm">
-          <div className="flex items-center gap-2">
-            <Calendar size={14} className="md:hidden" />
-            <Calendar size={16} className="hidden md:block" />
-            <span className="text-xs md:text-sm">{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+        <div className="relative z-10 mt-6 md:mt-8 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-sm">
+            <Calendar size={16} className="text-blue-400" />
+            <span className="text-sm font-medium text-gray-100">{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
           </div>
         </div>
       </div>
 
       {/* Summary Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
         {hasKasKecilAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-blue-600">
-            <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Kas Kecil</p>
-              <DollarSign className="text-blue-600" size={20} />
+          <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-400 to-blue-600"></div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider">Kas Kecil</p>
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                <DollarSign size={20} strokeWidth={2.5} />
+              </div>
             </div>
             {isLoadingStats ? (
-              <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
+              <div className="animate-pulse h-8 bg-gray-200 rounded w-1/2"></div>
             ) : (
               <>
-                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600">
+                <p className="text-xl sm:text-2xl font-bold text-gray-800" title={`Rp ${dashboardStats.kasKecilSaldoAkhir.toLocaleString('id-ID')}`}>
                   Rp {dashboardStats.kasKecilSaldoAkhir.toLocaleString('id-ID')}
                 </p>
-                <p className="text-xs text-gray-500 mt-1 md:mt-2">Saldo akhir hari ini</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-2 font-medium">Saldo akhir hari ini</p>
               </>
             )}
           </div>
         )}
 
         {hasKasKecilAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-green-500">
-            <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Pemasukan Hari Ini</p>
-              <TrendingUp className="text-green-500" size={20} />
+          <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-green-400 to-green-600"></div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider">Pemasukan Hari Ini</p>
+              <div className="p-2.5 bg-green-50 text-green-500 rounded-xl group-hover:bg-green-500 group-hover:text-white transition-colors duration-300">
+                <TrendingUp size={20} strokeWidth={2.5} />
+              </div>
             </div>
             {isLoadingStats ? (
-              <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
+              <div className="animate-pulse h-8 bg-gray-200 rounded w-1/2"></div>
             ) : (
               <>
-                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600">
+                <p className="text-xl sm:text-2xl font-bold text-gray-800" title={`Rp ${dashboardStats.kasKecilPemasukanHariIni.toLocaleString('id-ID')}`}>
                   Rp {dashboardStats.kasKecilPemasukanHariIni.toLocaleString('id-ID')}
                 </p>
-                <p className="text-xs text-green-600 mt-1 md:mt-2 font-medium">Kas Kecil approved</p>
+                <p className="text-xs sm:text-sm text-green-700 mt-2 font-semibold bg-green-50 inline-block px-2.5 py-1 rounded-md">Kas Kecil approved</p>
               </>
             )}
           </div>
         )}
 
-        {hasPenjualanAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-gray-700">
-            <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Penjualan Hari Ini</p>
-              <ShoppingCart className="text-gray-700" size={20} />
+        {hasKasKecilAccess && (
+          <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-red-400 to-red-600"></div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider">Pengeluaran Hari Ini</p>
+              <div className="p-2.5 bg-red-50 text-red-500 rounded-xl group-hover:bg-red-500 group-hover:text-white transition-colors duration-300">
+                <TrendingDown size={20} strokeWidth={2.5} />
+              </div>
             </div>
             {isLoadingStats ? (
-              <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
+              <div className="animate-pulse h-8 bg-gray-200 rounded w-1/2"></div>
             ) : (
               <>
-                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
-                  {dashboardStats.penjualanQty.toLocaleString('id-ID')} Tabung
+                <p className="text-xl sm:text-2xl font-bold text-gray-800" title={`Rp ${dashboardStats.kasKecilPengeluaranHariIni.toLocaleString('id-ID')}`}>
+                  Rp {dashboardStats.kasKecilPengeluaranHariIni.toLocaleString('id-ID')}
                 </p>
-                <p className="text-xs text-gray-500 mt-1 md:mt-2">
-                  Rp {dashboardStats.penjualanNilai.toLocaleString('id-ID')}
-                </p>
+                <p className="text-xs sm:text-sm text-red-700 mt-2 font-semibold bg-red-50 inline-block px-2.5 py-1 rounded-md">Kas Kecil approved</p>
               </>
             )}
           </div>
         )}
 
         {hasDetailKasAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-yellow-500 cursor-pointer hover:shadow-lg transition-shadow"
+          <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group cursor-pointer"
                onClick={() => onSetActiveMenu('detail-kas')}>
-            <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Pending Approval</p>
-              <AlertCircle className="text-yellow-500" size={20} />
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-yellow-400 to-yellow-600"></div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider">Pending Approval</p>
+              <div className="p-2.5 bg-yellow-50 text-yellow-500 rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-colors duration-300">
+                <AlertCircle size={20} strokeWidth={2.5} />
+              </div>
             </div>
             {isLoadingStats ? (
-              <p className="text-lg md:text-2xl font-bold text-gray-400">...</p>
+              <div className="animate-pulse h-8 bg-gray-200 rounded w-1/4"></div>
             ) : (
               <>
-                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">{dashboardStats.pendingApproval}</p>
-                <p className="text-xs text-yellow-600 mt-1 md:mt-2 font-medium">
+                <p className="text-xl sm:text-2xl font-bold text-gray-800">{dashboardStats.pendingApproval}</p>
+                <p className={`text-xs sm:text-sm mt-2 font-semibold inline-block px-2.5 py-1 rounded-md ${dashboardStats.pendingApproval > 0 ? 'text-yellow-700 bg-yellow-50' : 'text-gray-600 bg-gray-50'}`}>
                   {dashboardStats.pendingApproval > 0 ? 'Klik untuk approve/reject' : 'Semua sudah disetujui'}
                 </p>
               </>
@@ -161,21 +172,27 @@ const Beranda = ({
           </div>
         )}
 
-        {hasKasKecilAccess && (
-          <div className="bg-white rounded-lg md:rounded-xl p-4 sm:p-5 md:p-6 shadow-md border-l-4 border-red-500">
-            <div className="flex items-center justify-between mb-2 md:mb-3">
-              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600">Pengeluaran Hari Ini</p>
-              <TrendingDown className="text-red-500" size={20} />
+        {hasPenjualanAccess && (
+          <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group xl:col-span-2">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-gray-600 to-gray-800"></div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider">Penjualan Hari Ini</p>
+              <div className="p-2.5 bg-gray-100 text-gray-700 rounded-xl group-hover:bg-gray-800 group-hover:text-white transition-colors duration-300">
+                <ShoppingCart size={20} strokeWidth={2.5} />
+              </div>
             </div>
             {isLoadingStats ? (
-              <p className="text-lg md:text-2xl font-bold text-gray-400">Loading...</p>
+              <div className="animate-pulse h-8 bg-gray-200 rounded w-1/2"></div>
             ) : (
-              <>
-                <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600">
-                  Rp {dashboardStats.kasKecilPengeluaranHariIni.toLocaleString('id-ID')}
+              <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-4">
+                <p className="text-xl sm:text-2xl font-bold text-gray-800">
+                  {dashboardStats.penjualanQty.toLocaleString('id-ID')} <span className="text-sm font-semibold text-gray-500">Tabung</span>
                 </p>
-                <p className="text-xs text-red-600 mt-1 md:mt-2 font-medium">Kas Kecil approved</p>
-              </>
+                <div className="hidden sm:block w-px h-6 bg-gray-200 mb-1"></div>
+                <p className="text-lg sm:text-xl font-bold text-gray-600">
+                  Rp {dashboardStats.penjualanNilai.toLocaleString('id-ID')}
+                </p>
+              </div>
             )}
           </div>
         )}
