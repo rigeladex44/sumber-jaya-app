@@ -3528,28 +3528,28 @@ const SumberJayaApp = () => {
             {/* Date Filter - Single Date for Daily Report */}
             <div>
               <label className="block text-sm font-medium mb-2">Filter Tanggal (Laporan Harian)</label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <input
                   type="date"
                   value={filterArusKas.tanggal}
                   onChange={(e) => setFilterArusKas({ ...filterArusKas, tanggal: e.target.value })}
-                  className="px-4 py-2 border rounded-lg"
+                  className="w-full sm:w-auto px-4 py-2 border rounded-lg"
                 />
                 {filterArusKas.tanggal && (
                   <button
                     onClick={() => setFilterArusKas({ ...filterArusKas, tanggal: '' })}
-                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+                    className="w-full sm:w-auto px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
                   >
                     Reset
                   </button>
                 )}
-                <p className="text-xs text-gray-500">
-                  {filterArusKas.tanggal
-                    ? `Menampilkan data tanggal: ${new Date(filterArusKas.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
-                    : 'Semua tanggal ditampilkan'
-                  }
-                </p>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {filterArusKas.tanggal
+                  ? `Menampilkan data tanggal: ${new Date(filterArusKas.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                  : 'Semua tanggal ditampilkan'
+                }
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
