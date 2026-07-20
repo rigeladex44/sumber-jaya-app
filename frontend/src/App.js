@@ -4,6 +4,8 @@ import {
   AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Tags, BookOpen
 } from 'lucide-react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import {
   authService,
   kasKecilService,
@@ -415,6 +417,11 @@ const SumberJayaApp = () => {
 
   // Kas Kecil State (untuk pembukuan kasir tunai - Cash Only)
   const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
+  const [filterKasKecil, setFilterKasKecil] = useState({
+    pt: [],
+    tanggalMulai: getLocalDateString(),
+    tanggalSelesai: getLocalDateString()
+  });
   const [formKasKecil, setFormKasKecil] = useState({
     tanggal: getLocalDateString(),
     pt: '',
@@ -554,12 +561,6 @@ const SumberJayaApp = () => {
   const [searchDate, setSearchDate] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-
-  // Filter State for Kas Kecil & Arus Kas (Auto-filter, no manual trigger)
-  const [filterKasKecil, setFilterKasKecil] = useState({
-    pt: [], // Multi-select for Kas Kecil
-    tanggal: getLocalDateString() // Default to today
-  });
 
   // Filter State for Detail Kas (PT and date filters)
   const [filterDetailKas, setFilterDetailKas] = useState({
@@ -778,8 +779,7 @@ const SumberJayaApp = () => {
 
   const getDynamicSaldoAwal = (expandedPTs = [], selectedDateObj = null) => {
     if (!selectedDateObj) {
-      const selectedDate = filterKasKecil.tanggal || getLocalDateString();
-      selectedDateObj = new Date(selectedDate + 'T00:00:00');
+      selectedDateObj = new Date(filterKasKecil.tanggalMulai + 'T00:00:00');
     }
     
     // If not passed, use current filter's expanded PTs
@@ -803,41 +803,21 @@ const SumberJayaApp = () => {
     }, 0);
   };
 
-  // Auto-filter: Get filtered data for Kas Kecil (Harian - tampilkan hari ini saja)
+  // Filter functionality for Kas Kecil
   const getFilteredKasKecilData = () => {
-    // Get selected date from filter (defaults to today)
-    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
-    const selectedDateObj = new Date(selectedDate + 'T00:00:00'); // Parse as local date
+    // Determine start and end dates
+    const startDateStr = filterKasKecil.tanggalMulai || getLocalDateString();
+    const endDateStr = filterKasKecil.tanggalSelesai || startDateStr;
 
-    console.log('DEBUG Kas Kecil Filter:', {
-      filterPT: filterKasKecil.pt,
-      selectedDate: selectedDate,
-      kasKecilDataCount: kasKecilData.length,
-      sampleData: kasKecilData.slice(0, 3).map(item => ({
-        id: item.id,
-        tanggal: item.tanggal,
-        tanggalParsed: getLocalDateFromISO(item.tanggal),
-        pt: item.pt,
-        keterangan: item.keterangan.substring(0, 30)
-      })),
-      currentUserAccessPT: currentUserData?.accessPT
-    });
+    const startDateObj = new Date(startDateStr + 'T00:00:00');
+    const endDateObj = new Date(endDateStr + 'T00:00:00');
 
-    // Filter data by selected date (berdasarkan tanggal item, bukan created_at)
+    // Filter by date range
     const dateFilteredData = kasKecilData.filter(item => {
       if (!item.tanggal) return false;
-
-      // Parse tanggal item (handle both ISO string and date object)
       const itemDate = new Date(item.tanggal);
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-
-      // Compare date only (ignore time)
-      return itemDateOnly.getTime() === selectedDateObj.getTime();
-    });
-
-    console.log('DEBUG Date Filtered Data:', {
-      count: dateFilteredData.length,
-      data: dateFilteredData.map(d => ({ pt: d.pt, keterangan: d.keterangan.substring(0, 30) }))
+      return itemDateOnly.getTime() >= startDateObj.getTime() && itemDateOnly.getTime() <= endDateObj.getTime();
     });
 
     // If no PT selected, show all data for selected date
@@ -846,16 +826,9 @@ const SumberJayaApp = () => {
     }
 
     // If PT selected, filter by PT
-    const filtered = dateFilteredData.filter(item =>
+    return dateFilteredData.filter(item =>
       filterKasKecil.pt.includes(item.pt)
     );
-
-    console.log('DEBUG Filtered Kas Kecil:', {
-      filteredCount: filtered.length,
-      filteredPT: filterKasKecil.pt
-    });
-
-    return filtered;
   };
 
 
@@ -875,19 +848,26 @@ const SumberJayaApp = () => {
       allStatuses: displayData.map(d => d.status)
     });
 
-    // Use selected date from filter (or today as fallback)
-    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
-    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
-    const tanggalOnly = selectedDateObj.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    // Determine start and end dates
+    const startDateStr = filterKasKecil.tanggalMulai || getLocalDateString();
+    const endDateStr = filterKasKecil.tanggalSelesai || startDateStr;
+
+    const startDateObj = new Date(startDateStr + 'T00:00:00');
+    const endDateObj = new Date(endDateStr + 'T00:00:00');
+
+    // Generate string for PDF Title
+    let tanggalOnly = '';
+    if (startDateStr === endDateStr) {
+      tanggalOnly = startDateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    } else {
+      const s = startDateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      const e = endDateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      tanggalOnly = `${s} - ${e}`;
+    }
 
     // Generate PT Names with separator
     let ptNames = '';
     if (filterKasKecil.pt.length > 0) {
-      // Use PT codes directly if no ptList available
       ptNames = filterKasKecil.pt.map(code => {
         const pt = ptList?.find(p => p.code === code);
         return pt ? pt.name : code;
@@ -914,13 +894,14 @@ const SumberJayaApp = () => {
       if (!item.tanggal) return false;
       const itemDate = new Date(item.tanggal);
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-      if (itemDateOnly.getTime() !== selectedDateObj.getTime()) return false;
+      
+      if (itemDateOnly.getTime() < startDateObj.getTime() || itemDateOnly.getTime() > endDateObj.getTime()) return false;
       if (expandedPTs.length > 0 && !expandedPTs.includes(item.pt)) return false;
       return true;
     });
 
     // Calculate running balance based on GROUP data
-    const dynamicSaldoAwal = getDynamicSaldoAwal(expandedPTs, selectedDateObj);
+    const dynamicSaldoAwal = getDynamicSaldoAwal(expandedPTs, startDateObj);
     let runningBalance = dynamicSaldoAwal;
 
     const groupDataWithBalance = groupData.map((item) => {
@@ -960,8 +941,14 @@ const SumberJayaApp = () => {
       }
 
       // Format date for filename (DD-MM-YYYY)
-      const filenameDateParts = selectedDate.split('-'); // YYYY-MM-DD
-      const filenameDate = `${filenameDateParts[2]}-${filenameDateParts[1]}-${filenameDateParts[0]}`; // DD-MM-YYYY
+      const formatFilenameDate = (dateStr) => {
+        const parts = dateStr.split('-');
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      };
+      
+      const filenameDate = startDateStr === endDateStr 
+        ? formatFilenameDate(startDateStr) 
+        : `${formatFilenameDate(startDateStr)} to ${formatFilenameDate(endDateStr)}`;
 
       // Generate HTML content
       const htmlContent = `
@@ -2872,19 +2859,23 @@ const SumberJayaApp = () => {
     const displayData = getFilteredKasKecilData();
 
     // --- GRUP KASIR LOGIC FOR TOTALS ---
-    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
-    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+    const startDateStr = filterKasKecil.tanggalMulai || getLocalDateString();
+    const endDateStr = filterKasKecil.tanggalSelesai || startDateStr;
+
+    const startDateObj = new Date(startDateStr + 'T00:00:00');
+    const endDateObj = new Date(endDateStr + 'T00:00:00');
     
     const expandedPTs = filterKasKecil.pt.length > 0 
       ? getExpandedPTList(filterKasKecil.pt) 
       : [];
 
-    // Filter group data for the selected date
+    // Filter group data for the selected date range
     const groupData = kasKecilData.filter(item => {
       if (!item.tanggal) return false;
       const itemDate = new Date(item.tanggal);
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-      if (itemDateOnly.getTime() !== selectedDateObj.getTime()) return false;
+      
+      if (itemDateOnly.getTime() < startDateObj.getTime() || itemDateOnly.getTime() > endDateObj.getTime()) return false;
       if (expandedPTs.length > 0 && !expandedPTs.includes(item.pt)) return false;
       return true;
     });
@@ -2893,8 +2884,8 @@ const SumberJayaApp = () => {
     const masuk = groupData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const keluar = groupData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
 
-    // Get opening balance (calculated from group data)
-    const saldoAwal = getDynamicSaldoAwal(expandedPTs, selectedDateObj);
+    // Get opening balance (calculated from group data before startDate)
+    const saldoAwal = getDynamicSaldoAwal(expandedPTs, startDateObj);
 
     // Calculate closing balance = opening balance + masuk - keluar
     const saldo = saldoAwal + masuk - keluar;
@@ -3071,22 +3062,37 @@ const SumberJayaApp = () => {
               </p>
             </div>
 
-            {/* Date Filter - Single Date */}
+            {/* Date Filter - Range Picker */}
             <div>
-              <label className="block text-sm font-medium mb-2">Filter Tanggal</label>
-              <input
-                type="date"
-                value={filterKasKecil.tanggal}
-                onChange={(e) => {
+              <label className="block text-sm font-medium mb-2">Filter Rentang Tanggal</label>
+              <DatePicker
+                selectsRange={true}
+                startDate={filterKasKecil.tanggalMulai ? new Date(filterKasKecil.tanggalMulai + 'T00:00:00') : null}
+                endDate={filterKasKecil.tanggalSelesai ? new Date(filterKasKecil.tanggalSelesai + 'T00:00:00') : null}
+                onChange={(update) => {
+                  const [start, end] = update;
+                  // Helper function to format Date object to YYYY-MM-DD local string safely
+                  const formatDateLocal = (dateObj) => {
+                    if (!dateObj) return '';
+                    const year = dateObj.getFullYear();
+                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const day = String(dateObj.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  };
+
                   setFilterKasKecil(prev => ({
                     ...prev,
-                    tanggal: e.target.value
+                    tanggalMulai: formatDateLocal(start),
+                    tanggalSelesai: formatDateLocal(end)
                   }));
                 }}
+                isClearable={true}
+                placeholderText="Pilih rentang tanggal..."
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                dateFormat="dd/MM/yyyy"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Menampilkan transaksi pada tanggal yang dipilih
+                Pilih tanggal mulai, lalu pilih tanggal akhir.
               </p>
             </div>
           </div>
@@ -3158,7 +3164,7 @@ const SumberJayaApp = () => {
             <div className="p-4 border-b border-gray-100 bg-blue-50/50">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-semibold text-blue-800">
-                  Saldo Awal {filterKasKecil.tanggal ? `(Seb. ${new Date(filterKasKecil.tanggal).toLocaleDateString('id-ID', {day:'numeric', month:'short'})})` : ''}
+                  Saldo Awal {filterKasKecil.tanggalMulai ? `(Seb. ${new Date(filterKasKecil.tanggalMulai).toLocaleDateString('id-ID', {day:'numeric', month:'short'})})` : ''}
                 </span>
                 <span className="text-base font-black text-blue-700">Rp {saldoAwal.toLocaleString('id-ID')}</span>
               </div>
@@ -3277,7 +3283,7 @@ const SumberJayaApp = () => {
               <tbody className="divide-y divide-gray-100">
                 <tr className="bg-blue-50/50 border-b border-blue-100">
                   <td colSpan="6" className="px-5 py-4 text-sm font-semibold text-center text-blue-800">
-                    Saldo Awal {filterKasKecil.tanggal ? `(Sebelum ${new Date(filterKasKecil.tanggal).toLocaleDateString('id-ID')})` : ''}
+                    Saldo Awal {filterKasKecil.tanggalMulai ? `(Sebelum ${new Date(filterKasKecil.tanggalMulai).toLocaleDateString('id-ID')})` : ''}
                   </td>
                   <td className="px-5 py-4 text-sm text-right font-bold text-blue-700 whitespace-nowrap">
                     Rp {saldoAwal.toLocaleString('id-ID')}
