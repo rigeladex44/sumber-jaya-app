@@ -166,38 +166,42 @@ const Laporan = ({
           <p className="text-sm text-gray-600 mt-1">Periode: {bulanNama}</p>
           <p className="text-xs text-gray-500 mt-0.5">{ptNames}</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-auto">
             <button
-              className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white flex items-center gap-2"
+              className="w-full sm:w-auto px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white flex items-center justify-between sm:justify-start gap-2 shadow-sm"
               onClick={() => document.getElementById('pt-dropdown-laporan').classList.toggle('hidden')}
             >
-              {selectedPT.length > 0 ? `${selectedPT.length} PT Dipilih` : 'Pilih PT'}
-              <span className="text-xs">▼</span>
+              <span className="font-medium text-gray-700">
+                {selectedPT.length > 0 ? `${selectedPT.length} PT Dipilih` : 'Pilih PT'}
+              </span>
+              <span className="text-xs text-gray-500">▼</span>
             </button>
-            <div id="pt-dropdown-laporan" className="hidden absolute top-full mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[200px]">
-              {currentUserData?.accessPT?.map(code => (
-                <label key={code} className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedPT.includes(code)}
-                    onChange={() => handlePTChange(code)}
-                    className="mr-2"
-                  />
-                  <span className="text-sm">{code}</span>
-                </label>
-              ))}
+            <div id="pt-dropdown-laporan" className="hidden absolute top-full mt-1 w-full sm:w-auto min-w-[200px] bg-white border rounded-lg shadow-lg z-20 overflow-hidden">
+              <div className="max-h-60 overflow-y-auto">
+                {currentUserData?.accessPT?.map(code => (
+                  <label key={code} className="flex items-center px-4 py-3 sm:py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedPT.includes(code)}
+                      onChange={() => handlePTChange(code)}
+                      className="mr-3 sm:mr-2 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">{code}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <input
             type="month"
             value={selectedMonth}
             onChange={(e) => onMonthChange(e.target.value)}
-            className="px-4 py-2 border rounded-lg"
+            className="w-full sm:w-auto px-4 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 font-medium"
           />
           <button
             onClick={() => onExportPDF('labarugi')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 shadow-sm transition-colors font-medium"
           >
             <Download size={18} />
             Export PDF
@@ -208,81 +212,65 @@ const Laporan = ({
       <div id="content-to-export" className="bg-white rounded-lg shadow-md overflow-hidden">
         {/* PENDAPATAN Section */}
         <div className="mb-6">
-          <div className="bg-green-600 px-6 py-3">
-            <h3 className="text-white font-bold text-lg uppercase">Pendapatan (Pemasukan)</h3>
+          <div className="bg-emerald-600 px-4 sm:px-6 py-3">
+            <h3 className="text-white font-bold text-sm sm:text-lg uppercase tracking-wide">Pendapatan (Pemasukan)</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <tbody>
-                {laporanData.pemasukan.length > 0 ? (
-                  laporanData.pemasukan.map((item, index) => (
-                    <tr key={item.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-green-50 transition-colors`}>
-                      <td className="px-6 py-4 text-gray-800">{item.nama}</td>
-                      <td className="px-6 py-4 text-right font-semibold text-green-700">
-                        Rp {item.total.toLocaleString('id-ID')}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="2" className="px-6 py-4 text-center text-gray-400 italic">
-                      Tidak ada data pemasukan
-                    </td>
-                  </tr>
-                )}
-                <tr className="bg-green-100 border-t-2 border-green-600">
-                  <td className="px-6 py-4 font-bold text-gray-800">TOTAL PENDAPATAN</td>
-                  <td className="px-6 py-4 text-right font-bold text-green-700 text-lg">
-                    Rp {laporanData.totalPendapatan.toLocaleString('id-ID')}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="flex flex-col">
+            {laporanData.pemasukan.length > 0 ? (
+              laporanData.pemasukan.map((item, index) => (
+                <div key={item.id} className={`flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-emerald-50/50 transition-colors`}>
+                  <span className="text-sm sm:text-base font-medium text-gray-800">{item.nama}</span>
+                  <span className="text-sm sm:text-base font-bold text-emerald-600">Rp {item.total.toLocaleString('id-ID')}</span>
+                </div>
+              ))
+            ) : (
+              <div className="px-4 sm:px-6 py-8 text-center text-gray-400 text-sm italic">
+                Tidak ada data pemasukan
+              </div>
+            )}
+            <div className="flex justify-between items-center px-4 sm:px-6 py-4 bg-emerald-50 border-t-2 border-emerald-500">
+              <span className="text-sm sm:text-base font-bold text-gray-800 uppercase tracking-wide">Total Pendapatan</span>
+              <span className="text-lg sm:text-xl font-black text-emerald-700">
+                Rp {laporanData.totalPendapatan.toLocaleString('id-ID')}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* PENGELUARAN Section */}
         <div className="mb-6">
-          <div className="bg-red-600 px-6 py-3">
-            <h3 className="text-white font-bold text-lg uppercase">Pengeluaran</h3>
+          <div className="bg-rose-600 px-4 sm:px-6 py-3">
+            <h3 className="text-white font-bold text-sm sm:text-lg uppercase tracking-wide">Pengeluaran</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <tbody>
-                {laporanData.pengeluaran.length > 0 ? (
-                  laporanData.pengeluaran.map((item, index) => (
-                    <tr key={item.id} className={`border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-red-50 transition-colors`}>
-                      <td className="px-6 py-4 text-gray-800">{item.nama}</td>
-                      <td className="px-6 py-4 text-right font-semibold text-red-700">
-                        Rp {item.total.toLocaleString('id-ID')}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="2" className="px-6 py-4 text-center text-gray-400 italic">
-                      Tidak ada data pengeluaran
-                    </td>
-                  </tr>
-                )}
-                <tr className="bg-red-100 border-t-2 border-red-600">
-                  <td className="px-6 py-4 font-bold text-gray-800">TOTAL PENGELUARAN</td>
-                  <td className="px-6 py-4 text-right font-bold text-red-700 text-lg">
-                    Rp {laporanData.totalPengeluaran.toLocaleString('id-ID')}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="flex flex-col">
+            {laporanData.pengeluaran.length > 0 ? (
+              laporanData.pengeluaran.map((item, index) => (
+                <div key={item.id} className={`flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-rose-50/50 transition-colors`}>
+                  <span className="text-sm sm:text-base font-medium text-gray-800">{item.nama}</span>
+                  <span className="text-sm sm:text-base font-bold text-rose-600">Rp {item.total.toLocaleString('id-ID')}</span>
+                </div>
+              ))
+            ) : (
+              <div className="px-4 sm:px-6 py-8 text-center text-gray-400 text-sm italic">
+                Tidak ada data pengeluaran
+              </div>
+            )}
+            <div className="flex justify-between items-center px-4 sm:px-6 py-4 bg-rose-50 border-t-2 border-rose-500">
+              <span className="text-sm sm:text-base font-bold text-gray-800 uppercase tracking-wide">Total Pengeluaran</span>
+              <span className="text-lg sm:text-xl font-black text-rose-700">
+                Rp {laporanData.totalPengeluaran.toLocaleString('id-ID')}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* LABA/RUGI BERSIH */}
-        <div className={`mx-6 mb-6 border-4 rounded-lg p-6 ${laporanData.labaBersih >= 0 ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-bold text-gray-800">
-              {laporanData.labaBersih >= 0 ? 'LABA BERSIH' : 'RUGI BERSIH'}
+        <div className={`mx-4 sm:mx-6 mb-6 rounded-xl p-4 sm:p-6 border-l-4 sm:border-l-0 sm:border-t-4 shadow-sm ${laporanData.labaBersih >= 0 ? 'bg-emerald-50 border-emerald-500' : 'bg-rose-50 border-rose-500'}`}>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-0">
+            <span className="text-sm sm:text-xl font-bold text-gray-800 uppercase tracking-wider">
+              {laporanData.labaBersih >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}
             </span>
-            <span className={`text-3xl font-bold ${laporanData.labaBersih >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+            <span className={`text-2xl sm:text-3xl font-black tracking-tight ${laporanData.labaBersih >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
               Rp {Math.abs(laporanData.labaBersih).toLocaleString('id-ID')}
             </span>
           </div>
