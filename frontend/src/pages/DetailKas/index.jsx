@@ -60,50 +60,49 @@ const DetailKas = ({
           </div>
         ) : (
           filteredData.map(kas => (
-            <div key={kas.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3 relative overflow-hidden">
+            <div key={kas.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gray-200 to-gray-100"></div>
               
               {/* Card Header */}
-              <div className="flex justify-between items-start pl-2">
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-bold text-gray-900">{kas.pt}</span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-xs font-medium text-gray-500">{new Date(kas.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric'})}</span>
+              <div className="flex justify-between items-start pl-2 mb-2">
+                <div className="mr-2">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="font-bold text-gray-900 text-sm">{kas.pt}</span>
+                    <span className="text-[10px] text-gray-400">•</span>
+                    <span className="text-[11px] font-medium text-gray-500">{new Date(kas.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric'})}</span>
                   </div>
                   {kas.kategori && (
-                    <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-semibold uppercase tracking-wider">
+                    <span className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-semibold uppercase tracking-wider mt-0.5">
                       {kas.kategori}
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col items-end gap-1.5">
+                <div className="flex flex-wrap justify-end gap-1">
                   {getStatusBadge(kas.status)}
                   {getMethodBadge(kas.metodeBayar)}
                 </div>
               </div>
 
               {/* Card Body */}
-              <div className="pl-2">
-                <p className="text-sm text-gray-700 leading-snug">{kas.keterangan}</p>
+              <div className="pl-2 mb-2">
+                <p className="text-sm text-gray-700 leading-snug line-clamp-2">{kas.keterangan}</p>
               </div>
 
               {/* Card Nominal & Actions */}
-              <div className="pt-3 mt-1 border-t border-gray-50 flex items-center justify-between pl-2">
+              <div className="pt-2 border-t border-gray-50 flex items-center justify-between pl-2">
                 <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Nominal</p>
-                  <p className={`text-lg font-bold ${kas.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <p className={`text-base font-bold tracking-tight ${kas.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {kas.jenis === 'keluar' ? '-' : '+'} Rp {kas.jumlah.toLocaleString('id-ID')}
                   </p>
                 </div>
                 
                 {hasApprovalAccess && kas.status === 'pending' && currentUserData?.accessPT?.includes(kas.pt) && (
-                  <div className="flex gap-2">
-                    <button onClick={() => onApprove(kas.id)} className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center hover:bg-emerald-500 hover:text-white hover:border-emerald-500 active:scale-90 transition-all shadow-sm">
-                      <CheckCircle size={18} />
+                  <div className="flex gap-1.5">
+                    <button onClick={() => onApprove(kas.id)} className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center hover:bg-emerald-500 hover:text-white active:scale-90 transition-all shadow-sm">
+                      <CheckCircle size={15} />
                     </button>
-                    <button onClick={() => onReject(kas.id)} className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center hover:bg-rose-500 hover:text-white hover:border-rose-500 active:scale-90 transition-all shadow-sm">
-                      <XCircle size={18} />
+                    <button onClick={() => onReject(kas.id)} className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center hover:bg-rose-500 hover:text-white active:scale-90 transition-all shadow-sm">
+                      <XCircle size={15} />
                     </button>
                   </div>
                 )}
