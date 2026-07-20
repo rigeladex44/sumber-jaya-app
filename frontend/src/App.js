@@ -26,7 +26,13 @@ import PenjualanPage from './pages/Penjualan';
 import SearchResultsModal from './components/modals/SearchResultsModal';
 
 // Import constants
-import { APP_VERSION } from './utils/constants';
+import {
+  PT_LIST,
+  KATEGORI_PENGELUARAN,
+  MAIN_MENU_ITEMS,
+  AUTO_REFRESH_INTERVAL,
+  getExpandedPTList
+} from './utils/constants';
 // Helper: Get today's date in YYYY-MM-DD format (timezone-aware untuk WIB)
 const getLocalDateString = () => {
   const today = new Date();
@@ -769,9 +775,16 @@ const SumberJayaApp = () => {
     setSearchDate('');
   };
 
-  const getDynamicSaldoAwal = () => {
-    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
-    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+  const getDynamicSaldoAwal = (expandedPTs = [], selectedDateObj = null) => {
+    if (!selectedDateObj) {
+      const selectedDate = filterKasKecil.tanggal || getLocalDateString();
+      selectedDateObj = new Date(selectedDate + 'T00:00:00');
+    }
+    
+    // If not passed, use current filter's expanded PTs
+    if (expandedPTs.length === 0 && filterKasKecil.pt.length > 0) {
+      expandedPTs = getExpandedPTList(filterKasKecil.pt);
+    }
     
     return kasKecilData.reduce((sum, item) => {
       if (item.status !== 'approved') return sum;
@@ -780,7 +793,7 @@ const SumberJayaApp = () => {
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
       
       if (itemDateOnly.getTime() < selectedDateObj.getTime()) {
-        if (filterKasKecil.pt.length === 0 || filterKasKecil.pt.includes(item.pt)) {
+        if (expandedPTs.length === 0 || expandedPTs.includes(item.pt)) {
           if (item.jenis === 'masuk') return sum + (item.jumlah || 0);
           if (item.jenis === 'keluar') return sum - (item.jumlah || 0);
         }
@@ -892,31 +905,46 @@ const SumberJayaApp = () => {
       return;
     }
 
-    // Calculate running balance
-    const dynamicSaldoAwal = getDynamicSaldoAwal();
-    let runningBalance = dynamicSaldoAwal;
+    const expandedPTs = filterKasKecil.pt.length > 0 
+      ? getExpandedPTList(filterKasKecil.pt) 
+      : [];
 
-    const dataWithBalance = displayData.map((item, index) => {
-      // Only count approved transactions for balance
-      if (item.status === 'approved') {
-        if (item.jenis === 'masuk') {
-          runningBalance += item.jumlah || 0;
-        } else if (item.jenis === 'keluar') {
-          runningBalance -= item.jumlah || 0;
-        }
-      }
-      return {
-        ...item,
-        no: index + 1,
-        saldo: runningBalance
-      };
+    const groupData = kasKecilData.filter(item => {
+      if (!item.tanggal) return false;
+      const itemDate = new Date(item.tanggal);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      if (itemDateOnly.getTime() !== selectedDateObj.getTime()) return false;
+      if (expandedPTs.length > 0 && !expandedPTs.includes(item.pt)) return false;
+      return true;
     });
 
-    // Calculate totals
-    const totalMasuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const totalKeluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    // Calculate running balance based on GROUP data
+    const dynamicSaldoAwal = getDynamicSaldoAwal(expandedPTs, selectedDateObj);
+    let runningBalance = dynamicSaldoAwal;
 
-    // Saldo Akhir = Total Masuk - Total Keluar (today only)
+    const groupDataWithBalance = groupData.map((item) => {
+      if (item.status === 'approved') {
+        if (item.jenis === 'masuk') runningBalance += item.jumlah || 0;
+        else if (item.jenis === 'keluar') runningBalance -= item.jumlah || 0;
+      }
+      return { ...item, saldo: runningBalance };
+    });
+
+    const dataWithBalanceTemp = filterKasKecil.pt.length === 0
+      ? groupDataWithBalance
+      : groupDataWithBalance.filter(item => filterKasKecil.pt.includes(item.pt));
+    
+    const dataWithBalance = dataWithBalanceTemp.map((item, index) => ({
+      ...item,
+      no: index + 1
+    }));
+
+    // Calculate totals based on GROUP data
+    const totalMasuk = groupData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const totalKeluar = groupData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+
+    // Saldo Akhir = Total Masuk - Total Keluar (today only) 
+    // For print, we usually just need the flow diff
     const saldoAkhir = totalMasuk - totalKeluar;
 
     // DEBUG: Alert untuk konfirmasi data sebelum print
@@ -2839,23 +2867,41 @@ const SumberJayaApp = () => {
   // Render Kas Kecil Page (untuk pembukuan kasir tunai - Cash Only)
   const renderKasKecil = () => {
 
-    // Use auto-filtered data (real-time)
+    // Use auto-filtered data (real-time) for display list
     const displayData = getFilteredKasKecilData();
 
-    // Calculate totals based on display data
-    const masuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const keluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    // --- GRUP KASIR LOGIC FOR TOTALS ---
+    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+    
+    const expandedPTs = filterKasKecil.pt.length > 0 
+      ? getExpandedPTList(filterKasKecil.pt) 
+      : [];
 
-    // Get opening balance (calculate dynamically from kasKecilData based on selected date)
-    const saldoAwal = getDynamicSaldoAwal();
+    // Filter group data for the selected date
+    const groupData = kasKecilData.filter(item => {
+      if (!item.tanggal) return false;
+      const itemDate = new Date(item.tanggal);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      if (itemDateOnly.getTime() !== selectedDateObj.getTime()) return false;
+      if (expandedPTs.length > 0 && !expandedPTs.includes(item.pt)) return false;
+      return true;
+    });
+
+    // Calculate totals based on GROUP data (SJE+KSS+FAB combined)
+    const masuk = groupData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const keluar = groupData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+
+    // Get opening balance (calculated from group data)
+    const saldoAwal = getDynamicSaldoAwal(expandedPTs, selectedDateObj);
 
     // Calculate closing balance = opening balance + masuk - keluar
     const saldo = saldoAwal + masuk - keluar;
 
-    // Add running balance to display data
+    // Add running balance to GROUP data first so it correctly interleaves
     // Start from saldoAwal
     let runningBalance = saldoAwal;
-    const dataWithBalance = displayData.map((item) => {
+    const groupDataWithBalance = groupData.map((item) => {
       // Only count approved transactions for balance
       if (item.status === 'approved') {
         if (item.jenis === 'masuk') {
@@ -2869,6 +2915,11 @@ const SumberJayaApp = () => {
         saldo: runningBalance
       };
     });
+
+    // Finally, filter the displayed rows back down to exactly what the user selected in the UI
+    const dataWithBalance = filterKasKecil.pt.length === 0
+      ? groupDataWithBalance
+      : groupDataWithBalance.filter(item => filterKasKecil.pt.includes(item.pt));
 
     // Check if transaction is from today for edit/delete
     const isToday = (createdAt) => {
@@ -2911,7 +2962,7 @@ const SumberJayaApp = () => {
                 className="w-full px-4 py-2 border rounded-lg"
               >
                 <option value="">Pilih PT</option>
-                {currentUserData?.accessPT?.map(code => (
+                {getExpandedPTList(currentUserData?.accessPT || []).map(code => (
                   <option key={code} value={code}>{code}</option>
                 ))}
               </select>
@@ -2994,7 +3045,7 @@ const SumberJayaApp = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
               <div className="flex flex-wrap gap-2">
-                {currentUserData?.accessPT?.map(ptCode => (
+                {getExpandedPTList(currentUserData?.accessPT || []).map(ptCode => (
                   <button
                     key={ptCode}
                     onClick={() => {

@@ -20,6 +20,35 @@ export const PT_LIST = [
 ];
 
 /**
+ * Konfigurasi Grup Kasir (Penggabungan Kas Khusus Kas Kecil)
+ * PT dalam satu grup akan berbagi saldo fisik (Running Balance).
+ */
+export const KASIR_GROUPS = [
+  ['SJE', 'KSS', 'FAB']
+];
+
+/**
+ * Mendapatkan seluruh PT yang satu grup dengan PT yang diberikan
+ */
+export const getKasirGroupForPT = (pt) => {
+  const group = KASIR_GROUPS.find(g => g.includes(pt));
+  return group ? group : [pt];
+};
+
+/**
+ * Mengekspansi daftar PT dengan anggota grupnya (untuk Kas Kecil)
+ */
+export const getExpandedPTList = (ptList) => {
+  if (!ptList || ptList.length === 0) return [];
+  const expandedSet = new Set();
+  ptList.forEach(pt => {
+    const group = getKasirGroupForPT(pt);
+    group.forEach(g => expandedSet.add(g));
+  });
+  return Array.from(expandedSet);
+};
+
+/**
  * Kategori Pengeluaran untuk Kas Kecil
  */
 export const KATEGORI_PENGELUARAN = [
