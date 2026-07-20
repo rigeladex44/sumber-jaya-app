@@ -46,73 +46,10 @@ const DetailKas = ({
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      {/* Header & Filters */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Approval Kas Kecil</h2>
-          <p className="text-sm text-gray-500 mt-1">Review dan verifikasi transaksi harian</p>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* PT Filter Dropdown */}
-          <div className="relative">
-            <button
-              className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white flex items-center justify-between gap-3 transition-all text-sm font-medium text-gray-700"
-              onClick={() => setShowPTDropdown(!showPTDropdown)}
-            >
-              <span>{selectedPT.length > 0 ? `${selectedPT.length} PT Dipilih` : 'Semua PT'}</span>
-              <ChevronDown size={16} className={`text-gray-400 transition-transform ${showPTDropdown ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {showPTDropdown && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowPTDropdown(false)}></div>
-                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-100 rounded-xl shadow-lg z-20 min-w-[200px] p-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="text-xs font-semibold text-gray-400 mb-2 px-2 uppercase tracking-wider">Filter PT</div>
-                  {currentUserData?.accessPT?.map(code => (
-                    <label key={code} className="flex items-center px-3 py-2 hover:bg-blue-50 rounded-lg cursor-pointer group transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedPT.includes(code)}
-                        onChange={() => handlePTChange(code)}
-                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition-all"
-                      />
-                      <span className="ml-3 text-sm text-gray-700 group-hover:text-blue-700 font-medium">{code}</span>
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Date Filter */}
-          <div className="relative flex-1 sm:flex-none">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Calendar size={16} className="text-gray-400" />
-            </div>
-            <input
-              type="date"
-              value={filterDetailKas.tanggal}
-              onChange={(e) => onFilterChange({ tanggal: e.target.value })}
-              className="w-full sm:w-auto pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white text-sm font-medium text-gray-700 transition-all cursor-pointer"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Info Banner */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-5 rounded-2xl flex items-start gap-4">
-        <div className="p-2 bg-blue-100 rounded-full text-blue-600 shrink-0">
-          <AlertCircle size={20} />
-        </div>
-        <div>
-          <h4 className="font-semibold text-blue-900">Informasi Approval</h4>
-          <p className="text-sm text-blue-800/80 mt-1 leading-relaxed">
-            Fitur ini khusus untuk melihat detail transaksi kas kecil dan melakukan approval/reject.
-            {hasApprovalAccess ? ' Anda memiliki hak akses penuh untuk melakukan approval.' : ' Akun Anda saat ini hanya dalam mode pantau (Read-Only).'}
-          </p>
-        </div>
+    <div className="space-y-4 max-w-7xl mx-auto pb-10 pt-2">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Approval Kas Kecil</h2>
+        <p className="text-sm text-gray-500 mt-1">Review dan verifikasi transaksi harian</p>
       </div>
 
       {/* Mobile-First Card View (Hidden on md and up) */}
@@ -123,13 +60,13 @@ const DetailKas = ({
           </div>
         ) : (
           filteredData.map(kas => (
-            <div key={kas.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4 relative overflow-hidden">
+            <div key={kas.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gray-200 to-gray-100"></div>
               
               {/* Card Header */}
               <div className="flex justify-between items-start pl-2">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-bold text-gray-900">{kas.pt}</span>
                     <span className="text-xs text-gray-400">•</span>
                     <span className="text-xs font-medium text-gray-500">{new Date(kas.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric'})}</span>
@@ -140,7 +77,7 @@ const DetailKas = ({
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-col items-end gap-1.5">
                   {getStatusBadge(kas.status)}
                   {getMethodBadge(kas.metodeBayar)}
                 </div>
@@ -148,11 +85,11 @@ const DetailKas = ({
 
               {/* Card Body */}
               <div className="pl-2">
-                <p className="text-sm text-gray-700 leading-relaxed">{kas.keterangan}</p>
+                <p className="text-sm text-gray-700 leading-snug">{kas.keterangan}</p>
               </div>
 
               {/* Card Nominal & Actions */}
-              <div className="pt-4 mt-2 border-t border-gray-50 flex items-center justify-between pl-2">
+              <div className="pt-3 mt-1 border-t border-gray-50 flex items-center justify-between pl-2">
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Nominal</p>
                   <p className={`text-lg font-bold ${kas.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
