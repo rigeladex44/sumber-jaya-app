@@ -769,6 +769,26 @@ const SumberJayaApp = () => {
     setSearchDate('');
   };
 
+  const getDynamicSaldoAwal = () => {
+    const selectedDate = filterKasKecil.tanggal || getLocalDateString();
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+    
+    return kasKecilData.reduce((sum, item) => {
+      if (item.status !== 'approved') return sum;
+      
+      const itemDate = new Date(item.tanggal);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      
+      if (itemDateOnly.getTime() < selectedDateObj.getTime()) {
+        if (filterKasKecil.pt.length === 0 || filterKasKecil.pt.includes(item.pt)) {
+          if (item.jenis === 'masuk') return sum + (item.jumlah || 0);
+          if (item.jenis === 'keluar') return sum - (item.jumlah || 0);
+        }
+      }
+      return sum;
+    }, 0);
+  };
+
   // Auto-filter: Get filtered data for Kas Kecil (Harian - tampilkan hari ini saja)
   const getFilteredKasKecilData = () => {
     // Get selected date from filter (defaults to today)
@@ -873,8 +893,8 @@ const SumberJayaApp = () => {
     }
 
     // Calculate running balance
-    // Start from saldoAwalKasKecil
-    let runningBalance = saldoAwalKasKecil || 0;
+    const dynamicSaldoAwal = getDynamicSaldoAwal();
+    let runningBalance = dynamicSaldoAwal;
 
     const dataWithBalance = displayData.map((item, index) => {
       // Only count approved transactions for balance
@@ -1120,7 +1140,7 @@ const SumberJayaApp = () => {
               <tbody>
                 <tr style="background: #eef2ff;">
                   <td colspan="6" class="text-center"><strong>Saldo Awal (Sebelum ${tanggalOnly})</strong></td>
-                  <td class="text-right"><strong>Rp ${saldoAwalKasKecil.toLocaleString('id-ID')}</strong></td>
+                  <td class="text-right"><strong>Rp ${dynamicSaldoAwal.toLocaleString('id-ID')}</strong></td>
                 </tr>
                 ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
                   <tr>
@@ -2826,8 +2846,8 @@ const SumberJayaApp = () => {
     const masuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const keluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
 
-    // Get opening balance (from backend)
-    const saldoAwal = saldoAwalKasKecil || 0;
+    // Get opening balance (calculate dynamically from kasKecilData based on selected date)
+    const saldoAwal = getDynamicSaldoAwal();
 
     // Calculate closing balance = opening balance + masuk - keluar
     const saldo = saldoAwal + masuk - keluar;
@@ -3102,7 +3122,7 @@ const SumberJayaApp = () => {
                     Saldo Awal {filterKasKecil.tanggal ? `(Sebelum ${new Date(filterKasKecil.tanggal).toLocaleDateString('id-ID')})` : ''}
                   </td>
                   <td className="px-4 py-3 text-sm text-right font-bold text-blue-700">
-                    Rp {(saldoAwalKasKecil || 0).toLocaleString('id-ID')}
+                    Rp {saldoAwal.toLocaleString('id-ID')}
                   </td>
                   <td colSpan="2" className="px-4 py-3 no-print"></td>
                 </tr>
