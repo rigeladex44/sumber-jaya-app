@@ -3121,7 +3121,7 @@ const SumberJayaApp = () => {
                   <td colSpan="6" className="px-4 py-3 text-sm font-semibold text-center text-blue-800">
                     Saldo Awal {filterKasKecil.tanggal ? `(Sebelum ${new Date(filterKasKecil.tanggal).toLocaleDateString('id-ID')})` : ''}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right font-bold text-blue-700">
+                  <td className="px-4 py-3 text-sm text-right font-bold text-blue-700 whitespace-nowrap">
                     Rp {saldoAwal.toLocaleString('id-ID')}
                   </td>
                   <td colSpan="2" className="px-4 py-3 no-print"></td>
@@ -3132,7 +3132,7 @@ const SumberJayaApp = () => {
                     <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                       {item.jenis === 'masuk' ? (
                         <span className="text-green-600 font-medium">
                           Rp {(item.jumlah || 0).toLocaleString('id-ID')}
@@ -3141,7 +3141,7 @@ const SumberJayaApp = () => {
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                       {item.jenis === 'keluar' ? (
                         <span className="text-red-600 font-medium">
                           Rp {(item.jumlah || 0).toLocaleString('id-ID')}
@@ -3150,7 +3150,7 @@ const SumberJayaApp = () => {
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
                       <span className={`font-semibold ${item.saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                         Rp {(item.saldo || 0).toLocaleString('id-ID')}
                       </span>
