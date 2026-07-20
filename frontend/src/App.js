@@ -163,7 +163,6 @@ const SumberJayaApp = () => {
       });
 
       setKasKecilData(response.data || []);
-      setSaldoAwalKasKecil(response.saldoAwal || 0);
     } catch (error) {
       console.error('Error loading kas kecil:', error);
       // Don't alert on load error, just log it

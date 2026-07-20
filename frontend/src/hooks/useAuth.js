@@ -4,7 +4,6 @@
  */
 import { useState, useCallback } from 'react';
 import { authService } from '../services/api';
-import { getLocalDateString } from '../utils/dateHelpers';
 
 export const useAuth = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
