@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Home, DollarSign, Wallet, ArrowDownCircle, ArrowUpCircle, ShoppingCart, BarChart3, Users, LogOut,
-  AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Tags, BookOpen
+  Home, Wallet, ArrowDownCircle, ArrowUpCircle, ShoppingCart, BarChart3, Users, LogOut,
+  AlertCircle, Lock, X, Eye, EyeOff, TrendingUp, Tags, BookOpen
 } from 'lucide-react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import DatePicker from 'react-datepicker';
@@ -29,10 +29,6 @@ import SearchResultsModal from './components/modals/SearchResultsModal';
 
 // Import constants
 import {
-  PT_LIST,
-  KATEGORI_PENGELUARAN,
-  MAIN_MENU_ITEMS,
-  AUTO_REFRESH_INTERVAL,
   getExpandedPTList,
   APP_VERSION
 } from './utils/constants';
@@ -411,7 +407,6 @@ const SumberJayaApp = () => {
 
   // Data Management State
   const [kasKecilData, setKasKecilData] = useState([]);
-  const [saldoAwalKasKecil, setSaldoAwalKasKecil] = useState(0);
   const [userList, setUserList] = useState([]);
   const [penjualanData, setPenjualanData] = useState([]);
 
@@ -2855,8 +2850,6 @@ const SumberJayaApp = () => {
   // Render Kas Kecil Page (untuk pembukuan kasir tunai - Cash Only)
   const renderKasKecil = () => {
 
-    // Use auto-filtered data (real-time) for display list
-    const displayData = getFilteredKasKecilData();
 
     // --- GRUP KASIR LOGIC FOR TOTALS ---
     const startDateStr = filterKasKecil.tanggalMulai || getLocalDateString();

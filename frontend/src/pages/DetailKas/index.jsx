@@ -3,8 +3,8 @@
  * Displays transaction details with approval/rejection functionality
  * UI/UX revamped for mobile-first & premium desktop feel.
  */
-import React, { useState } from 'react';
-import { AlertCircle, Calendar, ChevronDown, CheckCircle, XCircle, CreditCard, Banknote, Clock } from 'lucide-react';
+import React from 'react';
+import { CheckCircle, XCircle, CreditCard, Banknote, Clock } from 'lucide-react';
 import { filterKasData, calculateKasTotals } from '../../utils/dataFilters';
 
 const DetailKas = ({
@@ -17,15 +17,6 @@ const DetailKas = ({
   onApprove,
   onReject
 }) => {
-  const [showPTDropdown, setShowPTDropdown] = useState(false);
-  
-  const handlePTChange = (ptCode) => {
-    const newSelectedPT = selectedPT.includes(ptCode)
-      ? selectedPT.filter(p => p !== ptCode)
-      : [...selectedPT, ptCode];
-    onPTChange(newSelectedPT);
-  };
-
   // Filter and calculate totals using shared utilities
   const filteredData = filterKasData(kasKecilData, selectedPT, filterDetailKas.tanggal);
   const { masuk, keluar, saldo } = calculateKasTotals(filteredData);
