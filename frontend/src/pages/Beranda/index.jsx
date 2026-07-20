@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import {
-  DollarSign, ShoppingCart, TrendingUp, TrendingDown, AlertCircle, Calendar, ChevronRight, CheckCircle, XCircle
+  Wallet, Package, ArrowDownCircle, ArrowUpCircle, Clock, Calendar, ChevronRight, CheckCircle, XCircle
 } from 'lucide-react';
 import { PT_LIST } from '../../utils/constants';
 import { getLocalDateString, getLocalDateFromISO } from '../../utils/dateHelpers';
@@ -87,7 +87,7 @@ const Beranda = ({
           <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 md:p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                <DollarSign size={20} strokeWidth={2.5} />
+                <Wallet size={20} strokeWidth={2.5} />
               </div>
               <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider leading-tight">Saldo Kas Kecil</p>
             </div>
@@ -107,7 +107,7 @@ const Beranda = ({
           <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 md:p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
-                <TrendingUp size={20} strokeWidth={2.5} />
+                <ArrowDownCircle size={20} strokeWidth={2.5} />
               </div>
               <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider leading-tight">Pemasukan Hari Ini</p>
             </div>
@@ -127,7 +127,7 @@ const Beranda = ({
           <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 md:p-2.5 bg-rose-50 text-rose-600 rounded-xl">
-                <TrendingDown size={20} strokeWidth={2.5} />
+                <ArrowUpCircle size={20} strokeWidth={2.5} />
               </div>
               <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider leading-tight">Pengeluaran Hari Ini</p>
             </div>
@@ -148,7 +148,7 @@ const Beranda = ({
                onClick={() => onSetActiveMenu('detail-kas')}>
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 md:p-2.5 bg-amber-50 text-amber-600 rounded-xl">
-                <AlertCircle size={20} strokeWidth={2.5} />
+                <Clock size={20} strokeWidth={2.5} />
               </div>
               <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider leading-tight">Pending Approval</p>
             </div>
@@ -167,7 +167,7 @@ const Beranda = ({
                onClick={() => onSetActiveMenu('penjualan')}>
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 md:p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-                <ShoppingCart size={20} strokeWidth={2.5} />
+                <Package size={20} strokeWidth={2.5} />
               </div>
               <p className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider">Penjualan Hari Ini</p>
             </div>

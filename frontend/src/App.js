@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Home, DollarSign, ShoppingCart, BarChart3, Users, LogOut,
+  Home, DollarSign, Wallet, ArrowDownCircle, ArrowUpCircle, ShoppingCart, BarChart3, Users, LogOut,
   AlertCircle, Lock, X, Eye, EyeOff, TrendingDown, TrendingUp, Tags, BookOpen
 } from 'lucide-react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -3097,7 +3097,7 @@ const SumberJayaApp = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-                  <DollarSign className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                  <Wallet className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Saldo Awal</p>
               </div>
@@ -3109,7 +3109,7 @@ const SumberJayaApp = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                  <TrendingUp className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                  <ArrowDownCircle className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Masuk</p>
               </div>
@@ -3121,7 +3121,7 @@ const SumberJayaApp = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-red-50 text-red-600 rounded-lg">
-                  <TrendingDown className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                  <ArrowUpCircle className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Keluar</p>
               </div>
@@ -3133,7 +3133,7 @@ const SumberJayaApp = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className={`p-2 rounded-lg ${saldo >= 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
-                  <DollarSign className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                  <Wallet className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Saldo Akhir</p>
               </div>
@@ -3644,7 +3644,7 @@ const SumberJayaApp = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                  <TrendingUp className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                  <ArrowDownCircle className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Masuk</p>
               </div>
@@ -3656,7 +3656,7 @@ const SumberJayaApp = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-red-50 text-red-600 rounded-lg">
-                  <TrendingDown className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                  <ArrowUpCircle className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Keluar</p>
               </div>
@@ -3668,7 +3668,7 @@ const SumberJayaApp = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className={`p-2 rounded-lg ${saldo >= 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
-                  <DollarSign className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                  <Wallet className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Saldo Akhir</p>
               </div>
