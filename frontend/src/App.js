@@ -3041,129 +3041,241 @@ const SumberJayaApp = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Saldo Awal</p>
-                <p className="text-2xl font-bold text-purple-600">Rp {saldoAwal.toLocaleString('id-ID')}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                  <DollarSign className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Saldo Awal</p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <DollarSign className="w-6 h-6 text-purple-600" />
-              </div>
+              <p className="text-lg md:text-2xl font-black text-purple-600 tracking-tight mt-1">Rp {saldoAwal.toLocaleString('id-ID')}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Masuk</p>
-                <p className="text-2xl font-bold text-green-600">Rp {masuk.toLocaleString('id-ID')}</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+                  <TrendingUp className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Masuk</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
+              <p className="text-lg md:text-2xl font-black text-green-600 tracking-tight mt-1">Rp {masuk.toLocaleString('id-ID')}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Keluar</p>
-                <p className="text-2xl font-bold text-red-600">Rp {keluar.toLocaleString('id-ID')}</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-red-50 text-red-600 rounded-lg">
+                  <TrendingDown className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Keluar</p>
               </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <TrendingDown className="w-6 h-6 text-red-600" />
-              </div>
+              <p className="text-lg md:text-2xl font-black text-red-600 tracking-tight mt-1">Rp {keluar.toLocaleString('id-ID')}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Saldo Akhir</p>
-                <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  Rp {saldo.toLocaleString('id-ID')}
-                </p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className={`p-2 rounded-lg ${saldo >= 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
+                  <DollarSign className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Saldo Akhir</p>
               </div>
-              <div className={`p-3 rounded-full ${saldo >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
-                <DollarSign className={`w-6 h-6 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
-              </div>
+              <p className={`text-lg md:text-2xl font-black tracking-tight mt-1 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                Rp {saldo.toLocaleString('id-ID')}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Transaction Table */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-4 border-b">
-            <div>
-              <h3 className="text-lg font-semibold">Riwayat Transaksi Kas Kecil</h3>
-              <p className="text-sm text-gray-600">Transaksi tunai (cash) di kasir</p>
+        {/* Transaction History */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-4 border-b border-gray-100">
+            <h3 className="text-lg font-bold text-gray-800">Riwayat Transaksi Kas Kecil</h3>
+            <p className="text-sm text-gray-500">Transaksi tunai (cash) di kasir</p>
+          </div>
+          
+          {/* Mobile Card View (Hidden on md and up) */}
+          <div className="md:hidden">
+            {/* Saldo Awal Card */}
+            <div className="p-4 border-b border-gray-100 bg-blue-50/50">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold text-blue-800">
+                  Saldo Awal {filterKasKecil.tanggal ? `(Seb. ${new Date(filterKasKecil.tanggal).toLocaleDateString('id-ID', {day:'numeric', month:'short'})})` : ''}
+                </span>
+                <span className="text-base font-black text-blue-700">Rp {saldoAwal.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+            
+            {/* Transaction Cards */}
+            <div className="flex flex-col">
+              {dataWithBalance.map((item) => (
+                <div key={item.id} className="p-4 border-b border-gray-100 hover:bg-gray-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="mr-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="font-bold text-sm text-gray-900">{item.pt}</span>
+                        <span className="text-[10px] text-gray-400">•</span>
+                        <span className="text-[11px] font-medium text-gray-500">{new Date(item.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric'})}</span>
+                      </div>
+                      {item.kategori && (
+                        <span className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-semibold uppercase tracking-wider mb-1">
+                          {item.kategori}
+                        </span>
+                      )}
+                      <p className="text-sm text-gray-700 leading-snug">{item.keterangan}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        item.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
+                        item.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
+                        'bg-amber-50 text-amber-600'
+                      }`}>
+                        {item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-200">
+                    <div>
+                      <p className={`text-base font-bold tracking-tight ${item.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {item.jenis === 'keluar' ? '-' : '+'} Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                      </p>
+                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mt-0.5">
+                        Saldo: <span className={`font-bold ${item.saldo >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>Rp {(item.saldo || 0).toLocaleString('id-ID')}</span>
+                      </p>
+                    </div>
+                    
+                    {isToday(item.created_at) && (
+                      <div className="flex gap-1.5 no-print">
+                        <button
+                          onClick={() => {
+                            setEditingKasKecil(item);
+                            setFormKasKecil({
+                              tanggal: getLocalDateFromISO(item.tanggal),
+                              pt: item.pt,
+                              jenis: item.jenis,
+                              jumlah: item.jumlah.toString(),
+                              keterangan: item.keterangan,
+                              kategori: item.kategori || ''
+                            });
+                            setShowEditKasKecilModal(true);
+                          }}
+                          className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteKasKecil(item.id, item.keterangan)}
+                          className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {dataWithBalance.length === 0 && (
+                <div className="p-8 text-center text-gray-500 text-sm">Tidak ada transaksi</div>
+              )}
+            </div>
+            
+            <div className="p-4 bg-gray-50 border-t border-gray-200">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase">Total Masuk</span>
+                <span className="text-sm font-bold text-emerald-600">Rp {masuk.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-semibold text-gray-500 uppercase">Total Keluar</span>
+                <span className="text-sm font-bold text-rose-600">Rp {keluar.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                <span className="text-sm font-bold text-gray-800">Saldo Akhir</span>
+                <span className="text-lg font-black text-blue-600">Rp {saldo.toLocaleString('id-ID')}</span>
+              </div>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50/80 border-b border-gray-100">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PT</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Keluar</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Saldo</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase no-print">Status</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase no-print">Aksi</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600">Tanggal</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600">PT</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600">Kategori</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600">Keterangan</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-right">Masuk</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-right">Keluar</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-right">Saldo</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-center no-print">Status</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-center no-print">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                <tr className="bg-blue-50 border-b border-blue-100">
-                  <td colSpan="6" className="px-4 py-3 text-sm font-semibold text-center text-blue-800">
+              <tbody className="divide-y divide-gray-100">
+                <tr className="bg-blue-50/50 border-b border-blue-100">
+                  <td colSpan="6" className="px-5 py-4 text-sm font-semibold text-center text-blue-800">
                     Saldo Awal {filterKasKecil.tanggal ? `(Sebelum ${new Date(filterKasKecil.tanggal).toLocaleDateString('id-ID')})` : ''}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right font-bold text-blue-700 whitespace-nowrap">
+                  <td className="px-5 py-4 text-sm text-right font-bold text-blue-700 whitespace-nowrap">
                     Rp {saldoAwal.toLocaleString('id-ID')}
                   </td>
-                  <td colSpan="2" className="px-4 py-3 no-print"></td>
+                  <td colSpan="2" className="px-5 py-4 no-print"></td>
                 </tr>
                 {dataWithBalance.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
-                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                  <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-5 py-4 text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td className="px-5 py-4 font-medium text-gray-900">{item.pt}</td>
+                    <td className="px-5 py-4 text-gray-600">
+                      {item.kategori ? (
+                        <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-semibold uppercase tracking-wider">
+                          {item.kategori}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-5 py-4 text-gray-700">{item.keterangan}</td>
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
                       {item.jenis === 'masuk' ? (
-                        <span className="text-green-600 font-medium">
+                        <span className="text-emerald-600 font-bold">
                           Rp {(item.jumlah || 0).toLocaleString('id-ID')}
                         </span>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-300">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
                       {item.jenis === 'keluar' ? (
-                        <span className="text-red-600 font-medium">
+                        <span className="text-rose-600 font-bold">
                           Rp {(item.jumlah || 0).toLocaleString('id-ID')}
                         </span>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-300">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
-                      <span className={`font-semibold ${item.saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
+                      <span className={`font-bold ${item.saldo >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
                         Rp {(item.saldo || 0).toLocaleString('id-ID')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center no-print">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'approved' ? 'bg-green-100 text-green-700' :
-                          item.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'
+                    <td className="px-5 py-4 text-center no-print">
+                      <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          item.status === 'rejected' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                            'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}>
                         {item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center no-print">
+                    <td className="px-5 py-4 text-center no-print">
                       {isToday(item.created_at) && (
                         <div className="flex items-center justify-center gap-2">
                           <button
@@ -3179,20 +3291,20 @@ const SumberJayaApp = () => {
                               });
                               setShowEditKasKecilModal(true);
                             }}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
                             title="Edit"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
                           <button
                             onClick={() => handleDeleteKasKecil(item.id, item.keterangan)}
-                            className="text-red-600 hover:text-red-800"
+                            className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors"
                             title="Hapus"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
                         </div>
@@ -3201,16 +3313,16 @@ const SumberJayaApp = () => {
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-100 font-bold">
+              <tfoot className="bg-gray-50/80 border-t-2 border-gray-200">
                 <tr>
-                  <td colSpan="4" className="px-4 py-3 text-right">Total Hari Ini (Approved)</td>
-                  <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
-                  <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
-                  <td colSpan="3" className="px-4 py-3"></td>
+                  <td colSpan="4" className="px-5 py-4 text-right font-bold text-gray-700">Total Hari Ini (Approved)</td>
+                  <td className="px-5 py-4 text-right font-black text-emerald-600">Rp {masuk.toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-4 text-right font-black text-rose-600">Rp {keluar.toLocaleString('id-ID')}</td>
+                  <td colSpan="3" className="px-5 py-4"></td>
                 </tr>
-                <tr className="bg-blue-50">
-                  <td colSpan="4" className="px-4 py-3 text-right">Saldo Akhir</td>
-                  <td colSpan="5" className="px-4 py-3 text-right text-blue-600 text-lg">
+                <tr className="bg-blue-50/50">
+                  <td colSpan="4" className="px-5 py-4 text-right font-bold text-gray-700">Saldo Akhir</td>
+                  <td colSpan="5" className="px-5 py-4 text-right font-black text-blue-700 text-lg">
                     Rp {saldo.toLocaleString('id-ID')}
                   </td>
                 </tr>
@@ -3476,98 +3588,195 @@ const SumberJayaApp = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Masuk</p>
-                <p className="text-2xl font-bold text-green-600">Rp {masuk.toLocaleString('id-ID')}</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+                  <TrendingUp className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Masuk</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
+              <p className="text-lg md:text-2xl font-black text-green-600 tracking-tight mt-1">Rp {masuk.toLocaleString('id-ID')}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Keluar</p>
-                <p className="text-2xl font-bold text-red-600">Rp {keluar.toLocaleString('id-ID')}</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-red-50 text-red-600 rounded-lg">
+                  <TrendingDown className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Keluar</p>
               </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <TrendingDown className="w-6 h-6 text-red-600" />
-              </div>
+              <p className="text-lg md:text-2xl font-black text-red-600 tracking-tight mt-1">Rp {keluar.toLocaleString('id-ID')}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Saldo Akhir</p>
-                <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  Rp {saldo.toLocaleString('id-ID')}
-                </p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 col-span-2 md:col-span-1">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className={`p-2 rounded-lg ${saldo >= 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
+                  <DollarSign className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                </div>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Saldo Akhir</p>
               </div>
-              <div className={`p-3 rounded-full ${saldo >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
-                <DollarSign className={`w-6 h-6 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
-              </div>
+              <p className={`text-lg md:text-2xl font-black tracking-tight mt-1 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                Rp {saldo.toLocaleString('id-ID')}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Transaction Table */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-4 border-b">
-            <h3 className="text-lg font-semibold">Riwayat Transaksi Arus Kas</h3>
-            <p className="text-sm text-gray-600">Transaksi cash & cashless</p>
+        {/* Transaction History */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-4 border-b border-gray-100">
+            <h3 className="text-lg font-bold text-gray-800">Riwayat Transaksi Arus Kas</h3>
+            <p className="text-sm text-gray-500">Transaksi cash & cashless</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+          
+          {/* Mobile Card View (Hidden on md and up) */}
+          <div className="md:hidden">
+            <div className="flex flex-col">
+              {displayData.map((item) => (
+                <div key={item.id} className="p-4 border-b border-gray-100 hover:bg-gray-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="mr-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="font-bold text-sm text-gray-900">{item.pt}</span>
+                        <span className="text-[10px] text-gray-400">•</span>
+                        <span className="text-[11px] font-medium text-gray-500">{new Date(item.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric'})}</span>
+                      </div>
+                      {item.kategori && (
+                        <span className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-semibold uppercase tracking-wider mb-1">
+                          {item.kategori}
+                        </span>
+                      )}
+                      <p className="text-sm text-gray-700 leading-snug">{item.keterangan}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        item.metode_bayar === 'cash' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'
+                      }`}>
+                        {item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-200">
+                    <div>
+                      <p className={`text-base font-bold tracking-tight ${item.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {item.jenis === 'keluar' ? '-' : '+'} Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    
+                    <div className="flex gap-1.5 no-print">
+                      <button
+                        onClick={() => {
+                          setEditingArusKas(item);
+                          setFormArusKas({
+                            tanggal: getLocalDateFromISO(item.tanggal),
+                            pt: item.pt,
+                            jenis: item.jenis,
+                            jumlah: item.jumlah.toString(),
+                            keterangan: item.keterangan,
+                            subKategoriId: item.sub_kategori_id?.toString() || '',
+                            metodeBayar: item.metode_bayar || 'cashless'
+                          });
+                          setShowEditArusKasModal(true);
+                        }}
+                        className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteArusKas(item.id, item.keterangan)}
+                        className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {displayData.length === 0 && (
+                <div className="p-8 text-center text-gray-500 text-sm">Tidak ada transaksi</div>
+              )}
+            </div>
+            
+            <div className="p-4 bg-gray-50 border-t border-gray-200">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase">Total Masuk</span>
+                <span className="text-sm font-bold text-emerald-600">Rp {masuk.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-semibold text-gray-500 uppercase">Total Keluar</span>
+                <span className="text-sm font-bold text-rose-600">Rp {keluar.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                <span className="text-sm font-bold text-gray-800">Saldo Akhir</span>
+                <span className="text-lg font-black text-blue-600">Rp {saldo.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50/80 border-b border-gray-100">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PT</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Metode</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Masuk</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Keluar</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase no-print">Aksi</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600">Tanggal</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600">PT</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600">Kategori</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600">Keterangan</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-center">Metode</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-right">Masuk</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-right">Keluar</th>
+                  <th className="px-5 py-4 font-semibold text-gray-600 text-center no-print">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {displayData.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.pt}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.metode_bayar === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                  <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-5 py-4 text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td className="px-5 py-4 font-medium text-gray-900">{item.pt}</td>
+                    <td className="px-5 py-4 text-gray-600">
+                      {item.kategori ? (
+                        <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-semibold uppercase tracking-wider">
+                          {item.kategori}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-5 py-4 text-gray-700">{item.keterangan}</td>
+                    <td className="px-5 py-4 text-center">
+                      <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${item.metode_bayar === 'cash' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                         }`}>
                         {item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
                       {item.jenis === 'masuk' ? (
-                        <span className="text-green-600 font-medium">
+                        <span className="text-emerald-600 font-bold">
                           Rp {(item.jumlah || 0).toLocaleString('id-ID')}
                         </span>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-300">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
                       {item.jenis === 'keluar' ? (
-                        <span className="text-red-600 font-medium">
+                        <span className="text-rose-600 font-bold">
                           Rp {(item.jumlah || 0).toLocaleString('id-ID')}
                         </span>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-300">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center no-print">
+                    <td className="px-5 py-4 text-center no-print">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => {
@@ -3583,20 +3792,20 @@ const SumberJayaApp = () => {
                             });
                             setShowEditArusKasModal(true);
                           }}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
                           title="Edit"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
                         <button
                           onClick={() => handleDeleteArusKas(item.id, item.keterangan)}
-                          className="text-red-600 hover:text-red-800"
+                          className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors"
                           title="Hapus"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
                       </div>
@@ -3604,16 +3813,16 @@ const SumberJayaApp = () => {
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-100 font-bold">
+              <tfoot className="bg-gray-50/80 border-t-2 border-gray-200">
                 <tr>
-                  <td colSpan="5" className="px-4 py-3 text-right">Total</td>
-                  <td className="px-4 py-3 text-right text-green-600">Rp {masuk.toLocaleString('id-ID')}</td>
-                  <td className="px-4 py-3 text-right text-red-600">Rp {keluar.toLocaleString('id-ID')}</td>
-                  <td className="px-4 py-3"></td>
+                  <td colSpan="5" className="px-5 py-4 text-right font-bold text-gray-700">Total</td>
+                  <td className="px-5 py-4 text-right font-black text-emerald-600">Rp {masuk.toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-4 text-right font-black text-rose-600">Rp {keluar.toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-4"></td>
                 </tr>
-                <tr className="bg-blue-50">
-                  <td colSpan="5" className="px-4 py-3 text-right">Saldo Akhir</td>
-                  <td colSpan="3" className="px-4 py-3 text-right text-blue-600 text-lg">
+                <tr className="bg-blue-50/50">
+                  <td colSpan="5" className="px-5 py-4 text-right font-bold text-gray-700">Saldo Akhir</td>
+                  <td colSpan="3" className="px-5 py-4 text-right font-black text-blue-700 text-lg">
                     Rp {saldo.toLocaleString('id-ID')}
                   </td>
                 </tr>
