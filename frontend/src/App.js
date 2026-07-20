@@ -79,7 +79,7 @@ const SumberJayaApp = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  
+
   // Dashboard Stats State
   const [dashboardStats, setDashboardStats] = useState({
     kasKecilSaldoAkhir: 0,
@@ -92,13 +92,13 @@ const SumberJayaApp = () => {
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoadingPenjualan, setIsLoadingPenjualan] = useState(false);
-  
+
   // Form Edit Profile
   const [formEditProfile, setFormEditProfile] = useState({
     nama: '',
     jabatan: ''
   });
-  
+
   // Form Change Password
   const [formChangePassword, setFormChangePassword] = useState({
     oldPassword: '',
@@ -108,7 +108,7 @@ const SumberJayaApp = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Load Users from API
   const loadUsers = useCallback(async () => {
     if (!isLoggedIn) return;
@@ -147,33 +147,18 @@ const SumberJayaApp = () => {
     }
 
     try {
-      // Auto-transfer saldo kemarin jika belum
-      try {
-        const transferResult = await kasKecilService.transferSaldo();
-        if (transferResult.transferred) {
-          console.log(`✅ Saldo ditransfer: ${transferResult.count} PT`);
-        }
-      } catch (error) {
-        console.log('Transfer saldo skip:', error.response?.data?.message || error.message);
-      }
-
       // Load data kas kecil
-      const data = await kasKecilService.getAll(filters);
+      const response = await kasKecilService.getAll(filters);
 
       console.log('DEBUG Load Kas Kecil Data:', {
-        dataCount: data.length,
-        sampleData: data.slice(0, 2).map(item => ({
-          id: item.id,
-          tanggal: item.tanggal,
-          tanggalLocal: getLocalDateFromISO(item.tanggal),
-          pt: item.pt,
-          keterangan: item.keterangan
-        })),
+        dataCount: response.data ? response.data.length : 0,
+        saldoAwal: response.saldoAwal,
         localDate: getLocalDateString(),
         silentRefresh: silent
       });
 
-      setKasKecilData(data);
+      setKasKecilData(response.data || []);
+      setSaldoAwalKasKecil(response.saldoAwal || 0);
     } catch (error) {
       console.error('Error loading kas kecil:', error);
       // Don't alert on load error, just log it
@@ -183,7 +168,7 @@ const SumberJayaApp = () => {
       }
     }
   }, [isLoggedIn]);
-  
+
   // Load Penjualan Data from API
   const loadPenjualanData = useCallback(async (filters = {}) => {
     if (!isLoggedIn) return;
@@ -233,10 +218,10 @@ const SumberJayaApp = () => {
   // Inactivity Timer: Auto-logout setelah 3 jam tidak aktif
   useEffect(() => {
     if (!isLoggedIn) return;
-    
+
     const INACTIVITY_TIMEOUT = 3 * 60 * 60 * 1000; // 3 jam dalam milliseconds
     let inactivityTimer;
-    
+
     const resetTimer = () => {
       clearTimeout(inactivityTimer);
       inactivityTimer = setTimeout(() => {
@@ -252,16 +237,16 @@ const SumberJayaApp = () => {
         alert('Sesi Anda telah berakhir karena tidak ada aktivitas selama 3 jam. Silakan login kembali.');
       }, INACTIVITY_TIMEOUT);
     };
-    
+
     // Events yang menandakan user aktif
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
-    
+
     events.forEach(event => {
       document.addEventListener(event, resetTimer);
     });
-    
+
     resetTimer(); // Start timer
-    
+
     // Cleanup
     return () => {
       clearTimeout(inactivityTimer);
@@ -270,7 +255,7 @@ const SumberJayaApp = () => {
       });
     };
   }, [isLoggedIn]);
-  
+
   // Fetch Dashboard Stats
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -417,9 +402,10 @@ const SumberJayaApp = () => {
 
   // Data Management State
   const [kasKecilData, setKasKecilData] = useState([]);
+  const [saldoAwalKasKecil, setSaldoAwalKasKecil] = useState(0);
   const [userList, setUserList] = useState([]);
   const [penjualanData, setPenjualanData] = useState([]);
-  
+
   // Kas Kecil State (untuk pembukuan kasir tunai - Cash Only)
   const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
   const [formKasKecil, setFormKasKecil] = useState({
@@ -553,7 +539,7 @@ const SumberJayaApp = () => {
   const getTodayDate = () => {
     return getLocalDateString();
   };
-  
+
   // Form State
 
 
@@ -597,24 +583,24 @@ const SumberJayaApp = () => {
   const hitungTotalPenjualan = () => {
     const subtotal = (formPenjualan.qty || 0) * (formPenjualan.harga || 16000);
     const ppn = subtotal * (formPenjualan.ppnPercent / 100);
-    
+
     if (formPenjualan.ppnType === 'include') {
       // PPN sudah termasuk dalam harga
       const total = subtotal;
       const ppnAmount = total * (formPenjualan.ppnPercent / 100);
       const baseAmount = total - ppnAmount;
-      return { 
-        subtotal: baseAmount, 
-        ppn: ppnAmount, 
+      return {
+        subtotal: baseAmount,
+        ppn: ppnAmount,
         total: total,
         displayTotal: total
       };
     } else {
       // PPN ditambahkan ke harga
       const total = subtotal + ppn;
-      return { 
-        subtotal: subtotal, 
-        ppn: ppn, 
+      return {
+        subtotal: subtotal,
+        ppn: ppn,
         total: total,
         displayTotal: total
       };
@@ -637,22 +623,22 @@ const SumberJayaApp = () => {
         role: formUser.jabatan,
         aksesPT: formUser.aksesPT,
         fiturAkses: formUser.fiturAkses,
-      status: 'aktif'
-    };
+        status: 'aktif'
+      };
 
       await userService.create(userData);
       await loadUsers(); // Refresh user list
-      
-    setFormUser({
-      nama: '',
-      username: '',
-      password: '',
-      jabatan: '',
-      fiturAkses: [],
-      aksesPT: []
-    });
-    setShowAddUserModal(false);
-    alert('User berhasil ditambahkan!');
+
+      setFormUser({
+        nama: '',
+        username: '',
+        password: '',
+        jabatan: '',
+        fiturAkses: [],
+        aksesPT: []
+      });
+      setShowAddUserModal(false);
+      alert('User berhasil ditambahkan!');
     } catch (error) {
       console.error('Error creating user:', error);
       alert('Gagal menambahkan user: ' + (error.response?.data?.message || error.message));
@@ -688,15 +674,15 @@ const SumberJayaApp = () => {
         fiturAkses: formUser.fiturAkses,
         status: editingUser.status || 'aktif'
       };
-      
+
       // Include password only if changed
       if (formUser.password) {
         userData.password = formUser.password;
       }
-      
+
       await userService.update(editingUser.id, userData);
       await loadUsers(); // Refresh user list
-      
+
       // Update currentUserData jika sedang edit user yang sedang login
       if (currentUserData?.id === editingUser.id) {
         const updatedUser = {
@@ -732,7 +718,7 @@ const SumberJayaApp = () => {
       alert('Anda tidak bisa menghapus user yang sedang login!');
       return;
     }
-    
+
     if (window.confirm('Apakah Anda yakin ingin menghapus user ini?')) {
       try {
         await userService.delete(userId);
@@ -887,8 +873,8 @@ const SumberJayaApp = () => {
     }
 
     // Calculate running balance
-    // Start from 0 because "Sisa Saldo" transaction is already in displayData as first transaction
-    let runningBalance = 0;
+    // Start from saldoAwalKasKecil
+    let runningBalance = saldoAwalKasKecil || 0;
 
     const dataWithBalance = displayData.map((item, index) => {
       // Only count approved transactions for balance
@@ -1132,6 +1118,10 @@ const SumberJayaApp = () => {
                 </tr>
               </thead>
               <tbody>
+                <tr style="background: #eef2ff;">
+                  <td colspan="6" class="text-center"><strong>Saldo Awal (Sebelum ${tanggalOnly})</strong></td>
+                  <td class="text-right"><strong>Rp ${saldoAwalKasKecil.toLocaleString('id-ID')}</strong></td>
+                </tr>
                 ${dataWithBalance && dataWithBalance.length > 0 ? dataWithBalance.map(item => `
                   <tr>
                     <td class="text-center">${item.no}</td>
@@ -1203,34 +1193,34 @@ const SumberJayaApp = () => {
       alert('Mohon lengkapi semua field!');
       return;
     }
-    
+
     setIsLoadingPenjualan(true);
-    
+
     try {
       const penjualanData = {
         tanggal: formPenjualan.tanggal,
         pt: formPenjualan.pt,
         pangkalan: formPenjualan.pangkalan,
-      qty: parseFloat(formPenjualan.qty),
+        qty: parseFloat(formPenjualan.qty),
         harga: parseFloat(formPenjualan.harga),
         ppnPercent: parseFloat(formPenjualan.ppnPercent),
         ppnType: formPenjualan.ppnType,
         metodeBayar: formPenjualan.metodeBayar
       };
-    
+
       await penjualanService.create(penjualanData);
-    
+
       // Refresh data
       await loadPenjualanData();
-      
+
       // If cash payment, kas kecil will be auto-created by backend
-    if (formPenjualan.metodeBayar === 'cash') {
+      if (formPenjualan.metodeBayar === 'cash') {
         await loadKasKecilData();
       }
-      
+
       // Reset form
       setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', harga: 16000, ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' });
-    alert('Data penjualan berhasil disimpan!');
+      alert('Data penjualan berhasil disimpan!');
     } catch (error) {
       console.error('Error saving penjualan:', error);
       alert('Gagal menyimpan data penjualan: ' + (error.response?.data?.message || error.message));
@@ -1249,9 +1239,9 @@ const SumberJayaApp = () => {
       alert('Mohon lengkapi semua field!');
       return;
     }
-    
+
     setIsLoadingKasKecil(true);
-    
+
     try {
       const kasKecilData = {
         tanggal: formKasKecil.tanggal,
@@ -1267,7 +1257,7 @@ const SumberJayaApp = () => {
         localDate: getLocalDateString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
-      
+
       await kasKecilService.create(kasKecilData);
 
       // Refresh data
@@ -1278,15 +1268,15 @@ const SumberJayaApp = () => {
       // await loadKasKecilData();
 
       // Reset form
-      setFormKasKecil({ 
-        tanggal: getLocalDateString(), 
-        pt: '', 
-        jenis: 'keluar', 
-        jumlah: '', 
-        keterangan: '', 
+      setFormKasKecil({
+        tanggal: getLocalDateString(),
+        pt: '',
+        jenis: 'keluar',
+        jumlah: '',
+        keterangan: '',
         kategori: ''
       });
-      
+
       alert('Data kas kecil berhasil disimpan!');
     } catch (error) {
       console.error('Error saving kas kecil:', error);
@@ -1319,14 +1309,14 @@ const SumberJayaApp = () => {
   // Handler Update Kas Kecil (only for today's entries)
   const handleUpdateKasKecil = async () => {
     if (!editingKasKecil) return;
-    
+
     if (!formKasKecil.pt || !formKasKecil.jumlah || !formKasKecil.keterangan) {
       alert('Mohon lengkapi semua field!');
       return;
     }
-    
+
     setIsLoadingKasKecil(true);
-    
+
     try {
       const kasKecilData = {
         tanggal: formKasKecil.tanggal,
@@ -1336,7 +1326,7 @@ const SumberJayaApp = () => {
         keterangan: formKasKecil.keterangan,
         kategori: formKasKecil.kategori
       };
-      
+
       await kasKecilService.update(editingKasKecil.id, kasKecilData);
 
       // Refresh data
@@ -1349,12 +1339,12 @@ const SumberJayaApp = () => {
       // Close modal and reset
       setShowEditKasKecilModal(false);
       setEditingKasKecil(null);
-      setFormKasKecil({ 
-        tanggal: getLocalDateString(), 
-        pt: '', 
-        jenis: 'keluar', 
-        jumlah: '', 
-        keterangan: '', 
+      setFormKasKecil({
+        tanggal: getLocalDateString(),
+        pt: '',
+        jenis: 'keluar',
+        jumlah: '',
+        keterangan: '',
         kategori: ''
       });
 
@@ -1935,7 +1925,7 @@ const SumberJayaApp = () => {
     'BEBAN DIMUKA',
     'BIAYA SEWA',
     'KASBON KARYAWAN'
-    
+
   ];
 
   const mainMenuItems = [
@@ -1952,14 +1942,14 @@ const SumberJayaApp = () => {
   const handleLogin = async () => {
     setLoginError('');
     setIsLoggingIn(true);
-    
+
     try {
       const data = await authService.login(username, password);
       setIsLoggedIn(true);
       setCurrentUserData(data.user);
       setActiveMenu('beranda');
       setPassword(''); // Clear password for security
-      
+
       // Initialize forms
       setFormKasKecil({
         tanggal: getLocalDateString(),
@@ -2009,17 +1999,17 @@ const SumberJayaApp = () => {
         name: formEditProfile.nama,
         role: formEditProfile.jabatan
       });
-      
+
       // Update currentUserData
       const updatedUser = {
         ...currentUserData,
         name: formEditProfile.nama,
         role: formEditProfile.jabatan
       };
-      
+
       setCurrentUserData(updatedUser);
       sessionStorage.setItem('currentUserData', JSON.stringify(updatedUser));
-      
+
       setShowEditProfileModal(false);
       alert(data.message || 'Profil berhasil diperbarui!');
     } catch (error) {
@@ -2068,7 +2058,7 @@ const SumberJayaApp = () => {
         oldPassword,
         newPassword
       });
-      
+
       setShowChangePasswordModal(false);
       setFormChangePassword({
         oldPassword: '',
@@ -2101,9 +2091,9 @@ const SumberJayaApp = () => {
       // Get full PT names for subtitle
       const selectedPTNames = selectedPT.length > 0
         ? selectedPT.map(code => {
-            const pt = ptList.find(p => p.code === code);
-            return pt ? pt.name : code;
-          }).join(' - ')
+          const pt = ptList.find(p => p.code === code);
+          return pt ? pt.name : code;
+        }).join(' - ')
         : ptList.map(p => p.name).join(' - ');
 
       headerSubtitle = selectedPTNames; // PT names for display below title
@@ -2133,7 +2123,7 @@ const SumberJayaApp = () => {
         if (!selectedPT.includes(item.pt)) return false;
         const itemDate = new Date(item.tanggal);
         return itemDate.getFullYear() === parseInt(year) &&
-               (itemDate.getMonth() + 1) === parseInt(month);
+          (itemDate.getMonth() + 1) === parseInt(month);
       });
 
       const pemasukanPerSubKategori = [];
@@ -2575,12 +2565,12 @@ const SumberJayaApp = () => {
               </thead>
               <tbody>
                 ${(() => {
-                  let saldo = 0;
-                  return displayData.map((item, index) => {
-                    const masuk = item.jenis === 'masuk' && item.status === 'approved' ? (item.jumlah || 0) : 0;
-                    const keluar = item.jenis === 'keluar' && item.status === 'approved' ? (item.jumlah || 0) : 0;
-                    saldo = saldo + masuk - keluar;
-                    return `
+            let saldo = 0;
+            return displayData.map((item, index) => {
+              const masuk = item.jenis === 'masuk' && item.status === 'approved' ? (item.jumlah || 0) : 0;
+              const keluar = item.jenis === 'keluar' && item.status === 'approved' ? (item.jumlah || 0) : 0;
+              saldo = saldo + masuk - keluar;
+              return `
                       <tr>
                         <td class="text-center">${index + 1}</td>
                         <td>${item.keterangan}</td>
@@ -2589,8 +2579,8 @@ const SumberJayaApp = () => {
                         <td class="text-right">Rp ${saldo.toLocaleString('id-ID')}</td>
                       </tr>
                     `;
-                  }).join('');
-                })()}
+            }).join('');
+          })()}
               </tbody>
             </table>
             ` : labaRugiContent}
@@ -2600,8 +2590,8 @@ const SumberJayaApp = () => {
         </html>
       `);
       printWindow.document.close();
-      
-      printWindow.onload = function() {
+
+      printWindow.onload = function () {
         printWindow.print();
       };
     } else {
@@ -2612,18 +2602,18 @@ const SumberJayaApp = () => {
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 relative bg-gray-900">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: "url('/images/background.png')"
           }}
         />
-        
+
         {/* Logo outside the form container */}
         <div className="relative z-10 mb-6">
-          <img 
-            src="/images/logo.png" 
-            alt="Logo" 
+          <img
+            src="/images/logo.png"
+            alt="Logo"
             className="object-contain"
             style={{ width: '200px', height: 'auto' }}
             onError={(e) => {
@@ -2635,11 +2625,11 @@ const SumberJayaApp = () => {
             <Lock size={80} />
           </div>
         </div>
-        
+
         <div className="relative bg-white bg-opacity-60 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10">
           <div className="p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2>
-            
+
             {loginError && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
                 <AlertCircle size={20} />
@@ -2659,18 +2649,18 @@ const SumberJayaApp = () => {
                   onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                 <div className="relative">
-                <input
+                  <input
                     type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white bg-opacity-60"
-                  placeholder="Masukkan password"
-                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                />
+                    placeholder="Masukkan password"
+                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                  />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -2684,11 +2674,10 @@ const SumberJayaApp = () => {
               <button
                 onClick={handleLogin}
                 disabled={isLoggingIn}
-                className={`w-full py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl ${
-                  isLoggingIn 
-                    ? 'bg-gray-400 cursor-not-allowed' 
+                className={`w-full py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl ${isLoggingIn
+                    ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:from-blue-700 hover:to-blue-900'
-                }`}
+                  }`}
               >
                 {isLoggingIn ? 'Loading...' : 'Login'}
               </button>
@@ -2830,44 +2819,6 @@ const SumberJayaApp = () => {
   // Render Kas Kecil Page (untuk pembukuan kasir tunai - Cash Only)
   const renderKasKecil = () => {
 
-    // Calculate yesterday's closing balance (Saldo Awal)
-    // Find the "Sisa Saldo" transaction from yesterday ONLY, not cumulative
-    const hitungSaldoAwal = () => {
-      const selectedDate = filterKasKecil.tanggal || getLocalDateString();
-      const selectedDateObj = new Date(selectedDate + 'T00:00:00');
-
-      // Get yesterday's date
-      const yesterday = new Date(selectedDateObj);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayDateOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-
-      // Find "Sisa Saldo" transaction from yesterday
-      const sisaSaldoTransactions = kasKecilData.filter(item => {
-        if (!item.tanggal) return false;
-
-        // Check if transaction is from yesterday
-        const itemDate = new Date(item.tanggal);
-        const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-        if (itemDateOnly.getTime() !== yesterdayDateOnly.getTime()) return false;
-
-        // Check if it's a "Sisa Saldo" transaction (masuk, approved, keterangan contains "Sisa Saldo")
-        if (item.jenis !== 'masuk') return false;
-        if (item.status !== 'approved') return false;
-        if (!item.keterangan || !item.keterangan.toLowerCase().includes('sisa saldo')) return false;
-
-        // Filter by PT if selected
-        if (filterKasKecil.pt.length > 0 && !filterKasKecil.pt.includes(item.pt)) return false;
-
-        return true;
-      });
-
-      // Return the sum of "Sisa Saldo" transactions from yesterday
-      // Usually should be only 1 transaction per PT
-      const saldoAwal = sisaSaldoTransactions.reduce((sum, item) => sum + (item.jumlah || 0), 0);
-
-      return saldoAwal;
-    };
-
     // Use auto-filtered data (real-time)
     const displayData = getFilteredKasKecilData();
 
@@ -2875,15 +2826,15 @@ const SumberJayaApp = () => {
     const masuk = displayData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
     const keluar = displayData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
 
-    // Get opening balance (yesterday's closing balance)
-    const saldoAwal = hitungSaldoAwal();
+    // Get opening balance (from backend)
+    const saldoAwal = saldoAwalKasKecil || 0;
 
-    // Calculate closing balance = today's masuk - today's keluar only
-    const saldo = masuk - keluar;
+    // Calculate closing balance = opening balance + masuk - keluar
+    const saldo = saldoAwal + masuk - keluar;
 
     // Add running balance to display data
-    // Start from 0 because "Sisa Saldo" transaction is already in displayData
-    let runningBalance = 0;
+    // Start from saldoAwal
+    let runningBalance = saldoAwal;
     const dataWithBalance = displayData.map((item) => {
       // Only count approved transactions for balance
       if (item.status === 'approved') {
@@ -2925,18 +2876,18 @@ const SumberJayaApp = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Tanggal *</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={formKasKecil.tanggal}
-                onChange={(e) => setFormKasKecil({...formKasKecil, tanggal: e.target.value})}
-                className="w-full px-4 py-2 border rounded-lg" 
+                onChange={(e) => setFormKasKecil({ ...formKasKecil, tanggal: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">PT *</label>
-              <select 
+              <select
                 value={formKasKecil.pt}
-                onChange={(e) => setFormKasKecil({...formKasKecil, pt: e.target.value})}
+                onChange={(e) => setFormKasKecil({ ...formKasKecil, pt: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
               >
                 <option value="">Pilih PT</option>
@@ -2947,9 +2898,9 @@ const SumberJayaApp = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Jenis *</label>
-              <select 
+              <select
                 value={formKasKecil.jenis}
-                onChange={(e) => setFormKasKecil({...formKasKecil, jenis: e.target.value})}
+                onChange={(e) => setFormKasKecil({ ...formKasKecil, jenis: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
               >
                 <option value="keluar">Pengeluaran</option>
@@ -2958,19 +2909,19 @@ const SumberJayaApp = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 value={formKasKecil.jumlah}
-                onChange={(e) => setFormKasKecil({...formKasKecil, jumlah: e.target.value})}
-                placeholder="0" 
-                className="w-full px-4 py-2 border rounded-lg" 
+                onChange={(e) => setFormKasKecil({ ...formKasKecil, jumlah: e.target.value })}
+                placeholder="0"
+                className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Kategori *</label>
-              <select 
+              <select
                 value={formKasKecil.kategori}
-                onChange={(e) => setFormKasKecil({...formKasKecil, kategori: e.target.value})}
+                onChange={(e) => setFormKasKecil({ ...formKasKecil, kategori: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
                 required
               >
@@ -2984,15 +2935,15 @@ const SumberJayaApp = () => {
               <label className="block text-sm font-medium mb-2">Keterangan *</label>
               <textarea
                 value={formKasKecil.keterangan}
-                onChange={(e) => setFormKasKecil({...formKasKecil, keterangan: e.target.value})}
-                placeholder="Masukkan keterangan transaksi" 
+                onChange={(e) => setFormKasKecil({ ...formKasKecil, keterangan: e.target.value })}
+                placeholder="Masukkan keterangan transaksi"
                 className="w-full px-4 py-2 border rounded-lg"
                 rows={1}
               />
             </div>
           </div>
           <div className="mt-4">
-            <button 
+            <button
               onClick={handleSaveKasKecil}
               disabled={isLoadingKasKecil}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
@@ -3017,7 +2968,7 @@ const SumberJayaApp = () => {
               Print
             </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {/* PT Filter - Multi Select */}
             <div>
@@ -3034,11 +2985,10 @@ const SumberJayaApp = () => {
                           : [...prev.pt, ptCode]
                       }));
                     }}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      filterKasKecil.pt.includes(ptCode)
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterKasKecil.pt.includes(ptCode)
                         ? 'bg-green-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
+                      }`}
                   >
                     {ptCode}
                   </button>
@@ -3177,11 +3127,10 @@ const SumberJayaApp = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center no-print">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.status === 'approved' ? 'bg-green-100 text-green-700' :
-                        item.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          item.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700'
+                        }`}>
                         {item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
                     </td>
@@ -3308,7 +3257,7 @@ const SumberJayaApp = () => {
               <input
                 type="date"
                 value={formArusKas.tanggal}
-                onChange={(e) => setFormArusKas({...formArusKas, tanggal: e.target.value})}
+                onChange={(e) => setFormArusKas({ ...formArusKas, tanggal: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
@@ -3316,7 +3265,7 @@ const SumberJayaApp = () => {
               <label className="block text-sm font-medium mb-2">PT *</label>
               <select
                 value={formArusKas.pt}
-                onChange={(e) => setFormArusKas({...formArusKas, pt: e.target.value})}
+                onChange={(e) => setFormArusKas({ ...formArusKas, pt: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
               >
                 <option value="">Pilih PT</option>
@@ -3329,7 +3278,7 @@ const SumberJayaApp = () => {
               <label className="block text-sm font-medium mb-2">Jenis *</label>
               <select
                 value={formArusKas.jenis}
-                onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value, subKategoriId: ''})}
+                onChange={(e) => setFormArusKas({ ...formArusKas, jenis: e.target.value, subKategoriId: '' })}
                 className="w-full px-4 py-2 border rounded-lg"
               >
                 <option value="keluar">Pengeluaran</option>
@@ -3340,7 +3289,7 @@ const SumberJayaApp = () => {
               <label className="block text-sm font-medium mb-2">Sub Kategori *</label>
               <select
                 value={formArusKas.subKategoriId}
-                onChange={(e) => setFormArusKas({...formArusKas, subKategoriId: e.target.value})}
+                onChange={(e) => setFormArusKas({ ...formArusKas, subKategoriId: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
                 required
               >
@@ -3379,7 +3328,7 @@ const SumberJayaApp = () => {
               <label className="block text-sm font-medium mb-2">Metode Bayar *</label>
               <select
                 value={formArusKas.metodeBayar}
-                onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
+                onChange={(e) => setFormArusKas({ ...formArusKas, metodeBayar: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
               >
                 <option value="cashless">Cashless (Transfer/Non-Tunai)</option>
@@ -3391,7 +3340,7 @@ const SumberJayaApp = () => {
               <input
                 type="number"
                 value={formArusKas.jumlah}
-                onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
+                onChange={(e) => setFormArusKas({ ...formArusKas, jumlah: e.target.value })}
                 placeholder="0"
                 className="w-full px-4 py-2 border rounded-lg"
               />
@@ -3400,7 +3349,7 @@ const SumberJayaApp = () => {
               <label className="block text-sm font-medium mb-2">Keterangan *</label>
               <textarea
                 value={formArusKas.keterangan}
-                onChange={(e) => setFormArusKas({...formArusKas, keterangan: e.target.value})}
+                onChange={(e) => setFormArusKas({ ...formArusKas, keterangan: e.target.value })}
                 placeholder="Masukkan keterangan transaksi"
                 className="w-full px-4 py-2 border rounded-lg"
                 rows={2}
@@ -3442,12 +3391,12 @@ const SumberJayaApp = () => {
                 <input
                   type="date"
                   value={filterArusKas.tanggal}
-                  onChange={(e) => setFilterArusKas({...filterArusKas, tanggal: e.target.value})}
+                  onChange={(e) => setFilterArusKas({ ...filterArusKas, tanggal: e.target.value })}
                   className="px-4 py-2 border rounded-lg"
                 />
                 {filterArusKas.tanggal && (
                   <button
-                    onClick={() => setFilterArusKas({...filterArusKas, tanggal: ''})}
+                    onClick={() => setFilterArusKas({ ...filterArusKas, tanggal: '' })}
                     className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
                   >
                     Reset
@@ -3471,11 +3420,10 @@ const SumberJayaApp = () => {
                     <button
                       key={ptCode}
                       onClick={() => handlePTChange(ptCode)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        filterArusKas.pt && filterArusKas.pt.includes(ptCode)
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterArusKas.pt && filterArusKas.pt.includes(ptCode)
                           ? 'bg-green-600 text-white'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
+                        }`}
                     >
                       {ptCode}
                     </button>
@@ -3567,9 +3515,8 @@ const SumberJayaApp = () => {
                     <td className="px-4 py-3 text-sm text-gray-900">{item.kategori || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.metode_bayar === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.metode_bayar === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
                         {item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
                       </span>
                     </td>
@@ -3679,7 +3626,7 @@ const SumberJayaApp = () => {
                     <input
                       type="date"
                       value={formArusKas.tanggal}
-                      onChange={(e) => setFormArusKas({...formArusKas, tanggal: e.target.value})}
+                      onChange={(e) => setFormArusKas({ ...formArusKas, tanggal: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg"
                     />
                   </div>
@@ -3687,7 +3634,7 @@ const SumberJayaApp = () => {
                     <label className="block text-sm font-medium mb-2">PT *</label>
                     <select
                       value={formArusKas.pt}
-                      onChange={(e) => setFormArusKas({...formArusKas, pt: e.target.value})}
+                      onChange={(e) => setFormArusKas({ ...formArusKas, pt: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg"
                     >
                       <option value="">Pilih PT</option>
@@ -3700,7 +3647,7 @@ const SumberJayaApp = () => {
                     <label className="block text-sm font-medium mb-2">Jenis *</label>
                     <select
                       value={formArusKas.jenis}
-                      onChange={(e) => setFormArusKas({...formArusKas, jenis: e.target.value, subKategoriId: ''})}
+                      onChange={(e) => setFormArusKas({ ...formArusKas, jenis: e.target.value, subKategoriId: '' })}
                       className="w-full px-4 py-2 border rounded-lg"
                     >
                       <option value="keluar">Pengeluaran</option>
@@ -3711,7 +3658,7 @@ const SumberJayaApp = () => {
                     <label className="block text-sm font-medium mb-2">Sub Kategori *</label>
                     <select
                       value={formArusKas.subKategoriId}
-                      onChange={(e) => setFormArusKas({...formArusKas, subKategoriId: e.target.value})}
+                      onChange={(e) => setFormArusKas({ ...formArusKas, subKategoriId: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg"
                       required
                     >
@@ -3747,7 +3694,7 @@ const SumberJayaApp = () => {
                     <label className="block text-sm font-medium mb-2">Metode Bayar *</label>
                     <select
                       value={formArusKas.metodeBayar}
-                      onChange={(e) => setFormArusKas({...formArusKas, metodeBayar: e.target.value})}
+                      onChange={(e) => setFormArusKas({ ...formArusKas, metodeBayar: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg"
                     >
                       <option value="cashless">Cashless</option>
@@ -3759,7 +3706,7 @@ const SumberJayaApp = () => {
                     <input
                       type="number"
                       value={formArusKas.jumlah}
-                      onChange={(e) => setFormArusKas({...formArusKas, jumlah: e.target.value})}
+                      onChange={(e) => setFormArusKas({ ...formArusKas, jumlah: e.target.value })}
                       placeholder="0"
                       className="w-full px-4 py-2 border rounded-lg"
                     />
@@ -3768,7 +3715,7 @@ const SumberJayaApp = () => {
                     <label className="block text-sm font-medium mb-2">Keterangan *</label>
                     <textarea
                       value={formArusKas.keterangan}
-                      onChange={(e) => setFormArusKas({...formArusKas, keterangan: e.target.value})}
+                      onChange={(e) => setFormArusKas({ ...formArusKas, keterangan: e.target.value })}
                       placeholder="Masukkan keterangan transaksi"
                       className="w-full px-4 py-2 border rounded-lg"
                       rows={2}
@@ -3838,13 +3785,13 @@ const SumberJayaApp = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col md:flex-row">
       <SpeedInsights />
-      
+
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-72 bg-white shadow-xl h-screen sticky top-0 z-40 overflow-y-auto">
         <div className="p-4 border-b flex justify-center items-center">
-          <img 
-            src="/images/logo.png" 
-            alt="Logo" 
+          <img
+            src="/images/logo.png"
+            alt="Logo"
             className="object-contain w-full max-w-[260px]"
             onError={(e) => {
               e.target.style.display = 'none';
@@ -3855,7 +3802,7 @@ const SumberJayaApp = () => {
             SJ
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {mainMenuItems
             .filter(item => currentUserData?.fiturAkses?.includes(item.id) || currentUserData?.role === 'Master User')
@@ -3866,11 +3813,10 @@ const SumberJayaApp = () => {
                 <button
                   key={item.id}
                   onClick={() => setActiveMenu(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    isActive 
-                      ? 'bg-blue-600 text-white shadow-md' 
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
+                      ? 'bg-blue-600 text-white shadow-md'
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   <ItemIcon size={22} strokeWidth={2.5} />
                   <span className="font-semibold text-sm">{item.label}</span>
@@ -3878,7 +3824,7 @@ const SumberJayaApp = () => {
               );
             })}
         </div>
-        
+
         <div className="p-4 border-t bg-gray-50">
           <div className="flex items-center gap-3 mb-4 px-2">
             <button
@@ -3893,21 +3839,21 @@ const SumberJayaApp = () => {
             </div>
           </div>
           <div className="space-y-1">
-            <button 
+            <button
               onClick={handleOpenEditProfile}
               className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-white rounded-lg flex items-center gap-2 transition-colors"
             >
               <Users size={16} />
               <span>Edit Profil</span>
             </button>
-            <button 
+            <button
               onClick={handleOpenChangePassword}
               className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-white rounded-lg flex items-center gap-2 transition-colors"
             >
               <Lock size={16} />
               <span>Ganti Password</span>
             </button>
-            <button 
+            <button
               onClick={handleLogout}
               className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors mt-2"
             >
@@ -3952,14 +3898,14 @@ const SumberJayaApp = () => {
                       <p className="text-sm font-bold text-gray-800">{currentUserData?.name}</p>
                       <p className="text-xs font-medium text-gray-500">{currentUserData?.role}</p>
                     </div>
-                    <button 
+                    <button
                       onClick={handleOpenEditProfile}
                       className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 active:bg-blue-100 flex items-center gap-3 transition-colors"
                     >
                       <Users size={16} className="text-gray-400" />
                       <span className="font-medium">Edit Profil</span>
                     </button>
-                    <button 
+                    <button
                       onClick={handleOpenChangePassword}
                       className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-blue-50 active:bg-blue-100 flex items-center gap-3 transition-colors"
                     >
@@ -3967,7 +3913,7 @@ const SumberJayaApp = () => {
                       <span className="font-medium">Ganti Password</span>
                     </button>
                     <div className="h-px bg-gray-100 my-1"></div>
-                    <button 
+                    <button
                       onClick={handleLogout}
                       className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 active:bg-red-100 flex items-center gap-3 transition-colors"
                     >
@@ -3996,7 +3942,7 @@ const SumberJayaApp = () => {
                 );
 
                 const iconSize = filteredItems.length <= 3 ? 24 :
-                                filteredItems.length <= 5 ? 22 : 20;
+                  filteredItems.length <= 5 ? 22 : 20;
 
                 return filteredItems.map(item => {
                   const ItemIcon = item.icon;
@@ -4008,11 +3954,10 @@ const SumberJayaApp = () => {
                       type="button"
                       aria-label={item.label}
                       aria-current={isActive ? 'page' : undefined}
-                      className={`relative flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all duration-300 ${
-                        isActive
+                      className={`relative flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all duration-300 ${isActive
                           ? 'text-blue-600'
                           : 'text-gray-400 hover:text-gray-600 active:scale-95'
-                      }`}
+                        }`}
                     >
                       {isActive && (
                         <div className="absolute inset-0 bg-blue-50 rounded-2xl scale-100 transition-transform duration-300"></div>
@@ -4037,7 +3982,7 @@ const SumberJayaApp = () => {
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
               <div className="flex items-center justify-between p-6 border-b">
                 <h3 className="text-xl font-bold text-gray-800">Edit Profil</h3>
-                <button 
+                <button
                   onClick={() => setShowEditProfileModal(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -4062,7 +4007,7 @@ const SumberJayaApp = () => {
                   <input
                     type="text"
                     value={formEditProfile.nama}
-                    onChange={(e) => setFormEditProfile({...formEditProfile, nama: e.target.value})}
+                    onChange={(e) => setFormEditProfile({ ...formEditProfile, nama: e.target.value })}
                     placeholder="Masukkan nama lengkap"
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
@@ -4073,7 +4018,7 @@ const SumberJayaApp = () => {
                   <input
                     type="text"
                     value={formEditProfile.jabatan}
-                    onChange={(e) => setFormEditProfile({...formEditProfile, jabatan: e.target.value})}
+                    onChange={(e) => setFormEditProfile({ ...formEditProfile, jabatan: e.target.value })}
                     placeholder="Masukkan jabatan"
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
@@ -4104,7 +4049,7 @@ const SumberJayaApp = () => {
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
               <div className="flex items-center justify-between p-6 border-b">
                 <h3 className="text-xl font-bold text-gray-800">Ganti Password</h3>
-                <button 
+                <button
                   onClick={() => setShowChangePasswordModal(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -4119,7 +4064,7 @@ const SumberJayaApp = () => {
                     <input
                       type={showOldPassword ? "text" : "password"}
                       value={formChangePassword.oldPassword}
-                      onChange={(e) => setFormChangePassword({...formChangePassword, oldPassword: e.target.value})}
+                      onChange={(e) => setFormChangePassword({ ...formChangePassword, oldPassword: e.target.value })}
                       placeholder="Masukkan password lama"
                       className="w-full px-4 py-2 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
@@ -4139,7 +4084,7 @@ const SumberJayaApp = () => {
                     <input
                       type={showNewPassword ? "text" : "password"}
                       value={formChangePassword.newPassword}
-                      onChange={(e) => setFormChangePassword({...formChangePassword, newPassword: e.target.value})}
+                      onChange={(e) => setFormChangePassword({ ...formChangePassword, newPassword: e.target.value })}
                       placeholder="Masukkan password baru (min. 6 karakter)"
                       className="w-full px-4 py-2 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
@@ -4159,7 +4104,7 @@ const SumberJayaApp = () => {
                     <input
                       type={showConfirmPassword ? "text" : "password"}
                       value={formChangePassword.confirmPassword}
-                      onChange={(e) => setFormChangePassword({...formChangePassword, confirmPassword: e.target.value})}
+                      onChange={(e) => setFormChangePassword({ ...formChangePassword, confirmPassword: e.target.value })}
                       placeholder="Konfirmasi password baru"
                       className="w-full px-4 py-2 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
@@ -4208,18 +4153,18 @@ const SumberJayaApp = () => {
                 <h3 className="text-xl font-bold text-gray-800">
                   {editingKasKecil ? 'Edit Transaksi Kas Kecil' : 'Tambah Transaksi Kas Kecil'}
                 </h3>
-                <button 
+                <button
                   onClick={() => {
                     setShowEditKasKecilModal(false);
                     setEditingKasKecil(null);
-                    setFormKasKecil({ 
-                      tanggal: getTodayDate(), 
-                      pt: '', 
-                      jenis: 'keluar', 
-                      jumlah: '', 
-                      keterangan: '', 
-                      kategori: '', 
-                      metodeBayar: 'cash' 
+                    setFormKasKecil({
+                      tanggal: getTodayDate(),
+                      pt: '',
+                      jenis: 'keluar',
+                      jumlah: '',
+                      keterangan: '',
+                      kategori: '',
+                      metodeBayar: 'cash'
                     });
                   }}
                   className="text-gray-500 hover:text-gray-700"
@@ -4238,18 +4183,18 @@ const SumberJayaApp = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Tanggal</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={formKasKecil.tanggal}
-                      onChange={(e) => setFormKasKecil({...formKasKecil, tanggal: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg" 
+                      onChange={(e) => setFormKasKecil({ ...formKasKecil, tanggal: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">PT *</label>
-                    <select 
+                    <select
                       value={formKasKecil.pt}
-                      onChange={(e) => setFormKasKecil({...formKasKecil, pt: e.target.value})}
+                      onChange={(e) => setFormKasKecil({ ...formKasKecil, pt: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg"
                     >
                       <option value="">Pilih PT</option>
@@ -4260,9 +4205,9 @@ const SumberJayaApp = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Jenis Transaksi *</label>
-                    <select 
+                    <select
                       value={formKasKecil.jenis}
-                      onChange={(e) => setFormKasKecil({...formKasKecil, jenis: e.target.value})}
+                      onChange={(e) => setFormKasKecil({ ...formKasKecil, jenis: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg"
                     >
                       <option value="keluar">Pengeluaran</option>
@@ -4271,29 +4216,29 @@ const SumberJayaApp = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Jumlah (Rp) *</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={formKasKecil.jumlah}
-                      onChange={(e) => setFormKasKecil({...formKasKecil, jumlah: e.target.value})}
-                      placeholder="0" 
-                      className="w-full px-4 py-2 border rounded-lg" 
+                      onChange={(e) => setFormKasKecil({ ...formKasKecil, jumlah: e.target.value })}
+                      placeholder="0"
+                      className="w-full px-4 py-2 border rounded-lg"
                     />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-2">Keterangan *</label>
-                    <textarea 
+                    <textarea
                       rows={3}
                       value={formKasKecil.keterangan}
-                      onChange={(e) => setFormKasKecil({...formKasKecil, keterangan: e.target.value})}
-                      placeholder="Masukkan keterangan transaksi" 
+                      onChange={(e) => setFormKasKecil({ ...formKasKecil, keterangan: e.target.value })}
+                      placeholder="Masukkan keterangan transaksi"
                       className="w-full px-4 py-2 border rounded-lg"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Kategori *</label>
-                    <select 
+                    <select
                       value={formKasKecil.kategori}
-                      onChange={(e) => setFormKasKecil({...formKasKecil, kategori: e.target.value})}
+                      onChange={(e) => setFormKasKecil({ ...formKasKecil, kategori: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg"
                       required
                     >
@@ -4318,14 +4263,14 @@ const SumberJayaApp = () => {
                   onClick={() => {
                     setShowEditKasKecilModal(false);
                     setEditingKasKecil(null);
-                    setFormKasKecil({ 
-                      tanggal: getTodayDate(), 
-                      pt: '', 
-                      jenis: 'keluar', 
-                      jumlah: '', 
-                      keterangan: '', 
-                      kategori: '', 
-                      metodeBayar: 'cash' 
+                    setFormKasKecil({
+                      tanggal: getTodayDate(),
+                      pt: '',
+                      jenis: 'keluar',
+                      jumlah: '',
+                      keterangan: '',
+                      kategori: '',
+                      metodeBayar: 'cash'
                     });
                   }}
                   className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
