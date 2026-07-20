@@ -197,7 +197,7 @@ const Beranda = ({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
-                  <AlertCircle size={16} strokeWidth={2.5} />
+                  <Clock size={16} strokeWidth={2.5} />
                 </div>
                 <h3 className="text-base md:text-lg font-bold text-amber-900">Menunggu Persetujuan</h3>
               </div>
@@ -241,7 +241,7 @@ const Beranda = ({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <DollarSign size={16} strokeWidth={2.5} />
+                  <Wallet size={16} strokeWidth={2.5} />
                 </div>
                 <h3 className="text-base md:text-lg font-bold text-gray-800">Kas Kecil Terbaru</h3>
               </div>
@@ -287,7 +287,7 @@ const Beranda = ({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <ShoppingCart size={16} strokeWidth={2.5} />
+                  <Package size={16} strokeWidth={2.5} />
                 </div>
                 <h3 className="text-base md:text-lg font-bold text-gray-800">Penjualan Hari Ini</h3>
               </div>
@@ -330,7 +330,7 @@ const Beranda = ({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
-                  <TrendingUp size={16} strokeWidth={2.5} />
+                  <ArrowDownCircle size={16} strokeWidth={2.5} />
                 </div>
                 <h3 className="text-base md:text-lg font-bold text-gray-800">Arus Kas Terbaru</h3>
               </div>

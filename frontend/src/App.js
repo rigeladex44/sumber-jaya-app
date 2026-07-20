@@ -31,7 +31,8 @@ import {
   KATEGORI_PENGELUARAN,
   MAIN_MENU_ITEMS,
   AUTO_REFRESH_INTERVAL,
-  getExpandedPTList
+  getExpandedPTList,
+  APP_VERSION
 } from './utils/constants';
 // Helper: Get today's date in YYYY-MM-DD format (timezone-aware untuk WIB)
 const getLocalDateString = () => {
