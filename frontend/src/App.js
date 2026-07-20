@@ -3097,6 +3097,15 @@ const SumberJayaApp = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
+                <tr className="bg-blue-50 border-b border-blue-100">
+                  <td colSpan="6" className="px-4 py-3 text-sm font-semibold text-center text-blue-800">
+                    Saldo Awal {filterKasKecil.tanggal ? `(Sebelum ${new Date(filterKasKecil.tanggal).toLocaleDateString('id-ID')})` : ''}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-right font-bold text-blue-700">
+                    Rp {(saldoAwalKasKecil || 0).toLocaleString('id-ID')}
+                  </td>
+                  <td colSpan="2" className="px-4 py-3 no-print"></td>
+                </tr>
                 {dataWithBalance.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
