@@ -3,22 +3,13 @@
  * Shared filtering logic for data tables
  */
 
-/**
- * Filter kas/cash data by PT and date
- * @param {Array} data - Array of transaction data
- * @param {Array} pts - Array of PT codes to filter by
- * @param {string} dateFilter - Date string to filter by (YYYY-MM-DD)
- * @returns {Array} Filtered transaction data
- */
-export const filterKasData = (data, pts = [], dateFilter = '') => {
+export const filterKasData = (data = [], pts = [], dateFilter = '') => {
   let filtered = data;
 
-  // Filter by PT if selected
-  if (pts.length > 0) {
+  if (pts && pts.length > 0) {
     filtered = filtered.filter(k => pts.includes(k.pt));
   }
 
-  // Filter by date if selected
   if (dateFilter) {
     const selectedDate = new Date(dateFilter + 'T00:00:00');
     filtered = filtered.filter(item => {
@@ -32,19 +23,14 @@ export const filterKasData = (data, pts = [], dateFilter = '') => {
   return filtered;
 };
 
-/**
- * Calculate totals from filtered kas data
- * @param {Array} data - Filtered transaction data
- * @returns {Object} Object with masuk, keluar, and saldo totals
- */
-export const calculateKasTotals = (data) => {
+export const calculateKasTotals = (data = []) => {
   const masuk = data
     .filter(k => k.jenis === 'masuk' && k.status === 'approved')
-    .reduce((sum, k) => sum + k.jumlah, 0);
+    .reduce((sum, k) => sum + (parseFloat(k.jumlah) || 0), 0);
   
   const keluar = data
     .filter(k => k.jenis === 'keluar' && k.status === 'approved')
-    .reduce((sum, k) => sum + k.jumlah, 0);
+    .reduce((sum, k) => sum + (parseFloat(k.jumlah) || 0), 0);
   
   const saldo = masuk - keluar;
 
