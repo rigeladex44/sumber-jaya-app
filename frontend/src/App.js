@@ -54,6 +54,12 @@ const getLocalDateFromISO = (isoString) => {
 // Helper alias: same as getLocalDateString (used in some older parts of UI)
 const getTodayDate = () => getLocalDateString();
 
+// Helper formatting Rupiah (bulat tanpa desimal ,00)
+const formatRupiah = (val) => {
+  const num = Math.round(Number(val) || 0);
+  return num.toLocaleString('id-ID');
+};
+
 
 const SumberJayaApp = () => {
   // Cek sessionStorage saat pertama kali load (logout saat close tab)
@@ -2852,25 +2858,32 @@ const SumberJayaApp = () => {
     });
 
     // Calculate totals based on GROUP data (SJE+KSS+FAB combined)
-    const masuk = groupData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
-    const keluar = groupData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
+    const masuk = Math.round(groupData.filter(k => k.jenis === 'masuk' && k.status === 'approved').reduce((sum, k) => sum + (parseFloat(k.jumlah) || 0), 0));
+    const keluar = Math.round(groupData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (parseFloat(k.jumlah) || 0), 0));
 
     // Get opening balance (calculated from group data before startDate)
-    const saldoAwal = getDynamicSaldoAwal();
+    const saldoAwal = Math.round(getDynamicSaldoAwal());
 
     // Calculate closing balance = opening balance + masuk - keluar
     const saldo = saldoAwal + masuk - keluar;
 
-    // Add running balance to GROUP data first so it correctly interleaves
-    // Start from saldoAwal
+    // Sort in ASCENDING order for chronological running balance calculation
+    const groupDataAsc = [...groupData].sort((a, b) => {
+      const dateA = new Date(a.tanggal);
+      const dateB = new Date(b.tanggal);
+      if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
+      return (a.id || 0) - (b.id || 0);
+    });
+
     let runningBalance = saldoAwal;
-    const groupDataWithBalance = groupData.map((item) => {
+    const groupDataAscWithBalance = groupDataAsc.map((item) => {
       // Only count approved transactions for balance
       if (item.status === 'approved') {
+        const amt = Math.round(parseFloat(item.jumlah || 0));
         if (item.jenis === 'masuk') {
-          runningBalance += item.jumlah || 0;
+          runningBalance += amt;
         } else if (item.jenis === 'keluar') {
-          runningBalance -= item.jumlah || 0;
+          runningBalance -= amt;
         }
       }
       return {
@@ -2878,6 +2891,9 @@ const SumberJayaApp = () => {
         saldo: runningBalance
       };
     });
+
+    // Reverse back to DESCENDING order so newest transactions are shown at top
+    const groupDataWithBalance = groupDataAscWithBalance.reverse();
 
     // Finally, filter the displayed rows back down to exactly what the user selected in the UI
     const dataWithBalance = filterKasKecil.pt.length === 0
@@ -3079,7 +3095,7 @@ const SumberJayaApp = () => {
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Saldo Awal</p>
               </div>
-              <p className="text-lg md:text-2xl font-black text-purple-600 tracking-tight mt-1">Rp {saldoAwal.toLocaleString('id-ID')}</p>
+              <p className="text-lg md:text-2xl font-black text-purple-600 tracking-tight mt-1">Rp {formatRupiah(saldoAwal)}</p>
             </div>
           </div>
 
@@ -3091,7 +3107,7 @@ const SumberJayaApp = () => {
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Masuk</p>
               </div>
-              <p className="text-lg md:text-2xl font-black text-green-600 tracking-tight mt-1">Rp {masuk.toLocaleString('id-ID')}</p>
+              <p className="text-lg md:text-2xl font-black text-green-600 tracking-tight mt-1">Rp {formatRupiah(masuk)}</p>
             </div>
           </div>
 
@@ -3103,7 +3119,7 @@ const SumberJayaApp = () => {
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Keluar</p>
               </div>
-              <p className="text-lg md:text-2xl font-black text-red-600 tracking-tight mt-1">Rp {keluar.toLocaleString('id-ID')}</p>
+              <p className="text-lg md:text-2xl font-black text-red-600 tracking-tight mt-1">Rp {formatRupiah(keluar)}</p>
             </div>
           </div>
 
@@ -3116,7 +3132,7 @@ const SumberJayaApp = () => {
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Saldo Akhir</p>
               </div>
               <p className={`text-lg md:text-2xl font-black tracking-tight mt-1 ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                Rp {saldo.toLocaleString('id-ID')}
+                Rp {formatRupiah(saldo)}
               </p>
             </div>
           </div>
@@ -3137,7 +3153,7 @@ const SumberJayaApp = () => {
                 <span className="text-sm font-semibold text-blue-800">
                   Saldo Awal {filterKasKecil.tanggalMulai ? `(Seb. ${new Date(filterKasKecil.tanggalMulai).toLocaleDateString('id-ID', {day:'numeric', month:'short'})})` : ''}
                 </span>
-                <span className="text-base font-black text-blue-700">Rp {saldoAwal.toLocaleString('id-ID')}</span>
+                <span className="text-base font-black text-blue-700">Rp {formatRupiah(saldoAwal)}</span>
               </div>
             </div>
             
@@ -3173,10 +3189,10 @@ const SumberJayaApp = () => {
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-200">
                     <div>
                       <p className={`text-base font-bold tracking-tight ${item.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {item.jenis === 'keluar' ? '-' : '+'} Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                        {item.jenis === 'keluar' ? '-' : '+'} Rp {formatRupiah(item.jumlah)}
                       </p>
                       <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mt-0.5">
-                        Saldo: <span className={`font-bold ${item.saldo >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>Rp {(item.saldo || 0).toLocaleString('id-ID')}</span>
+                        Saldo: <span className={`font-bold ${item.saldo >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>Rp {formatRupiah(item.saldo)}</span>
                       </p>
                     </div>
                     
@@ -3222,15 +3238,15 @@ const SumberJayaApp = () => {
             <div className="p-4 bg-gray-50 border-t border-gray-200">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-semibold text-gray-500 uppercase">Total Masuk</span>
-                <span className="text-sm font-bold text-emerald-600">Rp {masuk.toLocaleString('id-ID')}</span>
+                <span className="text-sm font-bold text-emerald-600">Rp {formatRupiah(masuk)}</span>
               </div>
               <div className="flex justify-between items-center mb-3">
                 <span className="text-xs font-semibold text-gray-500 uppercase">Total Keluar</span>
-                <span className="text-sm font-bold text-rose-600">Rp {keluar.toLocaleString('id-ID')}</span>
+                <span className="text-sm font-bold text-rose-600">Rp {formatRupiah(keluar)}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                 <span className="text-sm font-bold text-gray-800">Saldo Akhir</span>
-                <span className="text-lg font-black text-blue-600">Rp {saldo.toLocaleString('id-ID')}</span>
+                <span className="text-lg font-black text-blue-600">Rp {formatRupiah(saldo)}</span>
               </div>
             </div>
           </div>
@@ -3257,7 +3273,7 @@ const SumberJayaApp = () => {
                     Saldo Awal {filterKasKecil.tanggalMulai ? `(Sebelum ${new Date(filterKasKecil.tanggalMulai).toLocaleDateString('id-ID')})` : ''}
                   </td>
                   <td className="px-5 py-4 text-sm text-right font-bold text-blue-700 whitespace-nowrap">
-                    Rp {saldoAwal.toLocaleString('id-ID')}
+                    Rp {formatRupiah(saldoAwal)}
                   </td>
                   <td colSpan="2" className="px-5 py-4 no-print"></td>
                 </tr>
@@ -3276,7 +3292,7 @@ const SumberJayaApp = () => {
                     <td className="px-5 py-4 text-right whitespace-nowrap">
                       {item.jenis === 'masuk' ? (
                         <span className="text-emerald-600 font-bold">
-                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                          Rp {formatRupiah(item.jumlah)}
                         </span>
                       ) : (
                         <span className="text-gray-300">-</span>
@@ -3285,7 +3301,7 @@ const SumberJayaApp = () => {
                     <td className="px-5 py-4 text-right whitespace-nowrap">
                       {item.jenis === 'keluar' ? (
                         <span className="text-rose-600 font-bold">
-                          Rp {(item.jumlah || 0).toLocaleString('id-ID')}
+                          Rp {formatRupiah(item.jumlah)}
                         </span>
                       ) : (
                         <span className="text-gray-300">-</span>
@@ -3293,7 +3309,7 @@ const SumberJayaApp = () => {
                     </td>
                     <td className="px-5 py-4 text-right whitespace-nowrap">
                       <span className={`font-bold ${item.saldo >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
-                        Rp {(item.saldo || 0).toLocaleString('id-ID')}
+                        Rp {formatRupiah(item.saldo)}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-center no-print">
@@ -3345,14 +3361,14 @@ const SumberJayaApp = () => {
               <tfoot className="bg-gray-50/80 border-t-2 border-gray-200">
                 <tr>
                   <td colSpan="4" className="px-5 py-4 text-right font-bold text-gray-700">Total Hari Ini (Approved)</td>
-                  <td className="px-5 py-4 text-right font-black text-emerald-600">Rp {masuk.toLocaleString('id-ID')}</td>
-                  <td className="px-5 py-4 text-right font-black text-rose-600">Rp {keluar.toLocaleString('id-ID')}</td>
+                  <td className="px-5 py-4 text-right font-black text-emerald-600">Rp {formatRupiah(masuk)}</td>
+                  <td className="px-5 py-4 text-right font-black text-rose-600">Rp {formatRupiah(keluar)}</td>
                   <td colSpan="3" className="px-5 py-4"></td>
                 </tr>
                 <tr className="bg-blue-50/50">
                   <td colSpan="4" className="px-5 py-4 text-right font-bold text-gray-700">Saldo Akhir</td>
                   <td colSpan="5" className="px-5 py-4 text-right font-black text-blue-700 text-lg">
-                    Rp {saldo.toLocaleString('id-ID')}
+                    Rp {formatRupiah(saldo)}
                   </td>
                 </tr>
               </tfoot>

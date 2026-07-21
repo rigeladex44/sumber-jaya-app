@@ -489,8 +489,14 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
   let saldoAwalParams = [];
 
   if (pt) {
-    saldoAwalQuery += ' AND pt_code = ?';
-    saldoAwalParams.push(pt);
+    const ptList = pt.split(',').map(p => p.trim()).filter(Boolean);
+    if (ptList.length === 1) {
+      saldoAwalQuery += ' AND pt_code = ?';
+      saldoAwalParams.push(ptList[0]);
+    } else if (ptList.length > 1) {
+      saldoAwalQuery += ` AND pt_code IN (${ptList.map(() => '?').join(',')})`;
+      saldoAwalParams.push(...ptList);
+    }
   }
 
   if (tanggal_dari) {
@@ -506,7 +512,7 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
       return res.status(500).json({ message: 'Server error calculating saldo awal', error: err });
     }
 
-    const saldoAwal = saldoResult[0]?.saldo_awal || 0;
+    const saldoAwal = Math.round(parseFloat(saldoResult[0]?.saldo_awal || 0));
 
     // 2. Query transactions
     let query = `
@@ -523,8 +529,14 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
     let params = [];
 
     if (pt) {
-      query += ' AND kk.pt_code = ?';
-      params.push(pt);
+      const ptList = pt.split(',').map(p => p.trim()).filter(Boolean);
+      if (ptList.length === 1) {
+        query += ' AND kk.pt_code = ?';
+        params.push(ptList[0]);
+      } else if (ptList.length > 1) {
+        query += ` AND kk.pt_code IN (${ptList.map(() => '?').join(',')})`;
+        params.push(...ptList);
+      }
     }
 
     if (tanggal_dari) {
@@ -844,8 +856,14 @@ app.get('/api/kas-kecil/saldo', verifyToken, (req, res) => {
   let params = [];
   
   if (pt) {
-    query += ' AND pt_code = ?';
-    params.push(pt);
+    const ptList = pt.split(',').map(p => p.trim()).filter(Boolean);
+    if (ptList.length === 1) {
+      query += ' AND pt_code = ?';
+      params.push(ptList[0]);
+    } else if (ptList.length > 1) {
+      query += ` AND pt_code IN (${ptList.map(() => '?').join(',')})`;
+      params.push(...ptList);
+    }
   }
   
   db.query(query, params, (err, results) => {
@@ -853,8 +871,8 @@ app.get('/api/kas-kecil/saldo', verifyToken, (req, res) => {
       return res.status(500).json({ message: 'Server error', error: err });
     }
     
-    const masuk = parseFloat(results[0].total_masuk) || 0;
-    const keluar = parseFloat(results[0].total_keluar) || 0;
+    const masuk = Math.round(parseFloat(results[0].total_masuk) || 0);
+    const keluar = Math.round(parseFloat(results[0].total_keluar) || 0);
     const saldo = masuk - keluar;
     
     res.json({ masuk, keluar, saldo });
