@@ -27,39 +27,45 @@ const Beranda = ({
   const hasPenjualanAccess = currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes('penjualan');
   const hasArusKasAccess = currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes('arus-kas');
 
-  // Get recent transactions for each widget
+  const accessPT = Array.isArray(currentUserData?.accessPT) ? currentUserData.accessPT : [];
+
+  // Get recent transactions for each widget (safeguarded against null data)
   const getRecentKasKecil = () => {
+    if (!Array.isArray(kasKecilData)) return [];
     return kasKecilData
-      .filter(item => currentUserData?.accessPT?.includes(item.pt))
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .filter(item => item && (accessPT.length === 0 || accessPT.includes(item.pt)))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
       .slice(0, 5);
   };
 
   const getPendingApprovals = () => {
+    if (!Array.isArray(kasKecilData)) return [];
     return kasKecilData
       .filter(item =>
-        item.status === 'pending' &&
-        currentUserData?.accessPT?.includes(item.pt)
+        item && item.status === 'pending' && (accessPT.length === 0 || accessPT.includes(item.pt))
       )
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
       .slice(0, 5);
   };
 
   const getRecentPenjualan = () => {
+    if (!Array.isArray(penjualanData)) return [];
     const today = getLocalDateString();
     return penjualanData
       .filter(item => {
+        if (!item) return false;
         const itemDate = getLocalDateFromISO(item.tanggal);
-        return itemDate === today && currentUserData?.accessPT?.includes(item.pt);
+        return itemDate === today && (accessPT.length === 0 || accessPT.includes(item.pt));
       })
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
       .slice(0, 5);
   };
 
   const getRecentArusKas = () => {
+    if (!Array.isArray(arusKasData)) return [];
     return arusKasData
-      .filter(item => currentUserData?.accessPT?.includes(item.pt))
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .filter(item => item && (accessPT.length === 0 || accessPT.includes(item.pt)))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
       .slice(0, 5);
   };
 

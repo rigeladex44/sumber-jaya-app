@@ -80,8 +80,13 @@ const SumberJayaApp = () => {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [currentUserData, setCurrentUserData] = useState(() => {
-    const savedUser = sessionStorage.getItem('currentUserData');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = sessionStorage.getItem('currentUserData');
+      return (savedUser && savedUser !== 'undefined') ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.error('Error parsing stored user data:', e);
+      return null;
+    }
   });
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
