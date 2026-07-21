@@ -41,8 +41,7 @@ const getLocalDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
-// Helper: Convert ISO date string to local YYYY-MM-DD format
-// Handles timezone properly - parses ISO string and extracts local date
+// Helper: Convert ISO date string to local YYYY-MM-DD format (timezone-aware)
 const getLocalDateFromISO = (isoString) => {
   if (!isoString) return '';
   const date = new Date(isoString);
@@ -51,6 +50,10 @@ const getLocalDateFromISO = (isoString) => {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
+
+// Helper alias: same as getLocalDateString (used in some older parts of UI)
+const getTodayDate = () => getLocalDateString();
+
 
 const SumberJayaApp = () => {
   // Cek sessionStorage saat pertama kali load (logout saat close tab)
@@ -155,14 +158,8 @@ const SumberJayaApp = () => {
       // Load data kas kecil
       const response = await kasKecilService.getAll(filters);
 
-      console.log('DEBUG Load Kas Kecil Data:', {
-        dataCount: response.data ? response.data.length : 0,
-        saldoAwal: response.saldoAwal,
-        localDate: getLocalDateString(),
-        silentRefresh: silent
-      });
-
       setKasKecilData(response.data || []);
+      setSaldoAwalFromAPI(response.saldoAwal || 0);
     } catch (error) {
       console.error('Error loading kas kecil:', error);
       // Don't alert on load error, just log it
@@ -323,23 +320,30 @@ const SumberJayaApp = () => {
   useEffect(() => {
     if (!isLoggedIn || activeMenu !== 'kas-kecil') return;
 
-    console.log('🔄 Kas Kecil auto-refresh: ACTIVATED (30s interval)');
+    // Build API filter from current state
+    const buildKasKecilFilters = () => {
+      const filters = {};
+      const expandedPTs = filterKasKecil.pt.length > 0 ? getExpandedPTList(filterKasKecil.pt) : [];
+      if (expandedPTs.length > 0) filters.pt = expandedPTs.join(',');
+      if (filterKasKecil.tanggalMulai) filters.tanggal_dari = filterKasKecil.tanggalMulai;
+      if (filterKasKecil.tanggalSelesai) filters.tanggal_sampai = filterKasKecil.tanggalSelesai;
+      return filters;
+    };
 
     // Refresh immediately when entering menu (with loading indicator)
-    loadKasKecilData();
+    loadKasKecilData(buildKasKecilFilters());
 
     // Then refresh every 30 seconds for real-time collaboration (silent, no popup)
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Auto-refreshing Kas Kecil data (silent)...');
-      loadKasKecilData({}, true); // silent = true
+      loadKasKecilData(buildKasKecilFilters(), true); // silent = true
     }, 30000); // 30 seconds
 
     return () => {
-      console.log('⏹️ Kas Kecil auto-refresh: DEACTIVATED');
       clearInterval(refreshInterval);
     };
     // eslint-disable-next-line no-use-before-define
-  }, [isLoggedIn, activeMenu, loadKasKecilData]); // Re-run when menu changes
+  }, [isLoggedIn, activeMenu, loadKasKecilData, filterKasKecil]); // Re-run when menu or filter changes
+
 
   // Auto-refresh for Arus Kas menu - sync data every 30 seconds
   useEffect(() => {
@@ -406,6 +410,7 @@ const SumberJayaApp = () => {
 
   // Data Management State
   const [kasKecilData, setKasKecilData] = useState([]);
+  const [saldoAwalFromAPI, setSaldoAwalFromAPI] = useState(0); // Saldo awal from backend (sebelum filter tanggal mulai)
   const [userList, setUserList] = useState([]);
   const [penjualanData, setPenjualanData] = useState([]);
 
@@ -517,15 +522,12 @@ const SumberJayaApp = () => {
     }
   };
 
-  // Load data when logged in
+  // Load users on login (always needed for admin features)
   useEffect(() => {
     if (isLoggedIn) {
-      loadKasKecilData();
-      loadArusKasData();
-      loadPenjualanData();
       loadUsers();
     }
-  }, [isLoggedIn, loadKasKecilData, loadArusKasData, loadPenjualanData, loadUsers]);
+  }, [isLoggedIn, loadUsers]);
 
   // Auto set selectedPT to all user's PT when currentUserData changes
   useEffect(() => {
@@ -543,10 +545,6 @@ const SumberJayaApp = () => {
     }
   }, [activeMenu, loadArusKasData, loadSubKategoriData]);
 
-  // Helper: Get today's date in YYYY-MM-DD format (Asia/Jakarta timezone)
-  const getTodayDate = () => {
-    return getLocalDateString();
-  };
 
   // Form State
 
@@ -771,31 +769,11 @@ const SumberJayaApp = () => {
     setSearchDate('');
   };
 
-  const getDynamicSaldoAwal = (expandedPTs = [], selectedDateObj = null) => {
-    if (!selectedDateObj) {
-      selectedDateObj = new Date(filterKasKecil.tanggalMulai + 'T00:00:00');
-    }
-    
-    // If not passed, use current filter's expanded PTs
-    if (expandedPTs.length === 0 && filterKasKecil.pt.length > 0) {
-      expandedPTs = getExpandedPTList(filterKasKecil.pt);
-    }
-    
-    return kasKecilData.reduce((sum, item) => {
-      if (item.status !== 'approved') return sum;
-      
-      const itemDate = new Date(item.tanggal);
-      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-      
-      if (itemDateOnly.getTime() < selectedDateObj.getTime()) {
-        if (expandedPTs.length === 0 || expandedPTs.includes(item.pt)) {
-          if (item.jenis === 'masuk') return sum + (item.jumlah || 0);
-          if (item.jenis === 'keluar') return sum - (item.jumlah || 0);
-        }
-      }
-      return sum;
-    }, 0);
+  // Saldo Awal diambil langsung dari API backend (sudah dihitung dengan benar sebelum tanggal filter)
+  const getDynamicSaldoAwal = () => {
+    return saldoAwalFromAPI;
   };
+
 
   // Filter functionality for Kas Kecil
   const getFilteredKasKecilData = () => {
@@ -895,7 +873,7 @@ const SumberJayaApp = () => {
     });
 
     // Calculate running balance based on GROUP data
-    const dynamicSaldoAwal = getDynamicSaldoAwal(expandedPTs, startDateObj);
+    const dynamicSaldoAwal = getDynamicSaldoAwal();
     let runningBalance = dynamicSaldoAwal;
 
     const groupDataWithBalance = groupData.map((item) => {
@@ -2877,7 +2855,7 @@ const SumberJayaApp = () => {
     const keluar = groupData.filter(k => k.jenis === 'keluar' && k.status === 'approved').reduce((sum, k) => sum + (k.jumlah || 0), 0);
 
     // Get opening balance (calculated from group data before startDate)
-    const saldoAwal = getDynamicSaldoAwal(expandedPTs, startDateObj);
+    const saldoAwal = getDynamicSaldoAwal();
 
     // Calculate closing balance = opening balance + masuk - keluar
     const saldo = saldoAwal + masuk - keluar;

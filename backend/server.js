@@ -16,6 +16,8 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   // Production frontend URLs
   'https://sumber-jaya-app.vercel.app',
+  'https://sumber-jaya-app-eltp.vercel.app',
+  'https://sumber-jaya-app-eltp-git-main-rigeel-one-click.vercel.app',
   'https://sje-grup.rigeel.id'
 ];
 
@@ -199,14 +201,6 @@ pool.on('connection', (connection) => {
   connection.on('error', (err) => {
     console.error('❌ Connection error on thread', connection.threadId, ':', err.code);
   });
-});
-
-pool.on('acquire', (connection) => {
-  console.log('🔄 Connection %d acquired from pool', connection.threadId);
-});
-
-pool.on('release', (connection) => {
-  console.log('🔓 Connection %d released back to pool', connection.threadId);
 });
 
 pool.on('enqueue', () => {
@@ -572,20 +566,8 @@ app.get('/api/kas-kecil', verifyToken, (req, res) => {
 app.post('/api/kas-kecil', verifyToken, (req, res) => {
   const { tanggal, pt, jenis, jumlah, keterangan, kategori } = req.body;
   
-  console.log('DEBUG Backend Kas Kecil Save:', {
-    tanggal: tanggal,
-    tanggalType: typeof tanggal,
-    localDate: new Date().toISOString().split('T')[0],
-    timezone: 'Asia/Jakarta (UTC+7)'
-  });
-  
   // Force tanggal to be treated as local date (no timezone conversion)
   const localTanggal = processTanggal(tanggal);
-  
-  console.log('DEBUG Processed Tanggal:', {
-    original: tanggal,
-    processed: localTanggal
-  });
   
   // Logic approve/reject:
   // - Semua PEMASUKAN (masuk): Langsung approved
@@ -605,15 +587,6 @@ app.post('/api/kas-kecil', verifyToken, (req, res) => {
     if (err) {
       return res.status(500).json({ message: 'Server error', error: err });
     }
-
-    // Smart auto-sync - UPDATE existing Sisa Saldo (preserves manual edits)
-    autoRecalculateSisaSaldoFromDate(localTanggal, req.userId, (syncErr, syncResult) => {
-      if (syncErr) {
-        console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-      } else {
-        console.log('✅ Auto-sync completed:', syncResult);
-      }
-    });
 
     res.status(201).json({
       message: 'Kas kecil berhasil ditambahkan',
@@ -691,15 +664,6 @@ app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
           return res.status(500).json({ message: 'Server error', error: err });
         }
 
-        // Smart auto-sync - UPDATE existing Sisa Saldo (preserves manual edits)
-        autoRecalculateSisaSaldoFromDate(kasTanggal, req.userId, (syncErr, syncResult) => {
-          if (syncErr) {
-            console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-          } else {
-            console.log('✅ Auto-sync completed:', syncResult);
-          }
-        });
-
         res.json({
           message: 'Status berhasil diupdate',
           status: status,
@@ -776,19 +740,6 @@ app.put('/api/kas-kecil/:id', verifyToken, (req, res) => {
         if (err) {
           return res.status(500).json({ message: 'Server error', error: err });
         }
-
-        // Smart auto-sync - UPDATE existing Sisa Saldo (preserves manual edits)
-        const oldDate = new Date(kasTanggal);
-        const newDate = new Date(localTanggal);
-        const earlierDate = oldDate < newDate ? kasTanggal : localTanggal;
-
-        autoRecalculateSisaSaldoFromDate(earlierDate, req.userId, (syncErr, syncResult) => {
-          if (syncErr) {
-            console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-          } else {
-            console.log('✅ Auto-sync completed:', syncResult);
-          }
-        });
 
         res.json({
           message: 'Data kas berhasil diupdate',
@@ -870,15 +821,6 @@ app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
           return res.status(500).json({ message: 'Server error', error: err });
         }
 
-        // Smart auto-sync - UPDATE existing Sisa Saldo (preserves manual edits)
-        autoRecalculateSisaSaldoFromDate(kasTanggal, req.userId, (syncErr, syncResult) => {
-          if (syncErr) {
-            console.error('⚠️ Auto-sync error (non-critical):', syncErr);
-          } else {
-            console.log('✅ Auto-sync completed:', syncResult);
-          }
-        });
-
         res.json({
           message: 'Data kas berhasil dihapus'
         });
@@ -956,8 +898,6 @@ app.get('/api/arus-kas', verifyToken, (req, res) => {
 
   query += ' ORDER BY ak.tanggal DESC, ak.id DESC';
 
-  console.log('DEBUG Arus Kas Query:', { query, params });
-
   db.query(query, params, (err, results) => {
     if (err) {
       console.error('❌ ERROR loading arus kas:', {
@@ -981,17 +921,6 @@ app.get('/api/arus-kas', verifyToken, (req, res) => {
       jumlah: parseFloat(item.jumlah)
     }));
 
-    console.log('✅ DEBUG Backend Arus Kas Load:', {
-      resultCount: formattedResults.length,
-      sampleData: formattedResults.slice(0, 2).map(item => ({
-        id: item.id,
-        tanggal: item.tanggal,
-        pt: item.pt,
-        kategori: item.kategori,
-        metode_bayar: item.metode_bayar
-      }))
-    });
-
     res.json(formattedResults);
   });
 });
@@ -999,14 +928,6 @@ app.get('/api/arus-kas', verifyToken, (req, res) => {
 // Create Arus Kas (No Approval Needed)
 app.post('/api/arus-kas', verifyToken, (req, res) => {
   const { tanggal, pt, jenis, jumlah, keterangan, subKategoriId, metodeBayar } = req.body;
-
-  console.log('DEBUG Backend Arus Kas Save:', {
-    tanggal: tanggal,
-    pt: pt,
-    jenis: jenis,
-    subKategoriId: subKategoriId,
-    metodeBayar: metodeBayar
-  });
 
   // Force tanggal to be treated as local date (no timezone conversion)
   const localTanggal = processTanggal(tanggal);
@@ -1165,8 +1086,8 @@ app.delete('/api/arus-kas/:id', verifyToken, (req, res) => {
   });
 });
 
-// Test endpoint to debug arus_kas table structure (NO AUTH - TEMPORARY)
-app.get('/api/debug/arus-kas', (req, res) => {
+// Test endpoint to debug arus_kas table structure (Master User only)
+app.get('/api/debug/arus-kas', verifyToken, (req, res) => {
   console.log('🔍 DEBUG: Checking arus_kas table...');
 
   // Check if table exists
@@ -1232,8 +1153,8 @@ app.get('/api/debug/arus-kas', (req, res) => {
   });
 });
 
-// Auto-migration endpoint: Add updated_at column to arus_kas (NO AUTH - TEMPORARY)
-app.get('/api/migrate/add-updated-at', (req, res) => {
+// Auto-migration endpoint: Add updated_at column to arus_kas (Master User only)
+app.get('/api/migrate/add-updated-at', verifyToken, (req, res) => {
   console.log('🔧 MIGRATION: Adding updated_at column to arus_kas...');
 
   // First check if column already exists
@@ -1307,8 +1228,8 @@ app.get('/api/migrate/add-updated-at', (req, res) => {
   });
 });
 
-// Auto-migration endpoint: Create sub_kategori table and migrate data (NO AUTH - TEMPORARY)
-app.get('/api/migrate/create-sub-kategori', (req, res) => {
+// Auto-migration endpoint: Create sub_kategori table and migrate data (Master User only)
+app.get('/api/migrate/create-sub-kategori', verifyToken, (req, res) => {
   console.log('🔧 MIGRATION: Creating sub_kategori table and migrating data...');
 
   // Step 1: Check if table already exists
@@ -2090,69 +2011,9 @@ app.put('/api/auth/password', verifyToken, async (req, res) => {
   }
 });
 
-// Health Check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Sumber Jaya API is running' });
-});
+// Health Check - see enhanced version below
 
-// TEMPORARY: Seed Database Endpoint (REMOVE AFTER FIRST RUN!)
-app.get('/api/setup-database', async (req, res) => {
-  try {
-    // Insert PT List
-    await db.promise().query(`
-      INSERT INTO pt_list (code, name) VALUES
-      ('KSS', 'PT KHALISA SALMA SEJAHTERA'),
-      ('SJE', 'PT SUMBER JAYA ELPIJI'),
-      ('FAB', 'PT FADILLAH AMANAH BERSAMA'),
-      ('KBS', 'PT KHABITSA INDOGAS'),
-      ('SJS', 'PT SUMBER JAYA SEJAHTERA')
-      ON DUPLICATE KEY UPDATE code=code
-    `);
-    
-    // Insert Master User (password: hengky123)
-    const hashedPassword = await bcrypt.hash('hengky123', 10);
-    await db.promise().query(`
-      INSERT INTO users (username, password, name, role) 
-      VALUES ('hengky', ?, 'Hengky Master User', 'Master User')
-      ON DUPLICATE KEY UPDATE username=username
-    `, [hashedPassword]);
-    
-    // Insert PT Access
-    await db.promise().query(`
-      INSERT INTO pt_access (user_id, pt_code) 
-      SELECT 1, code FROM pt_list
-      ON DUPLICATE KEY UPDATE user_id=user_id
-    `);
-    
-    // Insert Pangkalan
-    await db.promise().query(`
-      INSERT INTO pangkalan (pt, nama) VALUES
-      ('KSS', 'Pangkalan A'), ('KSS', 'Pangkalan B'),
-      ('SJE', 'Pangkalan C'), ('FAB', 'Pangkalan D'),
-      ('KBS', 'Pangkalan E'), ('SJS', 'Pangkalan F')
-      ON DUPLICATE KEY UPDATE pt=pt
-    `);
-    
-    // Verify
-    const [users] = await db.promise().query('SELECT id, username, name, role FROM users WHERE username = "hengky"');
-    
-    res.json({ 
-      status: 'SUCCESS',
-      message: 'Database seeded successfully!',
-      credentials: {
-        username: 'hengky',
-        password: 'hengky123'
-      },
-      user: users[0]
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'ERROR',
-      message: 'Failed to seed database',
-      error: error.message 
-    });
-  }
-});
+// Note: setup-database endpoint removed for security - was exposing credentials
 
 // ==================== HEALTH CHECK & MONITORING ====================
 
