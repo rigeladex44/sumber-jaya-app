@@ -522,12 +522,15 @@ const SumberJayaApp = () => {
     }
   };
 
-  // Load users on login (always needed for admin features)
+  // Load initial data when logged in
   useEffect(() => {
     if (isLoggedIn) {
+      loadKasKecilData();
+      loadArusKasData();
+      loadPenjualanData();
       loadUsers();
     }
-  }, [isLoggedIn, loadUsers]);
+  }, [isLoggedIn, loadKasKecilData, loadArusKasData, loadPenjualanData, loadUsers]);
 
   // Auto set selectedPT to all user's PT when currentUserData changes
   useEffect(() => {
