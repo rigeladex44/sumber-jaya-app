@@ -57,6 +57,7 @@ const getTodayDate = () => getLocalDateString();
 
 const SumberJayaApp = () => {
   // Cek sessionStorage saat pertama kali load (logout saat close tab)
+  // --- Auth & Session State ---
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const savedLogin = sessionStorage.getItem('isLoggedIn');
     const token = sessionStorage.getItem('token');
@@ -66,11 +67,11 @@ const SumberJayaApp = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [activeMenu, setActiveMenu] = useState('beranda');
   const [selectedPT, setSelectedPT] = useState([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  // Get current month in YYYY-MM format
   const getCurrentMonth = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -79,7 +80,6 @@ const SumberJayaApp = () => {
   };
 
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [currentUserData, setCurrentUserData] = useState(() => {
     try {
       const savedUser = sessionStorage.getItem('currentUserData');
@@ -89,12 +89,29 @@ const SumberJayaApp = () => {
       return null;
     }
   });
+
+  // --- Modals State ---
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [showEditKasKecilModal, setShowEditKasKecilModal] = useState(false);
+  const [editingKasKecil, setEditingKasKecil] = useState(null);
+  const [showEditArusKasModal, setShowEditArusKasModal] = useState(false);
+  const [editingArusKas, setEditingArusKas] = useState(null);
+  const [showAddSubKategoriModal, setShowAddSubKategoriModal] = useState(false);
+  const [showEditSubKategoriModal, setShowEditSubKategoriModal] = useState(false);
+  const [editingSubKategori, setEditingSubKategori] = useState(null);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // Dashboard Stats State
+  // --- Data & Loading State ---
+  const [kasKecilData, setKasKecilData] = useState([]);
+  const [saldoAwalFromAPI, setSaldoAwalFromAPI] = useState(0);
+  const [userList, setUserList] = useState([]);
+  const [penjualanData, setPenjualanData] = useState([]);
+  const [arusKasData, setArusKasData] = useState([]);
+  const [subKategoriData, setSubKategoriData] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({
     kasKecilSaldoAkhir: 0,
     kasKecilPemasukanHariIni: 0,
@@ -104,16 +121,54 @@ const SumberJayaApp = () => {
     pendingApproval: 0
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoadingPenjualan, setIsLoadingPenjualan] = useState(false);
+  const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
+  const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
+  const [isLoadingSubKategori, setIsLoadingSubKategori] = useState(false);
 
-  // Form Edit Profile
+  // --- Filter State ---
+  const [filterKasKecil, setFilterKasKecil] = useState({
+    pt: [],
+    tanggalMulai: getLocalDateString(),
+    tanggalSelesai: getLocalDateString()
+  });
+  const [filterArusKas, setFilterArusKas] = useState({
+    pt: [],
+    tanggal: getLocalDateString()
+  });
+  const [filterDetailKas, setFilterDetailKas] = useState({
+    tanggal: ''
+  });
+  const [searchDate, setSearchDate] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+
+  // --- Form State ---
+  const [formKasKecil, setFormKasKecil] = useState({
+    tanggal: getLocalDateString(),
+    pt: '',
+    jenis: 'keluar',
+    jumlah: '',
+    keterangan: '',
+    kategori: ''
+  });
+  const [formArusKas, setFormArusKas] = useState({
+    tanggal: getLocalDateString(),
+    pt: '',
+    jenis: 'keluar',
+    jumlah: '',
+    keterangan: '',
+    subKategoriId: '',
+    metodeBayar: 'cashless'
+  });
+  const [formSubKategori, setFormSubKategori] = useState({
+    jenis: 'pengeluaran',
+    nama: '',
+    urutan: 0
+  });
   const [formEditProfile, setFormEditProfile] = useState({
     nama: '',
     jabatan: ''
   });
-
-  // Form Change Password
   const [formChangePassword, setFormChangePassword] = useState({
     oldPassword: '',
     newPassword: '',
@@ -122,6 +177,24 @@ const SumberJayaApp = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formUser, setFormUser] = useState({
+    nama: '',
+    username: '',
+    password: '',
+    jabatan: '',
+    fiturAkses: [],
+    aksesPT: []
+  });
+  const [formPenjualan, setFormPenjualan] = useState({
+    tanggal: getLocalDateString(),
+    pt: '',
+    pangkalan: '',
+    qty: '',
+    harga: 16000,
+    ppnPercent: 11,
+    ppnType: 'include',
+    metodeBayar: 'cash'
+  });
 
   // Load Users from API
   const loadUsers = useCallback(async () => {
@@ -414,60 +487,7 @@ const SumberJayaApp = () => {
   }, [isLoggedIn, activeMenu, loadSubKategoriData]); // Re-run when menu changes
 
 
-  // Data Management State
-  const [kasKecilData, setKasKecilData] = useState([]);
-  const [saldoAwalFromAPI, setSaldoAwalFromAPI] = useState(0); // Saldo awal from backend (sebelum filter tanggal mulai)
-  const [userList, setUserList] = useState([]);
-  const [penjualanData, setPenjualanData] = useState([]);
 
-  // Kas Kecil State (untuk pembukuan kasir tunai - Cash Only)
-  const [isLoadingKasKecil, setIsLoadingKasKecil] = useState(false);
-  const [filterKasKecil, setFilterKasKecil] = useState({
-    pt: [],
-    tanggalMulai: getLocalDateString(),
-    tanggalSelesai: getLocalDateString()
-  });
-  const [formKasKecil, setFormKasKecil] = useState({
-    tanggal: getLocalDateString(),
-    pt: '',
-    jenis: 'keluar',
-    jumlah: '',
-    keterangan: '',
-    kategori: ''
-  });
-  const [showEditKasKecilModal, setShowEditKasKecilModal] = useState(false);
-  const [editingKasKecil, setEditingKasKecil] = useState(null);
-
-  // Arus Kas State (Manual Cash Flow - Cash & Cashless)
-  const [arusKasData, setArusKasData] = useState([]);
-  const [isLoadingArusKas, setIsLoadingArusKas] = useState(false);
-  const [filterArusKas, setFilterArusKas] = useState({
-    pt: [],  // Array for multi-select
-    tanggal: getLocalDateString()  // Default to today for realtime view
-  });
-  const [formArusKas, setFormArusKas] = useState({
-    tanggal: getLocalDateString(),
-    pt: '',
-    jenis: 'keluar',
-    jumlah: '',
-    keterangan: '',
-    subKategoriId: '',
-    metodeBayar: 'cashless'
-  });
-  const [showEditArusKasModal, setShowEditArusKasModal] = useState(false);
-  const [editingArusKas, setEditingArusKas] = useState(null);
-
-  // Sub Kategori State (Master Data for Categories)
-  const [subKategoriData, setSubKategoriData] = useState([]);
-  const [isLoadingSubKategori, setIsLoadingSubKategori] = useState(false);
-  const [showAddSubKategoriModal, setShowAddSubKategoriModal] = useState(false);
-  const [showEditSubKategoriModal, setShowEditSubKategoriModal] = useState(false);
-  const [editingSubKategori, setEditingSubKategori] = useState(null);
-  const [formSubKategori, setFormSubKategori] = useState({
-    jenis: 'pengeluaran',
-    nama: '',
-    urutan: 0
-  });
 
   // Handle Add Sub Kategori
   const handleAddSubKategori = async (e) => {
@@ -558,35 +578,7 @@ const SumberJayaApp = () => {
   // Form State
 
 
-  // Search State
-  const [searchDate, setSearchDate] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // Filter State for Detail Kas (PT and date filters)
-  const [filterDetailKas, setFilterDetailKas] = useState({
-    tanggal: '' // Empty means show all dates
-  });
-
-  const [formUser, setFormUser] = useState({
-    nama: '',
-    username: '',
-    password: '',
-    jabatan: '',
-    fiturAkses: [],
-    aksesPT: []
-  });
-
-  const [formPenjualan, setFormPenjualan] = useState({
-    tanggal: getLocalDateString(),
-    pt: '',
-    pangkalan: '',
-    qty: '',
-    harga: 16000, // Harga per tabung
-    ppnPercent: 11,
-    ppnType: 'include', // 'include' atau 'exclude'
-    metodeBayar: 'cash'
-  });
 
   // Hitung Total
   const hitungTotalPenjualan = () => {
