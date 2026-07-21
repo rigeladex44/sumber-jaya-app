@@ -19,6 +19,7 @@ class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     sessionStorage.clear();
+    localStorage.clear();
     window.location.href = '/';
   };
 
@@ -43,6 +44,23 @@ class ErrorBoundary extends React.Component {
           <p style={{ color: '#64748b', marginBottom: '20px', maxWidth: '400px' }}>
             Sesi browser atau data lokal mengalami pembaruan. Silakan muat ulang atau login kembali.
           </p>
+
+          {this.state.error && (
+            <pre style={{
+              backgroundColor: '#fee2e2',
+              color: '#991b1b',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              maxWidth: '90%',
+              overflowX: 'auto',
+              marginBottom: '20px',
+              textAlign: 'left'
+            }}>
+              {this.state.error.toString()}
+            </pre>
+          )}
+
           <button
             onClick={this.handleReset}
             style={{

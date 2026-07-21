@@ -59,7 +59,8 @@ const SumberJayaApp = () => {
   // Cek sessionStorage saat pertama kali load (logout saat close tab)
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const savedLogin = sessionStorage.getItem('isLoggedIn');
-    return savedLogin === 'true';
+    const token = sessionStorage.getItem('token');
+    return savedLogin === 'true' && !!token;
   });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
