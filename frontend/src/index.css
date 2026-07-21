@@ -47,12 +47,19 @@ code {
 /* Animated Login Circle Bars (Reference: Login-page) */
 .login-circle-wrapper {
   position: absolute;
-  width: 360px;
-  height: 360px;
+  width: 310px;
+  height: 310px;
   display: flex;
   justify-content: center;
   align-items: center;
   pointer-events: none;
+}
+
+@media (min-width: 640px) {
+  .login-circle-wrapper {
+    width: 380px;
+    height: 380px;
+  }
 }
 
 .login-circle-container {
@@ -70,18 +77,27 @@ code {
 
 .login-bar {
   position: absolute;
-  width: 6px;
-  height: 28px;
+  width: 5px;
+  height: 22px;
   background: rgba(255, 255, 255, 0.12);
   border-radius: 4px;
   top: 0;
   left: 50%;
-  transform-origin: center 180px;
+  transform-origin: center 155px;
   transition: all 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .login-bar {
+    width: 6px;
+    height: 28px;
+    transform-origin: center 190px;
+  }
 }
 
 .login-bar.active {
   background: linear-gradient(180deg, #3b82f6, #60a5fa);
   box-shadow: 0 0 16px rgba(59, 130, 246, 0.85);
 }
+
 

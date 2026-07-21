@@ -63,7 +63,14 @@ const formatRupiah = (val) => {
 // Animated Circle Bars Component for Login Screen (Reference: Login-page)
 const AnimatedCircleBars = () => {
   const [activeBars, setActiveBars] = useState(0);
-  const numBars = 40;
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const numBars = 36;
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -72,19 +79,21 @@ const AnimatedCircleBars = () => {
     return () => clearInterval(interval);
   }, [numBars]);
 
+  const translateY = isMobile ? -155 : -190;
+
   return (
     <div className="login-circle-wrapper">
       <div className="login-circle-container">
         {Array.from({ length: numBars }).map((_, i) => {
           const rotation = (360 / numBars) * i;
-          const isActive = (i >= (activeBars - 8 + numBars) % numBars && i <= activeBars) ||
-            (activeBars < 8 && i >= numBars - (8 - activeBars));
+          const isActive = (i >= (activeBars - 7 + numBars) % numBars && i <= activeBars) ||
+            (activeBars < 7 && i >= numBars - (7 - activeBars));
           return (
             <div
               key={i}
               className={`login-bar ${isActive ? 'active' : ''}`}
               style={{
-                transform: `rotate(${rotation}deg) translateY(-180px)`
+                transform: `rotate(${rotation}deg) translateY(${translateY}px)`
               }}
             />
           );
@@ -2665,71 +2674,70 @@ const SumberJayaApp = () => {
         <AnimatedCircleBars />
 
         {/* Main Glossy White Glassmorphism Form Card */}
-        <div className="relative bg-white/45 backdrop-blur-2xl border border-white/60 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] w-full max-w-[400px] overflow-hidden z-10 p-8 md:p-9 transition-all">
+        <div className="relative bg-white/45 backdrop-blur-2xl border border-white/60 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.25)] w-full max-w-[330px] sm:max-w-[380px] md:max-w-[400px] overflow-hidden z-10 p-5 sm:p-7 md:p-9 transition-all">
           
           {/* Company Logo Header */}
-          <div className="flex flex-col items-center justify-center mb-6">
+          <div className="flex flex-col items-center justify-center mb-4 sm:mb-6">
             <img
               src="/images/logo.png"
               alt="Logo"
-              className="object-contain drop-shadow-md transform hover:scale-105 transition-transform duration-500"
-              style={{ width: '220px', height: 'auto' }}
+              className="object-contain drop-shadow-md transform hover:scale-105 transition-transform duration-500 w-44 sm:w-52 md:w-56 h-auto"
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.nextSibling.style.display = 'flex';
               }}
             />
-            <div className="bg-white/30 backdrop-blur-md rounded-2xl items-center justify-center hidden border border-white/40 w-[220px] h-[70px]">
-              <Lock size={45} className="text-gray-800 drop-shadow" />
+            <div className="bg-white/30 backdrop-blur-md rounded-2xl items-center justify-center hidden border border-white/40 w-44 sm:w-52 h-[60px] sm:h-[70px]">
+              <Lock size={36} className="text-gray-800 drop-shadow" />
             </div>
           </div>
 
-          <h2 className="text-xl font-extrabold text-gray-900 mb-6 text-center uppercase tracking-widest">
+          <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-gray-900 mb-4 sm:mb-6 text-center uppercase tracking-widest">
             Login System
           </h2>
 
           {loginError && (
-            <div className="mb-5 p-3.5 bg-red-50/90 border border-red-200/80 backdrop-blur-md rounded-xl flex items-center gap-2.5 text-red-700 shadow-sm">
-              <AlertCircle size={18} className="shrink-0 text-red-600" />
-              <span className="text-xs font-semibold leading-relaxed">{loginError}</span>
+            <div className="mb-4 sm:mb-5 p-3 bg-red-50/90 border border-red-200/80 backdrop-blur-md rounded-xl flex items-center gap-2 text-red-700 shadow-sm">
+              <AlertCircle size={16} className="shrink-0 text-red-600" />
+              <span className="text-[11px] sm:text-xs font-semibold leading-relaxed">{loginError}</span>
             </div>
           )}
 
-          <div className="space-y-5">
+          <div className="space-y-3.5 sm:space-y-5">
             <div>
-              <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider mb-2">Username</label>
+              <label className="block text-[10px] sm:text-xs font-bold text-gray-800 uppercase tracking-wider mb-1.5 sm:mb-2">Username</label>
               <div className="relative">
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-5 py-3.5 pr-12 border border-white/80 rounded-full focus:outline-none focus:ring-4 focus:ring-blue-500/25 focus:border-blue-500 focus:bg-white/90 bg-white/60 backdrop-blur-md text-gray-900 font-semibold text-sm placeholder-gray-500 shadow-inner transition-all"
+                  className="w-full px-4 sm:px-5 py-2.5 sm:py-3.5 pr-10 sm:pr-12 border border-white/80 rounded-full focus:outline-none focus:ring-4 focus:ring-blue-500/25 focus:border-blue-500 focus:bg-white/90 bg-white/60 backdrop-blur-md text-gray-900 font-semibold text-xs sm:text-sm placeholder-gray-500 shadow-inner transition-all"
                   placeholder="Masukkan username"
                   onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
-                  <User size={18} />
+                <span className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                  <User size={16} className="sm:w-4 sm:h-4" />
                 </span>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider mb-2">Password</label>
+              <label className="block text-[10px] sm:text-xs font-bold text-gray-800 uppercase tracking-wider mb-1.5 sm:mb-2">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-5 py-3.5 pr-12 border border-white/80 rounded-full focus:outline-none focus:ring-4 focus:ring-blue-500/25 focus:border-blue-500 focus:bg-white/90 bg-white/60 backdrop-blur-md text-gray-900 font-semibold text-sm placeholder-gray-500 shadow-inner transition-all"
+                  className="w-full px-4 sm:px-5 py-2.5 sm:py-3.5 pr-10 sm:pr-12 border border-white/80 rounded-full focus:outline-none focus:ring-4 focus:ring-blue-500/25 focus:border-blue-500 focus:bg-white/90 bg-white/60 backdrop-blur-md text-gray-900 font-semibold text-xs sm:text-sm placeholder-gray-500 shadow-inner transition-all"
                   placeholder="Masukkan password"
                   onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600 focus:outline-none transition-colors p-1"
+                  className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600 focus:outline-none transition-colors p-1"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -2737,26 +2745,26 @@ const SumberJayaApp = () => {
             <button
               onClick={handleLogin}
               disabled={isLoggingIn}
-              className={`w-full py-3.5 mt-2 rounded-full font-bold uppercase tracking-wider text-sm transition-all duration-300 transform active:scale-[0.98] ${
+              className={`w-full py-2.5 sm:py-3.5 mt-1 sm:mt-2 rounded-full font-bold uppercase tracking-wider text-xs sm:text-sm transition-all duration-300 transform active:scale-[0.98] ${
                 isLoggingIn
                   ? 'bg-gray-400/80 text-gray-200 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white shadow-[0_8px_25px_rgba(37,99,235,0.35)] hover:shadow-[0_12px_30px_rgba(37,99,235,0.5)] hover:-translate-y-0.5'
+                  : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:shadow-[0_10px_25px_rgba(37,99,235,0.5)] hover:-translate-y-0.5'
               }`}
             >
               {isLoggingIn ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   <span>Memproses...</span>
                 </div>
               ) : 'LOGIN DASHBOARD'}
             </button>
           </div>
 
-          <div className="mt-8 pt-5 border-t border-gray-400/25 text-center">
-            <p className="text-[11px] font-bold text-gray-800 tracking-wide">
+          <div className="mt-5 sm:mt-8 pt-4 sm:pt-5 border-t border-gray-400/25 text-center">
+            <p className="text-[10px] sm:text-[11px] font-bold text-gray-800 tracking-wide">
               © 2025 Sumber Jaya Grup Official
             </p>
-            <div className="flex items-center justify-center gap-2 text-[10px] text-gray-700 font-medium mt-1">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] text-gray-700 font-medium mt-1">
               <span>Powered by Rigeel One Click</span>
               <span className="w-1 h-1 rounded-full bg-gray-500"></span>
               <span>v{APP_VERSION}</span>
