@@ -2959,8 +2959,8 @@ const SumberJayaApp = () => {
       };
     });
 
-    // Currently reversing to DESCENDING (newest first). We can change this based on user response.
-    const groupDataWithBalance = groupDataAscWithBalance.reverse();
+    // Chronological order (oldest/first inputted first at the top, newest/latest at the bottom)
+    const groupDataWithBalance = groupDataAscWithBalance;
 
     // Finally, filter the displayed rows back down to exactly what the user selected in the UI
     const dataWithBalance = filterKasKecil.pt.length === 0
