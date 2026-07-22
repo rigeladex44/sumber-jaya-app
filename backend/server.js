@@ -366,6 +366,27 @@ const processTanggal = (tanggal) => {
   return tanggal.split('T')[0]; // Remove any timezone info
 };
 
+// Helper to retrieve user role and allowed PT codes
+const getUserAccessRestrictions = (userId) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT u.role, GROUP_CONCAT(DISTINCT pa.pt_code) as access_pts
+      FROM users u
+      LEFT JOIN pt_access pa ON u.id = pa.user_id
+      WHERE u.id = ?
+      GROUP BY u.id
+    `;
+    db.query(query, [userId], (err, results) => {
+      if (err) return reject(err);
+      if (results.length === 0) return resolve({ isMaster: false, allowedPTs: [] });
+      const user = results[0];
+      const isMaster = user.role === 'Master';
+      const allowedPTs = user.access_pts ? user.access_pts.split(',').map(p => p.trim()).filter(Boolean) : [];
+      resolve({ isMaster, allowedPTs });
+    });
+  });
+};
+
 
 // ==================== AUTH ROUTES ====================
 
@@ -475,103 +496,126 @@ app.get('/api/pt', verifyToken, (req, res) => {
 // ==================== KAS KECIL ROUTES ====================
 
 // Get Kas Kecil (Cash Only)
-app.get('/api/kas-kecil', verifyToken, (req, res) => {
-  const { pt, tanggal_dari, tanggal_sampai, status } = req.query;
+app.get('/api/kas-kecil', verifyToken, async (req, res) => {
+  try {
+    const { pt, tanggal_dari, tanggal_sampai, status } = req.query;
+    const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
 
-  // 1. Calculate saldoAwal if tanggal_dari is provided
-  let saldoAwalQuery = `
-    SELECT
-      SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
-      SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_awal
-    FROM kas_kecil
-    WHERE 1=1
-  `;
-  let saldoAwalParams = [];
-
-  if (pt) {
-    const ptList = pt.split(',').map(p => p.trim()).filter(Boolean);
-    if (ptList.length === 1) {
-      saldoAwalQuery += ' AND pt_code = ?';
-      saldoAwalParams.push(ptList[0]);
-    } else if (ptList.length > 1) {
-      saldoAwalQuery += ` AND pt_code IN (${ptList.map(() => '?').join(',')})`;
-      saldoAwalParams.push(...ptList);
-    }
-  }
-
-  if (tanggal_dari) {
-    saldoAwalQuery += ' AND tanggal < ?';
-    saldoAwalParams.push(tanggal_dari);
-  } else {
-    // If no start date, opening balance is 0 because we're showing from the beginning
-    saldoAwalQuery += ' AND 1=0';
-  }
-
-  db.query(saldoAwalQuery, saldoAwalParams, (err, saldoResult) => {
-    if (err) {
-      return res.status(500).json({ message: 'Server error calculating saldo awal', error: err });
+    // Build the list of PTs we are allowed to query
+    let targetPTs = [];
+    if (pt) {
+      const requestedPTs = pt.split(',').map(p => p.trim()).filter(Boolean);
+      if (isMaster) {
+        targetPTs = requestedPTs;
+      } else {
+        // Only keep requested PTs that are allowed for the user
+        targetPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+      }
+    } else {
+      if (!isMaster) {
+        targetPTs = allowedPTs;
+      }
     }
 
-    const saldoAwal = Math.round(parseFloat(saldoResult[0]?.saldo_awal || 0));
-
-    // 2. Query transactions
-    let query = `
+    // 1. Calculate saldoAwal if tanggal_dari is provided
+    let saldoAwalQuery = `
       SELECT
-        kk.id, kk.tanggal, kk.pt_code AS pt, kk.jenis, kk.jumlah, kk.keterangan,
-        kk.kategori, kk.status, kk.created_by, kk.approved_by, kk.created_at, kk.updated_at,
-        kk.sub_kategori_id,
-        sk.nama AS sub_kategori_nama,
-        sk.jenis AS sub_kategori_jenis
-      FROM kas_kecil kk
-      LEFT JOIN sub_kategori sk ON kk.sub_kategori_id = sk.id
+        SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
+        SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo_awal
+      FROM kas_kecil
       WHERE 1=1
     `;
-    let params = [];
+    let saldoAwalParams = [];
 
-    if (pt) {
-      const ptList = pt.split(',').map(p => p.trim()).filter(Boolean);
-      if (ptList.length === 1) {
-        query += ' AND kk.pt_code = ?';
-        params.push(ptList[0]);
-      } else if (ptList.length > 1) {
-        query += ` AND kk.pt_code IN (${ptList.map(() => '?').join(',')})`;
-        params.push(...ptList);
+    if (pt || !isMaster) {
+      if (targetPTs.length === 0) {
+        saldoAwalQuery += ' AND 1=0';
+      } else if (targetPTs.length === 1) {
+        saldoAwalQuery += ' AND pt_code = ?';
+        saldoAwalParams.push(targetPTs[0]);
+      } else {
+        saldoAwalQuery += ` AND pt_code IN (${targetPTs.map(() => '?').join(',')})`;
+        saldoAwalParams.push(...targetPTs);
       }
     }
 
     if (tanggal_dari) {
-      query += ' AND kk.tanggal >= ?';
-      params.push(tanggal_dari);
+      saldoAwalQuery += ' AND tanggal < ?';
+      saldoAwalParams.push(tanggal_dari);
+    } else {
+      // If no start date, opening balance is 0 because we're showing from the beginning
+      saldoAwalQuery += ' AND 1=0';
     }
 
-    if (tanggal_sampai) {
-      query += ' AND kk.tanggal <= ?';
-      params.push(tanggal_sampai);
-    }
-
-    if (status) {
-      query += ' AND kk.status = ?';
-      params.push(status);
-    }
-
-    query += ' ORDER BY kk.tanggal DESC, kk.id ASC';
-    
-    db.query(query, params, (err, results) => {
+    db.query(saldoAwalQuery, saldoAwalParams, (err, saldoResult) => {
       if (err) {
-        return res.status(500).json({ message: 'Server error', error: err });
+        return res.status(500).json({ message: 'Server error calculating saldo awal', error: err });
       }
+
+      const saldoAwal = Math.round(parseFloat(saldoResult[0]?.saldo_awal || 0));
+
+      // 2. Query transactions
+      let query = `
+        SELECT
+          kk.id, kk.tanggal, kk.pt_code AS pt, kk.jenis, kk.jumlah, kk.keterangan,
+          kk.kategori, kk.status, kk.created_by, kk.approved_by, kk.created_at, kk.updated_at,
+          kk.sub_kategori_id,
+          sk.nama AS sub_kategori_nama,
+          sk.jenis AS sub_kategori_jenis
+        FROM kas_kecil kk
+        LEFT JOIN sub_kategori sk ON kk.sub_kategori_id = sk.id
+        WHERE 1=1
+      `;
+      let params = [];
+
+      if (pt || !isMaster) {
+        if (targetPTs.length === 0) {
+          query += ' AND 1=0';
+        } else if (targetPTs.length === 1) {
+          query += ' AND kk.pt_code = ?';
+          params.push(targetPTs[0]);
+        } else {
+          query += ` AND kk.pt_code IN (${targetPTs.map(() => '?').join(',')})`;
+          params.push(...targetPTs);
+        }
+      }
+
+      if (tanggal_dari) {
+        query += ' AND kk.tanggal >= ?';
+        params.push(tanggal_dari);
+      }
+
+      if (tanggal_sampai) {
+        query += ' AND kk.tanggal <= ?';
+        params.push(tanggal_sampai);
+      }
+
+      if (status) {
+        query += ' AND kk.status = ?';
+        params.push(status);
+      }
+
+      query += ' ORDER BY kk.tanggal DESC, kk.id ASC';
       
-      const formattedResults = results.map(item => ({
-        ...item,
-        jumlah: parseFloat(item.jumlah)
-      }));
-      
-      res.json({
-        data: formattedResults,
-        saldoAwal: saldoAwal
+      db.query(query, params, (err, results) => {
+        if (err) {
+          return res.status(500).json({ message: 'Server error', error: err });
+        }
+        
+        const formattedResults = results.map(item => ({
+          ...item,
+          jumlah: parseFloat(item.jumlah)
+        }));
+        
+        res.json({
+          data: formattedResults,
+          saldoAwal: saldoAwal
+        });
       });
     });
-  });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 });
 
 // Create Kas Kecil (Cash Only)
@@ -842,105 +886,153 @@ app.delete('/api/kas-kecil/:id', verifyToken, (req, res) => {
 });
 
 // Get Saldo Kas (TOTAL balance including opening balance carryover)
-app.get('/api/kas-kecil/saldo', verifyToken, (req, res) => {
-  const { pt } = req.query;
+app.get('/api/kas-kecil/saldo', verifyToken, async (req, res) => {
+  try {
+    const { pt } = req.query;
+    const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
 
-  let query = `
-    SELECT
-      SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) as total_masuk,
-      SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as total_keluar
-    FROM kas_kecil
-    WHERE 1=1
-  `;
-  
-  let params = [];
-  
-  if (pt) {
-    const ptList = pt.split(',').map(p => p.trim()).filter(Boolean);
-    if (ptList.length === 1) {
-      query += ' AND pt_code = ?';
-      params.push(ptList[0]);
-    } else if (ptList.length > 1) {
-      query += ` AND pt_code IN (${ptList.map(() => '?').join(',')})`;
-      params.push(...ptList);
+    // Build the list of PTs we are allowed to query
+    let targetPTs = [];
+    if (pt) {
+      const requestedPTs = pt.split(',').map(p => p.trim()).filter(Boolean);
+      if (isMaster) {
+        targetPTs = requestedPTs;
+      } else {
+        targetPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+      }
+    } else {
+      if (!isMaster) {
+        targetPTs = allowedPTs;
+      }
     }
+
+    let query = `
+      SELECT
+        SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) as total_masuk,
+        SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as total_keluar
+      FROM kas_kecil
+      WHERE 1=1
+    `;
+    
+    let params = [];
+    
+    if (pt || !isMaster) {
+      if (targetPTs.length === 0) {
+        query += ' AND 1=0';
+      } else if (targetPTs.length === 1) {
+        query += ' AND pt_code = ?';
+        params.push(targetPTs[0]);
+      } else {
+        query += ` AND pt_code IN (${targetPTs.map(() => '?').join(',')})`;
+        params.push(...targetPTs);
+      }
+    }
+    
+    db.query(query, params, (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      
+      const masuk = Math.round(parseFloat(results[0].total_masuk) || 0);
+      const keluar = Math.round(parseFloat(results[0].total_keluar) || 0);
+      const saldo = masuk - keluar;
+      
+      res.json({ masuk, keluar, saldo });
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
-  
-  db.query(query, params, (err, results) => {
-    if (err) {
-      return res.status(500).json({ message: 'Server error', error: err });
-    }
-    
-    const masuk = Math.round(parseFloat(results[0].total_masuk) || 0);
-    const keluar = Math.round(parseFloat(results[0].total_keluar) || 0);
-    const saldo = masuk - keluar;
-    
-    res.json({ masuk, keluar, saldo });
-  });
 });
 
 
 // ==================== ARUS KAS ROUTES ====================
 
 // Get Arus Kas (Manual Cash Flow - No Approval)
-app.get('/api/arus-kas', verifyToken, (req, res) => {
-  const { pt, tanggal_dari, tanggal_sampai } = req.query;
+app.get('/api/arus-kas', verifyToken, async (req, res) => {
+  try {
+    const { pt, tanggal_dari, tanggal_sampai } = req.query;
+    const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
 
-  let query = `
-    SELECT
-      ak.id, ak.tanggal, ak.pt_code AS pt, ak.jenis, ak.jumlah, ak.keterangan,
-      ak.kategori, ak.metode_bayar, ak.created_by, ak.created_at, ak.updated_at,
-      ak.sub_kategori_id,
-      sk.nama AS sub_kategori_nama,
-      sk.jenis AS sub_kategori_jenis
-    FROM arus_kas ak
-    LEFT JOIN sub_kategori sk ON ak.sub_kategori_id = sk.id
-    WHERE 1=1
-  `;
-  let params = [];
-
-  if (pt) {
-    query += ' AND ak.pt_code = ?';
-    params.push(pt);
-  }
-
-  if (tanggal_dari) {
-    query += ' AND ak.tanggal >= ?';
-    params.push(tanggal_dari);
-  }
-
-  if (tanggal_sampai) {
-    query += ' AND ak.tanggal <= ?';
-    params.push(tanggal_sampai);
-  }
-
-  query += ' ORDER BY ak.tanggal DESC, ak.id DESC';
-
-  db.query(query, params, (err, results) => {
-    if (err) {
-      console.error('❌ ERROR loading arus kas:', {
-        error: err.message,
-        code: err.code,
-        sqlState: err.sqlState,
-        sql: err.sql,
-        query: query,
-        params: params
-      });
-      return res.status(500).json({
-        message: 'Server error loading arus kas',
-        error: err.message,
-        code: err.code
-      });
+    // Build the list of PTs we are allowed to query
+    let targetPTs = [];
+    if (pt) {
+      const requestedPTs = pt.split(',').map(p => p.trim()).filter(Boolean);
+      if (isMaster) {
+        targetPTs = requestedPTs;
+      } else {
+        targetPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+      }
+    } else {
+      if (!isMaster) {
+        targetPTs = allowedPTs;
+      }
     }
 
-    // Convert jumlah string to number for correct calculations
-    const formattedResults = results.map(item => ({
-      ...item,
-      jumlah: parseFloat(item.jumlah)
-    }));
+    let query = `
+      SELECT
+        ak.id, ak.tanggal, ak.pt_code AS pt, ak.jenis, ak.jumlah, ak.keterangan,
+        ak.kategori, ak.metode_bayar, ak.created_by, ak.created_at, ak.updated_at,
+        ak.sub_kategori_id,
+        sk.nama AS sub_kategori_nama,
+        sk.jenis AS sub_kategori_jenis
+      FROM arus_kas ak
+      LEFT JOIN sub_kategori sk ON ak.sub_kategori_id = sk.id
+      WHERE 1=1
+    `;
+    let params = [];
 
-    res.json(formattedResults);
-  });
+    if (pt || !isMaster) {
+      if (targetPTs.length === 0) {
+        query += ' AND 1=0';
+      } else if (targetPTs.length === 1) {
+        query += ' AND ak.pt_code = ?';
+        params.push(targetPTs[0]);
+      } else {
+        query += ` AND ak.pt_code IN (${targetPTs.map(() => '?').join(',')})`;
+        params.push(...targetPTs);
+      }
+    }
+
+    if (tanggal_dari) {
+      query += ' AND ak.tanggal >= ?';
+      params.push(tanggal_dari);
+    }
+
+    if (tanggal_sampai) {
+      query += ' AND ak.tanggal <= ?';
+      params.push(tanggal_sampai);
+    }
+
+    query += ' ORDER BY ak.tanggal DESC, ak.id DESC';
+
+    db.query(query, params, (err, results) => {
+      if (err) {
+        console.error('❌ ERROR loading arus kas:', {
+          error: err.message,
+          code: err.code,
+          sqlState: err.sqlState,
+          sql: err.sql,
+          query: query,
+          params: params
+        });
+        return res.status(500).json({
+          message: 'Server error loading arus kas',
+          error: err.message,
+          code: err.code
+        });
+      }
+
+      // Convert jumlah string to number for correct calculations
+      const formattedResults = results.map(item => ({
+        ...item,
+        jumlah: parseFloat(item.jumlah)
+      }));
+
+      res.json(formattedResults);
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 });
 
 // Create Arus Kas (No Approval Needed)
@@ -1566,35 +1658,62 @@ app.delete('/api/sub-kategori/:id', verifyToken, (req, res) => {
 // ==================== PENJUALAN ROUTES ====================
 
 // Get Penjualan
-app.get('/api/penjualan', verifyToken, (req, res) => {
-  const { pt, tanggal_dari, tanggal_sampai } = req.query;
-  
-  let query = 'SELECT * FROM penjualan WHERE 1=1';
-  let params = [];
-  
-  if (pt) {
-    query += ' AND pt_code = ?';
-    params.push(pt);
-  }
-  
-  if (tanggal_dari) {
-    query += ' AND tanggal >= ?';
-    params.push(tanggal_dari);
-  }
-  
-  if (tanggal_sampai) {
-    query += ' AND tanggal <= ?';
-    params.push(tanggal_sampai);
-  }
-  
-  query += ' ORDER BY tanggal ASC, id ASC';
-  
-  db.query(query, params, (err, results) => {
-    if (err) {
-      return res.status(500).json({ message: 'Server error', error: err });
+app.get('/api/penjualan', verifyToken, async (req, res) => {
+  try {
+    const { pt, tanggal_dari, tanggal_sampai } = req.query;
+    const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
+
+    // Build the list of PTs we are allowed to query
+    let targetPTs = [];
+    if (pt) {
+      const requestedPTs = pt.split(',').map(p => p.trim()).filter(Boolean);
+      if (isMaster) {
+        targetPTs = requestedPTs;
+      } else {
+        targetPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+      }
+    } else {
+      if (!isMaster) {
+        targetPTs = allowedPTs;
+      }
     }
-    res.json(results);
-  });
+
+    let query = 'SELECT * FROM penjualan WHERE 1=1';
+    let params = [];
+
+    if (pt || !isMaster) {
+      if (targetPTs.length === 0) {
+        query += ' AND 1=0';
+      } else if (targetPTs.length === 1) {
+        query += ' AND pt_code = ?';
+        params.push(targetPTs[0]);
+      } else {
+        query += ` AND pt_code IN (${targetPTs.map(() => '?').join(',')})`;
+        params.push(...targetPTs);
+      }
+    }
+
+    if (tanggal_dari) {
+      query += ' AND tanggal >= ?';
+      params.push(tanggal_dari);
+    }
+
+    if (tanggal_sampai) {
+      query += ' AND tanggal <= ?';
+      params.push(tanggal_sampai);
+    }
+
+    query += ' ORDER BY tanggal ASC, id ASC';
+
+    db.query(query, params, (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+      res.json(results);
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 });
 
 // Create Penjualan
@@ -1658,96 +1777,133 @@ app.get('/api/pangkalan', verifyToken, (req, res) => {
 
 // ==================== DASHBOARD STATS ====================
 
-app.get('/api/dashboard/stats', verifyToken, (req, res) => {
-  const { pt } = req.query;
-  const today = getLocalDate();
+app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
+  try {
+    const { pt } = req.query;
+    const today = getLocalDate();
+    const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
 
-  // Query untuk stats
-  const queries = {
-    // Kas Kecil Hari Ini: Saldo akhir dari transaksi hari ini saja (masuk - keluar)
-    kasKecilHariIni: `SELECT
-      SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
-      SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo
-      FROM kas_kecil
-      WHERE tanggal = ?
-      AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
-      ${pt ? 'AND pt_code = ?' : ''}`,
+    // Build target PTs list
+    let targetPTs = [];
+    let useFilter = false;
+    if (pt) {
+      const requestedPTs = pt.split(',').map(p => p.trim()).filter(Boolean);
+      if (isMaster) {
+        targetPTs = requestedPTs;
+      } else {
+        targetPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+      }
+      useFilter = true;
+    } else {
+      if (!isMaster) {
+        targetPTs = allowedPTs;
+        useFilter = true;
+      }
+    }
 
-    // Pemasukan Kas Kecil Hari Ini
-    pemasukanHariIni: `SELECT SUM(jumlah) as total_pemasukan
-      FROM kas_kecil
-      WHERE jenis = 'masuk'
-        AND status = 'approved'
-        AND tanggal = ?
+    // Sub-queries with dynamic PT placeholders
+    let ptPlaceholder = '';
+    if (useFilter) {
+      if (targetPTs.length === 0) {
+        ptPlaceholder = ' AND pt_code = "impossible_pt"';
+      } else if (targetPTs.length === 1) {
+        ptPlaceholder = ' AND pt_code = ?';
+      } else {
+        ptPlaceholder = ` AND pt_code IN (${targetPTs.map(() => '?').join(',')})`;
+      }
+    }
+
+    const queries = {
+      kasKecilHariIni: `SELECT
+        SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
+        SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo
+        FROM kas_kecil
+        WHERE tanggal = ?
         AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
-        ${pt ? 'AND pt_code = ?' : ''}`,
+        ${ptPlaceholder}`,
 
-    // Pengeluaran Kas Kecil Hari Ini
-    pengeluaranHariIni: `SELECT SUM(jumlah) as total_pengeluaran
-      FROM kas_kecil
-      WHERE jenis = 'keluar'
-        AND status = 'approved'
-        AND tanggal = ?
-        ${pt ? 'AND pt_code = ?' : ''}`,
+      pemasukanHariIni: `SELECT SUM(jumlah) as total_pemasukan
+        FROM kas_kecil
+        WHERE jenis = 'masuk'
+          AND status = 'approved'
+          AND tanggal = ?
+          AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
+          ${ptPlaceholder}`,
 
-    penjualanHariIni: `SELECT SUM(qty) as total_qty, SUM(total) as total_nilai
-      FROM penjualan WHERE tanggal = ? ${pt ? 'AND pt_code = ?' : ''}`,
+      pengeluaranHariIni: `SELECT SUM(jumlah) as total_pengeluaran
+        FROM kas_kecil
+        WHERE jenis = 'keluar'
+          AND status = 'approved'
+          AND tanggal = ?
+          ${ptPlaceholder}`,
 
-    pendingApproval: `SELECT COUNT(*) as total
-      FROM kas_kecil WHERE status = 'pending' ${pt ? 'AND pt_code = ?' : ''}`
-  };
+      penjualanHariIni: `SELECT SUM(qty) as total_qty, SUM(total) as total_nilai
+        FROM penjualan WHERE tanggal = ? ${ptPlaceholder}`,
 
-  const paramsKasKecil = pt ? [today, pt] : [today];
-  const paramsPemasukan = pt ? [today, pt] : [today];
-  const paramsPengeluaran = pt ? [today, pt] : [today];
-  const paramsPenjualan = pt ? [today, pt] : [today];
-  const paramsPending = pt ? [pt] : [];
+      pendingApproval: `SELECT COUNT(*) as total
+        FROM kas_kecil WHERE status = 'pending' ${ptPlaceholder}`
+    };
 
-  Promise.all([
-    new Promise((resolve, reject) => {
-      db.query(queries.kasKecilHariIni, paramsKasKecil, (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
-      });
-    }),
-    new Promise((resolve, reject) => {
-      db.query(queries.pemasukanHariIni, paramsPemasukan, (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
-      });
-    }),
-    new Promise((resolve, reject) => {
-      db.query(queries.pengeluaranHariIni, paramsPengeluaran, (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
-      });
-    }),
-    new Promise((resolve, reject) => {
-      db.query(queries.penjualanHariIni, paramsPenjualan, (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
-      });
-    }),
-    new Promise((resolve, reject) => {
-      db.query(queries.pendingApproval, paramsPending, (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
+    // Construct parameters arrays
+    const getParams = (baseParams) => {
+      if (!useFilter || targetPTs.length === 0) return baseParams;
+      return [...baseParams, ...targetPTs];
+    };
+
+    const paramsKasKecil = getParams([today]);
+    const paramsPemasukan = getParams([today]);
+    const paramsPengeluaran = getParams([today]);
+    const paramsPenjualan = getParams([today]);
+    const paramsPending = getParams([]);
+
+    Promise.all([
+      new Promise((resolve, reject) => {
+        db.query(queries.kasKecilHariIni, paramsKasKecil, (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        db.query(queries.pemasukanHariIni, paramsPemasukan, (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        db.query(queries.pengeluaranHariIni, paramsPengeluaran, (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        db.query(queries.penjualanHariIni, paramsPenjualan, (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        db.query(queries.pendingApproval, paramsPending, (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+      })
+    ])
+    .then(([kasKecil, pemasukan, pengeluaran, penjualan, pending]) => {
+      res.json({
+        kasKecilSaldoAkhir: parseFloat(kasKecil.saldo) || 0,
+        kasKecilPemasukanHariIni: parseFloat(pemasukan.total_pemasukan) || 0,
+        kasKecilPengeluaranHariIni: parseFloat(pengeluaran.total_pengeluaran) || 0,
+        penjualanQty: parseFloat(penjualan.total_qty) || 0,
+        penjualanNilai: parseFloat(penjualan.total_nilai) || 0,
+        pendingApproval: parseInt(pending.total) || 0
       });
     })
-  ])
-  .then(([kasKecil, pemasukan, pengeluaran, penjualan, pending]) => {
-    res.json({
-      kasKecilSaldoAkhir: parseFloat(kasKecil.saldo) || 0,
-      kasKecilPemasukanHariIni: parseFloat(pemasukan.total_pemasukan) || 0,
-      kasKecilPengeluaranHariIni: parseFloat(pengeluaran.total_pengeluaran) || 0,
-      penjualanQty: parseInt(penjualan.total_qty) || 0,
-      penjualanNilai: parseFloat(penjualan.total_nilai) || 0,
-      pendingApproval: parseInt(pending.total) || 0
+    .catch(err => {
+      res.status(500).json({ message: 'Server error', error: err.message });
     });
-  })
-  .catch(err => {
-    res.status(500).json({ message: 'Server error', error: err });
-  });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 });
 
 // ==================== USER MANAGEMENT ROUTES ====================
