@@ -908,15 +908,15 @@ const SumberJayaApp = () => {
       return;
     }
 
-    const expandedPTs = filterKasKecil.pt.length > 0 
-      ? getExpandedPTList(filterKasKecil.pt) 
+    const expandedPTs = filterKasKecil.pt.length > 0
+      ? getExpandedPTList(filterKasKecil.pt)
       : [];
 
     const groupData = kasKecilData.filter(item => {
       if (!item.tanggal) return false;
       const itemDate = new Date(item.tanggal);
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-      
+
       if (itemDateOnly.getTime() < startDateObj.getTime() || itemDateOnly.getTime() > endDateObj.getTime()) return false;
       if (expandedPTs.length > 0 && !expandedPTs.includes(item.pt)) return false;
       return true;
@@ -937,7 +937,7 @@ const SumberJayaApp = () => {
     const dataWithBalanceTemp = filterKasKecil.pt.length === 0
       ? groupDataWithBalance
       : groupDataWithBalance.filter(item => filterKasKecil.pt.includes(item.pt));
-    
+
     const dataWithBalance = dataWithBalanceTemp.map((item, index) => ({
       ...item,
       no: index + 1
@@ -967,9 +967,9 @@ const SumberJayaApp = () => {
         const parts = dateStr.split('-');
         return `${parts[2]}-${parts[1]}-${parts[0]}`;
       };
-      
-      const filenameDate = startDateStr === endDateStr 
-        ? formatFilenameDate(startDateStr) 
+
+      const filenameDate = startDateStr === endDateStr
+        ? formatFilenameDate(startDateStr)
         : `${formatFilenameDate(startDateStr)} to ${formatFilenameDate(endDateStr)}`;
 
       // Generate HTML content
@@ -2675,7 +2675,7 @@ const SumberJayaApp = () => {
 
         {/* Main Glossy White Glassmorphism Form Card */}
         <div className="relative bg-white/45 backdrop-blur-2xl border border-white/60 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.25)] w-full max-w-[330px] sm:max-w-[380px] md:max-w-[400px] overflow-hidden z-10 p-5 sm:p-7 md:p-9 transition-all">
-          
+
           {/* Company Logo Header */}
           <div className="flex flex-col items-center justify-center mb-4 sm:mb-6">
             <img
@@ -2745,11 +2745,10 @@ const SumberJayaApp = () => {
             <button
               onClick={handleLogin}
               disabled={isLoggingIn}
-              className={`w-full py-2.5 sm:py-3.5 mt-1 sm:mt-2 rounded-full font-bold uppercase tracking-wider text-xs sm:text-sm transition-all duration-300 transform active:scale-[0.98] ${
-                isLoggingIn
+              className={`w-full py-2.5 sm:py-3.5 mt-1 sm:mt-2 rounded-full font-bold uppercase tracking-wider text-xs sm:text-sm transition-all duration-300 transform active:scale-[0.98] ${isLoggingIn
                   ? 'bg-gray-400/80 text-gray-200 cursor-not-allowed shadow-none'
                   : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:shadow-[0_10px_25px_rgba(37,99,235,0.5)] hover:-translate-y-0.5'
-              }`}
+                }`}
             >
               {isLoggingIn ? (
                 <div className="flex items-center justify-center gap-2">
@@ -2904,9 +2903,9 @@ const SumberJayaApp = () => {
 
     const startDateObj = new Date(startDateStr + 'T00:00:00');
     const endDateObj = new Date(endDateStr + 'T00:00:00');
-    
-    const expandedPTs = filterKasKecil.pt.length > 0 
-      ? getExpandedPTList(filterKasKecil.pt) 
+
+    const expandedPTs = filterKasKecil.pt.length > 0
+      ? getExpandedPTList(filterKasKecil.pt)
       : [];
 
     // Filter group data for the selected date range
@@ -2914,7 +2913,7 @@ const SumberJayaApp = () => {
       if (!item.tanggal) return false;
       const itemDate = new Date(item.tanggal);
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-      
+
       if (itemDateOnly.getTime() < startDateObj.getTime() || itemDateOnly.getTime() > endDateObj.getTime()) return false;
       if (expandedPTs.length > 0 && !expandedPTs.includes(item.pt)) return false;
       return true;
@@ -2930,11 +2929,16 @@ const SumberJayaApp = () => {
     // Calculate closing balance = opening balance + masuk - keluar
     const saldo = saldoAwal + masuk - keluar;
 
-    // Sort in ASCENDING order for chronological running balance calculation
+    // Sort in ASCENDING order for chronological running balance calculation (precise by tanggal, created_at, and id)
     const groupDataAsc = [...groupData].sort((a, b) => {
       const dateA = new Date(a.tanggal);
       const dateB = new Date(b.tanggal);
       if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
+
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+
       return (a.id || 0) - (b.id || 0);
     });
 
@@ -2955,7 +2959,7 @@ const SumberJayaApp = () => {
       };
     });
 
-    // Reverse back to DESCENDING order so newest transactions are shown at top
+    // Currently reversing to DESCENDING (newest first). We can change this based on user response.
     const groupDataWithBalance = groupDataAscWithBalance.reverse();
 
     // Finally, filter the displayed rows back down to exactly what the user selected in the UI
@@ -3099,8 +3103,8 @@ const SumberJayaApp = () => {
                       }));
                     }}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterKasKecil.pt.includes(ptCode)
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                   >
                     {ptCode}
@@ -3207,19 +3211,19 @@ const SumberJayaApp = () => {
             <h3 className="text-lg font-bold text-gray-800">Riwayat Transaksi Kas Kecil</h3>
             <p className="text-sm text-gray-500">Transaksi tunai (cash) di kasir</p>
           </div>
-          
+
           {/* Mobile Card View (Hidden on md and up) */}
           <div className="md:hidden">
             {/* Saldo Awal Card */}
             <div className="p-4 border-b border-gray-100 bg-blue-50/50">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-semibold text-blue-800">
-                  Saldo Awal {filterKasKecil.tanggalMulai ? `(Seb. ${new Date(filterKasKecil.tanggalMulai).toLocaleDateString('id-ID', {day:'numeric', month:'short'})})` : ''}
+                  Saldo Awal {filterKasKecil.tanggalMulai ? `(Seb. ${new Date(filterKasKecil.tanggalMulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})` : ''}
                 </span>
                 <span className="text-base font-black text-blue-700">Rp {formatRupiah(saldoAwal)}</span>
               </div>
             </div>
-            
+
             {/* Transaction Cards */}
             <div className="flex flex-col">
               {dataWithBalance.map((item) => (
@@ -3229,7 +3233,10 @@ const SumberJayaApp = () => {
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="font-bold text-sm text-gray-900">{item.pt}</span>
                         <span className="text-[10px] text-gray-400">•</span>
-                        <span className="text-[11px] font-medium text-gray-500">{new Date(item.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric'})}</span>
+                        <span className="text-[11px] font-medium text-gray-500">
+                          {new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {item.created_at && ` • ${new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`}
+                        </span>
                       </div>
                       {item.kategori && (
                         <span className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-semibold uppercase tracking-wider mb-1">
@@ -3239,16 +3246,15 @@ const SumberJayaApp = () => {
                       <p className="text-sm text-gray-700 leading-snug">{item.keterangan}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        item.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
-                        item.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
-                        'bg-amber-50 text-amber-600'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
+                          item.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
+                            'bg-amber-50 text-amber-600'
+                        }`}>
                         {item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-200">
                     <div>
                       <p className={`text-base font-bold tracking-tight ${item.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -3258,7 +3264,7 @@ const SumberJayaApp = () => {
                         Saldo: <span className={`font-bold ${item.saldo >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>Rp {formatRupiah(item.saldo)}</span>
                       </p>
                     </div>
-                    
+
                     {isToday(item.created_at) && (
                       <div className="flex gap-1.5 no-print">
                         <button
@@ -3297,7 +3303,7 @@ const SumberJayaApp = () => {
                 <div className="p-8 text-center text-gray-500 text-sm">Tidak ada transaksi</div>
               )}
             </div>
-            
+
             <div className="p-4 bg-gray-50 border-t border-gray-200">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-semibold text-gray-500 uppercase">Total Masuk</span>
@@ -3342,7 +3348,14 @@ const SumberJayaApp = () => {
                 </tr>
                 {dataWithBalance.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-2.5 py-2 text-gray-500 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td className="px-2.5 py-2 whitespace-nowrap text-left">
+                      <div className="text-gray-900 font-medium">{new Date(item.tanggal).toLocaleDateString('id-ID')}</div>
+                      {item.created_at && (
+                        <div className="text-[10px] text-gray-400 font-semibold">
+                          {new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-2.5 py-2 font-semibold text-gray-900">{item.pt}</td>
                     <td className="px-2.5 py-2 whitespace-nowrap">
                       {item.kategori ? (
@@ -3377,8 +3390,8 @@ const SumberJayaApp = () => {
                     </td>
                     <td className="px-2.5 py-2 text-center no-print">
                       <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${item.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                          item.status === 'rejected' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                            'bg-amber-50 text-amber-700 border border-amber-200'
+                        item.status === 'rejected' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                          'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}>
                         {item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
@@ -3670,8 +3683,8 @@ const SumberJayaApp = () => {
                       key={ptCode}
                       onClick={() => handlePTChange(ptCode)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterArusKas.pt && filterArusKas.pt.includes(ptCode)
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`}
                     >
                       {ptCode}
@@ -3742,7 +3755,7 @@ const SumberJayaApp = () => {
             <h3 className="text-lg font-bold text-gray-800">Riwayat Transaksi Arus Kas</h3>
             <p className="text-sm text-gray-500">Transaksi cash & cashless</p>
           </div>
-          
+
           {/* Mobile Card View (Hidden on md and up) */}
           <div className="md:hidden">
             <div className="flex flex-col">
@@ -3753,7 +3766,7 @@ const SumberJayaApp = () => {
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="font-bold text-sm text-gray-900">{item.pt}</span>
                         <span className="text-[10px] text-gray-400">•</span>
-                        <span className="text-[11px] font-medium text-gray-500">{new Date(item.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric'})}</span>
+                        <span className="text-[11px] font-medium text-gray-500">{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       </div>
                       {item.kategori && (
                         <span className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-semibold uppercase tracking-wider mb-1">
@@ -3763,21 +3776,20 @@ const SumberJayaApp = () => {
                       <p className="text-sm text-gray-700 leading-snug">{item.keterangan}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        item.metode_bayar === 'cash' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.metode_bayar === 'cash' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'
+                        }`}>
                         {item.metode_bayar === 'cash' ? 'Cash' : 'Cashless'}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-200">
                     <div>
                       <p className={`text-base font-bold tracking-tight ${item.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {item.jenis === 'keluar' ? '-' : '+'} Rp {(item.jumlah || 0).toLocaleString('id-ID')}
                       </p>
                     </div>
-                    
+
                     <div className="flex gap-1.5 no-print">
                       <button
                         onClick={() => {
@@ -3815,7 +3827,7 @@ const SumberJayaApp = () => {
                 <div className="p-8 text-center text-gray-500 text-sm">Tidak ada transaksi</div>
               )}
             </div>
-            
+
             <div className="p-4 bg-gray-50 border-t border-gray-200">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-semibold text-gray-500 uppercase">Total Masuk</span>
@@ -4160,8 +4172,8 @@ const SumberJayaApp = () => {
                   key={item.id}
                   onClick={() => setActiveMenu(item.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                 >
                   <ItemIcon size={22} strokeWidth={2.5} />
@@ -4301,8 +4313,8 @@ const SumberJayaApp = () => {
                       aria-label={item.label}
                       aria-current={isActive ? 'page' : undefined}
                       className={`relative flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all duration-300 ${isActive
-                          ? 'text-blue-600'
-                          : 'text-gray-400 hover:text-gray-600 active:scale-95'
+                        ? 'text-blue-600'
+                        : 'text-gray-400 hover:text-gray-600 active:scale-95'
                         }`}
                     >
                       {isActive && (
