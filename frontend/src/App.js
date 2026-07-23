@@ -2746,8 +2746,8 @@ const SumberJayaApp = () => {
               onClick={handleLogin}
               disabled={isLoggingIn}
               className={`w-full py-2.5 sm:py-3.5 mt-1 sm:mt-2 rounded-full font-bold uppercase tracking-wider text-xs sm:text-sm transition-all duration-300 transform active:scale-[0.98] ${isLoggingIn
-                  ? 'bg-gray-400/80 text-gray-200 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:shadow-[0_10px_25px_rgba(37,99,235,0.5)] hover:-translate-y-0.5'
+                ? 'bg-gray-400/80 text-gray-200 cursor-not-allowed shadow-none'
+                : 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.35)] hover:shadow-[0_10px_25px_rgba(37,99,235,0.5)] hover:-translate-y-0.5'
                 }`}
             >
               {isLoggingIn ? (
@@ -3247,8 +3247,8 @@ const SumberJayaApp = () => {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
-                          item.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
-                            'bg-amber-50 text-amber-600'
+                        item.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
+                          'bg-amber-50 text-amber-600'
                         }`}>
                         {item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>

@@ -75,14 +75,42 @@ const Beranda = ({
       <div className="relative bg-slate-900 rounded-2xl p-6 lg:p-8 text-white shadow-lg overflow-hidden border border-slate-800">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500 opacity-[0.15] blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-indigo-500 opacity-[0.15] blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        
+        {/* Transparent Logo Watermark */}
+        <div className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 w-36 h-36 sm:w-44 sm:h-44 md:w-56 md:h-56 opacity-30 pointer-events-none z-0 flex items-center justify-center">
+          <img 
+            src={accessPT.length === 1 ? `/images/logo_${accessPT[0].toLowerCase()}.png` : '/images/logo_grup.png'} 
+            alt="Watermark Logo" 
+            className="w-full h-full object-contain"
+            onError={(e) => {
+              const filePrefix = accessPT.length === 1 ? accessPT[0].toLowerCase() : 'grup';
+              const currentSrc = e.target.src;
+              const base = `${window.location.origin}/images/logo_${filePrefix}`;
+              
+              if (currentSrc.endsWith('.png')) {
+                e.target.src = `${base}.jpeg`;
+              } else if (currentSrc.endsWith('.jpeg')) {
+                e.target.src = `${base}.jpg`;
+              } else if (currentSrc.endsWith('.jpg')) {
+                e.target.src = `${base}.webp`;
+              } else {
+                e.target.onerror = null;
+                e.target.src = '/images/logo.png';
+              }
+            }}
+          />
+        </div>
+
+        <div className="relative z-10 flex flex-col justify-between gap-4">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold mb-1 tracking-tight">Selamat Datang, {currentUserData?.name} 👋</h2>
-            <p className="text-slate-400 text-sm md:text-base font-medium">{currentUserData?.role}</p>
-          </div>
-          <div className="flex items-center gap-2 bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/50 self-start md:self-auto">
-            <Calendar size={16} className="text-blue-400" />
-            <span className="text-sm font-medium text-slate-200">{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            <p className="text-slate-400 text-sm md:text-base font-medium mb-3">{currentUserData?.role}</p>
+            <div className="inline-flex items-center gap-2 bg-slate-800/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-slate-700/50">
+              <Calendar size={15} className="text-blue-400" />
+              <span className="text-xs md:text-sm font-medium text-slate-300">
+                {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            </div>
           </div>
         </div>
       </div>
