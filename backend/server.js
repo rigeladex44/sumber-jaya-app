@@ -366,6 +366,28 @@ const processTanggal = (tanggal) => {
   return tanggal.split('T')[0]; // Remove any timezone info
 };
 
+// Konfigurasi Grup Kasir (Penggabungan Kas Khusus Kas Kecil)
+const KASIR_GROUPS = [
+  ['SJE', 'KSS', 'FAB']
+];
+
+// Mendapatkan seluruh PT yang satu grup dengan PT yang diberikan
+const getKasirGroupForPT = (pt) => {
+  const group = KASIR_GROUPS.find(g => g.includes(pt));
+  return group ? group : [pt];
+};
+
+// Mengekspansi daftar PT dengan anggota grupnya (untuk Kas Kecil)
+const getExpandedPTList = (ptList) => {
+  if (!ptList || ptList.length === 0) return [];
+  const expandedSet = new Set();
+  ptList.forEach(pt => {
+    const group = getKasirGroupForPT(pt);
+    group.forEach(g => expandedSet.add(g));
+  });
+  return Array.from(expandedSet);
+};
+
 // Helper to retrieve user role and allowed PT codes
 const getUserAccessRestrictions = (userId) => {
   return new Promise((resolve, reject) => {
@@ -380,7 +402,7 @@ const getUserAccessRestrictions = (userId) => {
       if (err) return reject(err);
       if (results.length === 0) return resolve({ isMaster: false, allowedPTs: [] });
       const user = results[0];
-      const isMaster = user.role === 'Master';
+      const isMaster = user.role === 'Master User';
       const allowedPTs = user.access_pts ? user.access_pts.split(',').map(p => p.trim()).filter(Boolean) : [];
       resolve({ isMaster, allowedPTs });
     });
@@ -500,6 +522,7 @@ app.get('/api/kas-kecil', verifyToken, async (req, res) => {
   try {
     const { pt, tanggal_dari, tanggal_sampai, status } = req.query;
     const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
+    const allowedKasKecilPTs = getExpandedPTList(allowedPTs);
 
     // Build the list of PTs we are allowed to query
     let targetPTs = [];
@@ -509,11 +532,11 @@ app.get('/api/kas-kecil', verifyToken, async (req, res) => {
         targetPTs = requestedPTs;
       } else {
         // Only keep requested PTs that are allowed for the user
-        targetPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+        targetPTs = requestedPTs.filter(p => allowedKasKecilPTs.includes(p));
       }
     } else {
       if (!isMaster) {
-        targetPTs = allowedPTs;
+        targetPTs = allowedKasKecilPTs;
       }
     }
 
@@ -619,37 +642,48 @@ app.get('/api/kas-kecil', verifyToken, async (req, res) => {
 });
 
 // Create Kas Kecil (Cash Only)
-app.post('/api/kas-kecil', verifyToken, (req, res) => {
+app.post('/api/kas-kecil', verifyToken, async (req, res) => {
   const { tanggal, pt, jenis, jumlah, keterangan, kategori } = req.body;
   
-  // Force tanggal to be treated as local date (no timezone conversion)
-  const localTanggal = processTanggal(tanggal);
-  
-  // Logic approve/reject:
-  // - Semua PEMASUKAN (masuk): Langsung approved
-  // - PENGELUARAN (keluar) < 300k: Auto approved  
-  // - PENGELUARAN (keluar) >= 300k: Butuh approval (pending)
-  let status = 'approved';
-  let approved_by = req.userId;
-  
-  if (jenis === 'keluar' && parseFloat(jumlah) >= 300000) {
-    status = 'pending';
-    approved_by = null;
-  }
-  
-  const query = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, kategori, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-  
-  db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategori || null, status, req.userId, approved_by], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: 'Server error', error: err });
+  try {
+    const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
+    const allowedKasKecilPTs = getExpandedPTList(allowedPTs);
+
+    if (!isMaster && !allowedKasKecilPTs.includes(pt)) {
+      return res.status(403).json({ message: `Anda tidak memiliki akses ke PT ${pt}` });
     }
 
-    res.status(201).json({
-      message: 'Kas kecil berhasil ditambahkan',
-      id: result.insertId,
-      status
+    // Force tanggal to be treated as local date (no timezone conversion)
+    const localTanggal = processTanggal(tanggal);
+    
+    // Logic approve/reject:
+    // - Semua PEMASUKAN (masuk): Langsung approved
+    // - PENGELUARAN (keluar) < 300k: Auto approved  
+    // - PENGELUARAN (keluar) >= 300k: Butuh approval (pending)
+    let status = 'approved';
+    let approved_by = req.userId;
+    
+    if (jenis === 'keluar' && parseFloat(jumlah) >= 300000) {
+      status = 'pending';
+      approved_by = null;
+    }
+    
+    const query = 'INSERT INTO kas_kecil (tanggal, pt_code, jenis, jumlah, keterangan, kategori, status, created_by, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    
+    db.query(query, [localTanggal, pt, jenis, jumlah, keterangan, kategori || null, status, req.userId, approved_by], (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Server error', error: err });
+      }
+
+      res.status(201).json({
+        message: 'Kas kecil berhasil ditambahkan',
+        id: result.insertId,
+        status
+      });
     });
-  });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 });
 
 // Delete all transactions for a specific month
@@ -708,7 +742,8 @@ app.patch('/api/kas-kecil/:id/status', verifyToken, (req, res) => {
       }
       
       // Check if user has access to this PT (unless Master User)
-      if (userRole !== 'Master User' && !userAccessPT.includes(kasPT)) {
+      const allowedKasKecilPTs = getExpandedPTList(userAccessPT);
+      if (userRole !== 'Master User' && !allowedKasKecilPTs.includes(kasPT)) {
         return res.status(403).json({ message: `Anda tidak memiliki akses ke PT ${kasPT}` });
       }
       
@@ -890,6 +925,7 @@ app.get('/api/kas-kecil/saldo', verifyToken, async (req, res) => {
   try {
     const { pt } = req.query;
     const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
+    const allowedKasKecilPTs = getExpandedPTList(allowedPTs);
 
     // Build the list of PTs we are allowed to query
     let targetPTs = [];
@@ -898,11 +934,11 @@ app.get('/api/kas-kecil/saldo', verifyToken, async (req, res) => {
       if (isMaster) {
         targetPTs = requestedPTs;
       } else {
-        targetPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+        targetPTs = requestedPTs.filter(p => allowedKasKecilPTs.includes(p));
       }
     } else {
       if (!isMaster) {
-        targetPTs = allowedPTs;
+        targetPTs = allowedKasKecilPTs;
       }
     }
 
@@ -1782,34 +1818,64 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
     const { pt } = req.query;
     const today = getLocalDate();
     const { isMaster, allowedPTs } = await getUserAccessRestrictions(req.userId);
+    const allowedKasKecilPTs = getExpandedPTList(allowedPTs);
 
-    // Build target PTs list
-    let targetPTs = [];
-    let useFilter = false;
+    // Build target PTs list for Kas Kecil (expanded)
+    let targetKasKecilPTs = [];
+    let useKasKecilFilter = false;
     if (pt) {
       const requestedPTs = pt.split(',').map(p => p.trim()).filter(Boolean);
       if (isMaster) {
-        targetPTs = requestedPTs;
+        targetKasKecilPTs = requestedPTs;
       } else {
-        targetPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+        targetKasKecilPTs = requestedPTs.filter(p => allowedKasKecilPTs.includes(p));
       }
-      useFilter = true;
+      useKasKecilFilter = true;
     } else {
       if (!isMaster) {
-        targetPTs = allowedPTs;
-        useFilter = true;
+        targetKasKecilPTs = allowedKasKecilPTs;
+        useKasKecilFilter = true;
+      }
+    }
+
+    // Build target PTs list for Penjualan (not expanded)
+    let targetPenjualanPTs = [];
+    let usePenjualanFilter = false;
+    if (pt) {
+      const requestedPTs = pt.split(',').map(p => p.trim()).filter(Boolean);
+      if (isMaster) {
+        targetPenjualanPTs = requestedPTs;
+      } else {
+        targetPenjualanPTs = requestedPTs.filter(p => allowedPTs.includes(p));
+      }
+      usePenjualanFilter = true;
+    } else {
+      if (!isMaster) {
+        targetPenjualanPTs = allowedPTs;
+        usePenjualanFilter = true;
       }
     }
 
     // Sub-queries with dynamic PT placeholders
-    let ptPlaceholder = '';
-    if (useFilter) {
-      if (targetPTs.length === 0) {
-        ptPlaceholder = ' AND pt_code = "impossible_pt"';
-      } else if (targetPTs.length === 1) {
-        ptPlaceholder = ' AND pt_code = ?';
+    let kasKecilPtPlaceholder = '';
+    if (useKasKecilFilter) {
+      if (targetKasKecilPTs.length === 0) {
+        kasKecilPtPlaceholder = ' AND pt_code = "impossible_pt"';
+      } else if (targetKasKecilPTs.length === 1) {
+        kasKecilPtPlaceholder = ' AND pt_code = ?';
       } else {
-        ptPlaceholder = ` AND pt_code IN (${targetPTs.map(() => '?').join(',')})`;
+        kasKecilPtPlaceholder = ` AND pt_code IN (${targetKasKecilPTs.map(() => '?').join(',')})`;
+      }
+    }
+
+    let penjualanPtPlaceholder = '';
+    if (usePenjualanFilter) {
+      if (targetPenjualanPTs.length === 0) {
+        penjualanPtPlaceholder = ' AND pt_code = "impossible_pt"';
+      } else if (targetPenjualanPTs.length === 1) {
+        penjualanPtPlaceholder = ' AND pt_code = ?';
+      } else {
+        penjualanPtPlaceholder = ` AND pt_code IN (${targetPenjualanPTs.map(() => '?').join(',')})`;
       }
     }
 
@@ -1818,9 +1884,9 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
         SUM(CASE WHEN jenis = 'masuk' AND status = 'approved' THEN jumlah ELSE 0 END) -
         SUM(CASE WHEN jenis = 'keluar' AND status = 'approved' THEN jumlah ELSE 0 END) as saldo
         FROM kas_kecil
-        WHERE tanggal = ?
+        WHERE 1=1
         AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
-        ${ptPlaceholder}`,
+        ${kasKecilPtPlaceholder}`,
 
       pemasukanHariIni: `SELECT SUM(jumlah) as total_pemasukan
         FROM kas_kecil
@@ -1828,33 +1894,38 @@ app.get('/api/dashboard/stats', verifyToken, async (req, res) => {
           AND status = 'approved'
           AND tanggal = ?
           AND keterangan NOT LIKE 'Sisa Saldo tanggal%'
-          ${ptPlaceholder}`,
+          ${kasKecilPtPlaceholder}`,
 
       pengeluaranHariIni: `SELECT SUM(jumlah) as total_pengeluaran
         FROM kas_kecil
         WHERE jenis = 'keluar'
           AND status = 'approved'
           AND tanggal = ?
-          ${ptPlaceholder}`,
+          ${kasKecilPtPlaceholder}`,
 
       penjualanHariIni: `SELECT SUM(qty) as total_qty, SUM(total) as total_nilai
-        FROM penjualan WHERE tanggal = ? ${ptPlaceholder}`,
+        FROM penjualan WHERE tanggal = ? ${penjualanPtPlaceholder}`,
 
       pendingApproval: `SELECT COUNT(*) as total
-        FROM kas_kecil WHERE status = 'pending' ${ptPlaceholder}`
+        FROM kas_kecil WHERE status = 'pending' ${kasKecilPtPlaceholder}`
     };
 
     // Construct parameters arrays
-    const getParams = (baseParams) => {
-      if (!useFilter || targetPTs.length === 0) return baseParams;
-      return [...baseParams, ...targetPTs];
+    const getKasKecilParams = (baseParams) => {
+      if (!useKasKecilFilter || targetKasKecilPTs.length === 0) return baseParams;
+      return [...baseParams, ...targetKasKecilPTs];
     };
 
-    const paramsKasKecil = getParams([today]);
-    const paramsPemasukan = getParams([today]);
-    const paramsPengeluaran = getParams([today]);
-    const paramsPenjualan = getParams([today]);
-    const paramsPending = getParams([]);
+    const getPenjualanParams = (baseParams) => {
+      if (!usePenjualanFilter || targetPenjualanPTs.length === 0) return baseParams;
+      return [...baseParams, ...targetPenjualanPTs];
+    };
+
+    const paramsKasKecil = getKasKecilParams([]);
+    const paramsPemasukan = getKasKecilParams([today]);
+    const paramsPengeluaran = getKasKecilParams([today]);
+    const paramsPenjualan = getPenjualanParams([today]);
+    const paramsPending = getKasKecilParams([]);
 
     Promise.all([
       new Promise((resolve, reject) => {

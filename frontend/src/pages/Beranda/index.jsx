@@ -3,9 +3,9 @@
  * Dashboard with stats and recent transactions widgets
  * UI/UX revamped for a premium fintech feel
  */
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  Wallet, Package, ArrowDownCircle, ArrowUpCircle, Clock, Calendar, ChevronRight, CheckCircle, XCircle
+  Wallet, Package, ArrowDownCircle, Clock, Calendar, ChevronLeft, ChevronRight, CheckCircle, XCircle
 } from 'lucide-react';
 import { PT_LIST } from '../../utils/constants';
 import { getLocalDateString, getLocalDateFromISO } from '../../utils/dateHelpers';
@@ -27,7 +27,162 @@ const Beranda = ({
   const hasPenjualanAccess = currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes('penjualan');
   const hasArusKasAccess = currentUserData?.role === 'Master User' || currentUserData?.fiturAkses?.includes('arus-kas');
 
-  const accessPT = Array.isArray(currentUserData?.accessPT) ? currentUserData.accessPT : [];
+  const accessPT = useMemo(() => {
+    return Array.isArray(currentUserData?.accessPT) ? currentUserData.accessPT : [];
+  }, [currentUserData?.accessPT]);
+
+  // Sort accessPT based on transaction count in Arus Kas (descending)
+  const sortedAccessPT = useMemo(() => {
+    if (accessPT.length <= 1 || !Array.isArray(arusKasData)) return accessPT;
+    
+    const counts = {};
+    accessPT.forEach(pt => {
+      counts[pt] = arusKasData.filter(item => item && item.pt === pt).length;
+    });
+    
+    return [...accessPT].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+  }, [accessPT, arusKasData]);
+
+  const [activeChartIndex, setActiveChartIndex] = useState(0);
+
+  const handlePrevChart = () => {
+    setActiveChartIndex(prev => (prev === 0 ? sortedAccessPT.length - 1 : prev - 1));
+  };
+
+  const handleNextChart = () => {
+    setActiveChartIndex(prev => (prev === sortedAccessPT.length - 1 ? 0 : prev + 1));
+  };
+
+  const activePTCode = sortedAccessPT[activeChartIndex] || '';
+
+  const getChartDataForPT = (ptCode) => {
+    if (!Array.isArray(arusKasData)) return [];
+    
+    // Filter Arus Kas for this PT
+    const ptData = arusKasData.filter(item => item && item.pt === ptCode);
+    
+    // Group by date
+    const grouped = {};
+    ptData.forEach(item => {
+      if (!item.tanggal) return;
+      const dateStr = new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+      if (!grouped[dateStr]) {
+        grouped[dateStr] = { date: dateStr, rawDate: new Date(item.tanggal), masuk: 0, keluar: 0 };
+      }
+      if (item.jenis === 'masuk') {
+        grouped[dateStr].masuk += parseFloat(item.jumlah) || 0;
+      } else if (item.jenis === 'keluar') {
+        grouped[dateStr].keluar += parseFloat(item.jumlah) || 0;
+      }
+    });
+    
+    // Sort by date ascending
+    const sortedData = Object.values(grouped)
+      .sort((a, b) => a.rawDate - b.rawDate)
+      .slice(-7); // Take last 7 days of transactions
+      
+    return sortedData;
+  };
+
+  const renderChart = (chartData) => {
+    if (chartData.length === 0) {
+      return (
+        <div className="h-[180px] flex flex-col items-center justify-center text-slate-400 text-sm gap-2">
+          <span>Belum ada transaksi Arus Kas untuk PT {activePTCode}</span>
+        </div>
+      );
+    }
+    
+    const maxVal = Math.max(
+      ...chartData.map(d => Math.max(d.masuk, d.keluar)),
+      100000 // default minimum scale
+    );
+    
+    const height = 160;
+    const width = 500;
+    const paddingLeft = 60;
+    const paddingRight = 20;
+    const paddingTop = 20;
+    const paddingBottom = 30;
+    
+    const chartWidth = width - paddingLeft - paddingRight;
+    const chartHeight = height - paddingTop - paddingBottom;
+    
+    const barWidth = Math.max(6, Math.min(16, chartWidth / (chartData.length * 3.5)));
+    
+    return (
+      <div className="w-full overflow-x-auto select-none">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[450px] h-auto">
+          {/* Grid lines & Y Axis Labels */}
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+            const y = paddingTop + chartHeight * (1 - ratio);
+            const val = maxVal * ratio;
+            return (
+              <g key={idx} className="opacity-60">
+                <line x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} stroke="#F8FAFC" strokeDasharray="3 3" />
+                <text x={paddingLeft - 8} y={y + 3} textAnchor="end" className="text-[8px] fill-slate-400 font-semibold">
+                  {val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${(val / 1000).toFixed(0)}K` : `Rp ${val}`}
+                </text>
+              </g>
+            );
+          })}
+          
+          {/* Bars */}
+          {chartData.map((d, i) => {
+            const xGroup = paddingLeft + (i * chartWidth) / chartData.length + chartWidth / (chartData.length * 4.5);
+            const yMasuk = paddingTop + chartHeight * (1 - d.masuk / maxVal);
+            const hMasuk = chartHeight * (d.masuk / maxVal);
+            const yKeluar = paddingTop + chartHeight * (1 - d.keluar / maxVal);
+            const hKeluar = chartHeight * (d.keluar / maxVal);
+            
+            return (
+              <g key={i} className="group">
+                {/* Pemasukan (Green Bar) */}
+                {d.masuk > 0 && (
+                  <rect
+                    x={xGroup}
+                    y={yMasuk}
+                    width={barWidth}
+                    height={hMasuk}
+                    rx="1.5"
+                    className="fill-emerald-500 hover:fill-emerald-600 transition-colors cursor-pointer"
+                  >
+                    <title>{`Pemasukan: Rp ${d.masuk.toLocaleString('id-ID')}`}</title>
+                  </rect>
+                )}
+                {/* Pengeluaran (Red Bar) */}
+                {d.keluar > 0 && (
+                  <rect
+                    x={xGroup + barWidth + 3}
+                    y={yKeluar}
+                    width={barWidth}
+                    height={hKeluar}
+                    rx="1.5"
+                    className="fill-rose-500 hover:fill-rose-600 transition-colors cursor-pointer"
+                  >
+                    <title>{`Pengeluaran: Rp ${d.keluar.toLocaleString('id-ID')}`}</title>
+                  </rect>
+                )}
+                
+                {/* X Axis Label */}
+                <text
+                  x={xGroup + barWidth + 1.5}
+                  y={height - 10}
+                  textAnchor="middle"
+                  className="text-[8px] fill-slate-400 font-semibold"
+                >
+                  {d.date}
+                </text>
+              </g>
+            );
+          })}
+          
+          {/* X Axis Line */}
+          <line x1={paddingLeft} y1={height - paddingBottom} x2={width - paddingRight} y2={height - paddingBottom} stroke="#E2E8F0" />
+        </svg>
+      </div>
+    );
+  };
 
   // Get recent transactions for each widget (safeguarded against null data)
   const getRecentKasKecil = () => {
@@ -114,69 +269,8 @@ const Beranda = ({
           </div>
         </div>
       </div>
-
-      {/* Summary Stats Cards (2 Columns on Mobile, clean layout) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
-        {hasKasKecilAccess && (
-          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 md:p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                <Wallet size={20} strokeWidth={2.5} />
-              </div>
-              <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider leading-tight">Saldo Kas Kecil</p>
-            </div>
-            {isLoadingStats ? (
-              <div className="animate-pulse h-8 bg-gray-100 rounded w-full mt-auto"></div>
-            ) : (
-              <div className="mt-auto">
-                <p className="text-base sm:text-xl md:text-2xl font-black text-gray-900 tracking-tight" title={`Rp ${dashboardStats.kasKecilSaldoAkhir.toLocaleString('id-ID')}`}>
-                  Rp {dashboardStats.kasKecilSaldoAkhir.toLocaleString('id-ID')}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {hasKasKecilAccess && (
-          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 md:p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
-                <ArrowDownCircle size={20} strokeWidth={2.5} />
-              </div>
-              <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider leading-tight">Pemasukan Hari Ini</p>
-            </div>
-            {isLoadingStats ? (
-              <div className="animate-pulse h-8 bg-gray-100 rounded w-full mt-auto"></div>
-            ) : (
-              <div className="mt-auto">
-                <p className="text-base sm:text-xl md:text-2xl font-black text-emerald-600 tracking-tight" title={`Rp ${dashboardStats.kasKecilPemasukanHariIni.toLocaleString('id-ID')}`}>
-                  Rp {dashboardStats.kasKecilPemasukanHariIni.toLocaleString('id-ID')}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {hasKasKecilAccess && (
-          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 md:p-2.5 bg-rose-50 text-rose-600 rounded-xl">
-                <ArrowUpCircle size={20} strokeWidth={2.5} />
-              </div>
-              <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider leading-tight">Pengeluaran Hari Ini</p>
-            </div>
-            {isLoadingStats ? (
-              <div className="animate-pulse h-8 bg-gray-100 rounded w-full mt-auto"></div>
-            ) : (
-              <div className="mt-auto">
-                <p className="text-base sm:text-xl md:text-2xl font-black text-rose-600 tracking-tight" title={`Rp ${dashboardStats.kasKecilPengeluaranHariIni.toLocaleString('id-ID')}`}>
-                  Rp {dashboardStats.kasKecilPengeluaranHariIni.toLocaleString('id-ID')}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
+      {/* Summary Stats Cards (Clean layout) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {hasDetailKasAccess && (
           <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col cursor-pointer hover:border-amber-200 transition-colors"
                onClick={() => onSetActiveMenu('detail-kas')}>
@@ -197,7 +291,7 @@ const Beranda = ({
         )}
 
         {hasPenjualanAccess && (
-          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col col-span-2 lg:col-span-4 cursor-pointer hover:border-indigo-200 transition-colors"
+          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col cursor-pointer hover:border-indigo-200 transition-colors"
                onClick={() => onSetActiveMenu('penjualan')}>
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 md:p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
@@ -221,6 +315,78 @@ const Beranda = ({
           </div>
         )}
       </div>
+
+      {/* Chart Section (Carousel of Arus Kas charts) */}
+      {sortedAccessPT.length > 0 && hasArusKasAccess && (
+        <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col relative overflow-hidden">
+          {/* Header Carousel */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-base md:text-lg font-bold text-slate-800">Tren Arus Kas (7 Hari Terakhir)</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                  PT {activePTCode}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">Perbandingan pemasukan dan pengeluaran harian arus kas</p>
+            </div>
+            
+            <div className="flex items-center justify-between sm:justify-end gap-4">
+              {/* Legend */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                  <div className="w-2.5 h-2.5 rounded bg-emerald-500"></div>
+                  <span>Pemasukan</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                  <div className="w-2.5 h-2.5 rounded bg-rose-500"></div>
+                  <span>Pengeluaran</span>
+                </div>
+              </div>
+
+              {/* Navigasi Slide */}
+              {sortedAccessPT.length > 1 && (
+                <div className="flex items-center gap-2 border-l border-slate-100 pl-3">
+                  <button 
+                    onClick={handlePrevChart}
+                    className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all text-slate-600"
+                    title="PT Sebelumnya"
+                  >
+                    <ChevronLeft size={14} strokeWidth={2.5} />
+                  </button>
+                  <span className="text-xs font-bold text-slate-600 min-w-[36px] text-center">
+                    {activeChartIndex + 1} / {sortedAccessPT.length}
+                  </span>
+                  <button 
+                    onClick={handleNextChart}
+                    className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all text-slate-600"
+                    title="PT Selanjutnya"
+                  >
+                    <ChevronRight size={14} strokeWidth={2.5} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Chart SVG */}
+          {renderChart(getChartDataForPT(activePTCode))}
+          
+          {/* Slide Dots / Indicators */}
+          {sortedAccessPT.length > 1 && (
+            <div className="flex justify-center gap-1.5 mt-3">
+              {sortedAccessPT.map((ptCode, idx) => (
+                <button
+                  key={ptCode}
+                  onClick={() => setActiveChartIndex(idx)}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${idx === activeChartIndex ? 'bg-blue-600 w-3' : 'bg-gray-200 hover:bg-gray-300'}`}
+                  title={`Tampilkan PT ${ptCode}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Dynamic Widgets (Compact Lists without heavy borders) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
