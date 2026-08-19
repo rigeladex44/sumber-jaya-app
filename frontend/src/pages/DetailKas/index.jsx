@@ -126,57 +126,57 @@ const DetailKas = ({
       {/* Premium Desktop Table View (Hidden on Mobile) */}
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-xs text-left">
             <thead>
               <tr className="bg-gray-50/80 border-b border-gray-100">
-                <th className="px-4 py-3 font-semibold text-gray-600 whitespace-nowrap w-[10%]">Tanggal</th>
-                <th className="px-4 py-3 font-semibold text-gray-600 w-[15%]">PT</th>
-                <th className="px-4 py-3 font-semibold text-gray-600 w-[25%]">Keterangan</th>
-                <th className="px-4 py-3 font-semibold text-gray-600 whitespace-nowrap w-[15%]">Metode & Kategori</th>
-                <th className="px-4 py-3 font-semibold text-gray-600 text-right whitespace-nowrap w-[12%]">Masuk</th>
-                <th className="px-4 py-3 font-semibold text-gray-600 text-right whitespace-nowrap w-[12%]">Keluar</th>
-                <th className="px-4 py-3 font-semibold text-gray-600 text-center whitespace-nowrap w-[6%]">Status</th>
+                <th className="px-3 py-3 font-semibold text-gray-600 whitespace-nowrap">Tanggal</th>
+                <th className="px-3 py-3 font-semibold text-gray-600">PT</th>
+                <th className="px-3 py-3 font-semibold text-gray-600 w-full">Keterangan</th>
+                <th className="px-3 py-3 font-semibold text-gray-600 whitespace-nowrap">Metode & Kategori</th>
+                <th className="px-3 py-3 font-semibold text-gray-600 text-right whitespace-nowrap">Masuk</th>
+                <th className="px-3 py-3 font-semibold text-gray-600 text-right whitespace-nowrap">Keluar</th>
+                <th className="px-3 py-3 font-semibold text-gray-600 text-center whitespace-nowrap">Status</th>
                 {hasApprovalAccess && (
-                  <th className="px-4 py-3 font-semibold text-gray-600 text-center whitespace-nowrap w-[5%]">Aksi</th>
+                  <th className="px-3 py-3 font-semibold text-gray-600 text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={hasApprovalAccess ? 8 : 7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={hasApprovalAccess ? 8 : 7} className="px-3 py-8 text-center text-gray-500">
                     Tidak ada transaksi pada tanggal ini.
                   </td>
                 </tr>
               ) : (
                 filteredData.map(kas => (
                   <tr key={kas.id} className="hover:bg-gray-50/80 transition-colors duration-150 group">
-                    <td className="px-4 py-3.5 whitespace-nowrap text-gray-600">
+                    <td className="px-3 py-3 whitespace-nowrap text-gray-600">
                       {new Date(kas.tanggal).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'})}
                     </td>
-                    <td className="px-4 py-3.5 text-gray-800 font-bold leading-tight">{getPTName(kas.pt)}</td>
-                    <td className="px-4 py-3.5 text-gray-700 leading-relaxed truncate max-w-[200px] group-hover:whitespace-normal group-hover:break-words">
+                    <td className="px-3 py-3 text-gray-800 font-bold leading-tight max-w-[150px] truncate group-hover:whitespace-normal group-hover:break-words">{getPTName(kas.pt)}</td>
+                    <td className="px-3 py-3 text-gray-700 leading-relaxed truncate max-w-[180px] group-hover:whitespace-normal group-hover:break-words">
                       {kas.keterangan}
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap space-y-1.5">
-                      <div className="flex flex-col items-start gap-1">
+                    <td className="px-3 py-3 whitespace-nowrap space-y-1">
+                      <div className="flex flex-col items-start gap-0.5">
                         {getMethodBadge(kas.metodeBayar)}
                         {kas.kategori && (
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{kas.kategori}</span>
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{kas.kategori}</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-right font-semibold text-emerald-600">
+                    <td className="px-3 py-3 whitespace-nowrap text-right font-semibold text-emerald-600">
                       {kas.jenis === 'masuk' ? `Rp ${kas.jumlah.toLocaleString('id-ID')}` : '-'}
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-right font-semibold text-rose-600">
+                    <td className="px-3 py-3 whitespace-nowrap text-right font-semibold text-rose-600">
                       {kas.jenis === 'keluar' ? `Rp ${kas.jumlah.toLocaleString('id-ID')}` : '-'}
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-center">
+                    <td className="px-3 py-3 whitespace-nowrap text-center">
                       {getStatusBadge(kas.status)}
                     </td>
                     {hasApprovalAccess && (
-                      <td className="px-4 py-3.5 whitespace-nowrap text-center">
+                      <td className="px-3 py-3 whitespace-nowrap text-center">
                         {kas.status === 'pending' && currentUserData?.accessPT?.includes(kas.pt) ? (
                           <div className="flex gap-1.5 justify-center transition-opacity">
                             <button
