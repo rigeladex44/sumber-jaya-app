@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { Download } from 'lucide-react';
-import { PT_LIST } from '../../utils/constants';
+import { PT_LIST, getPTName } from '../../utils/constants';
 
 const Laporan = ({
   arusKasData,
@@ -167,32 +167,34 @@ const Laporan = ({
           <p className="text-xs text-gray-500 mt-0.5">{ptNames}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full md:w-auto">
-          <div className="relative w-full sm:w-auto">
-            <button
-              className="w-full sm:w-auto px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white flex items-center justify-between sm:justify-start gap-2 shadow-sm"
-              onClick={() => document.getElementById('pt-dropdown-laporan').classList.toggle('hidden')}
-            >
-              <span className="font-medium text-gray-700">
-                {selectedPT.length > 0 ? `${selectedPT.length} PT Dipilih` : 'Pilih PT'}
-              </span>
-              <span className="text-xs text-gray-500">▼</span>
-            </button>
-            <div id="pt-dropdown-laporan" className="hidden absolute top-full mt-1 w-full sm:w-auto min-w-[200px] bg-white border rounded-lg shadow-lg z-20 overflow-hidden">
-              <div className="max-h-60 overflow-y-auto">
-                {currentUserData?.accessPT?.map(code => (
-                  <label key={code} className="flex items-center px-4 py-3 sm:py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0">
-                    <input
-                      type="checkbox"
-                      checked={selectedPT.includes(code)}
-                      onChange={() => handlePTChange(code)}
-                      className="mr-3 sm:mr-2 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">{code}</span>
-                  </label>
-                ))}
+          {currentUserData?.accessPT?.length > 1 && (
+            <div className="relative w-full sm:w-auto">
+              <button
+                className="w-full sm:w-auto px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white flex items-center justify-between sm:justify-start gap-2 shadow-sm"
+                onClick={() => document.getElementById('pt-dropdown-laporan').classList.toggle('hidden')}
+              >
+                <span className="font-medium text-gray-700">
+                  {selectedPT.length > 0 ? `${selectedPT.length} PT Dipilih` : 'Pilih PT'}
+                </span>
+                <span className="text-xs text-gray-500">▼</span>
+              </button>
+              <div id="pt-dropdown-laporan" className="hidden absolute top-full mt-1 w-full sm:w-auto min-w-[200px] bg-white border rounded-lg shadow-lg z-20 overflow-hidden">
+                <div className="max-h-60 overflow-y-auto">
+                  {currentUserData?.accessPT?.map(code => (
+                    <label key={code} className="flex items-center px-4 py-3 sm:py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedPT.includes(code)}
+                        onChange={() => handlePTChange(code)}
+                        className="mr-3 sm:mr-2 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">{getPTName(code)}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <input
             type="month"
             value={selectedMonth}

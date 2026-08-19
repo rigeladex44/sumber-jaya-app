@@ -6,6 +6,7 @@
 import React from 'react';
 import { CheckCircle, XCircle, CreditCard, Banknote, Clock } from 'lucide-react';
 import { filterKasData, calculateKasTotals } from '../../utils/dataFilters';
+import { getPTName } from '../../utils/constants';
 
 const DetailKas = ({
   kasKecilData,
@@ -58,7 +59,7 @@ const DetailKas = ({
               <div className="flex justify-between items-start pl-2 mb-2">
                 <div className="mr-2">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="font-bold text-gray-900 text-sm">{kas.pt}</span>
+                    <span className="font-bold text-gray-900 text-sm">{getPTName(kas.pt)}</span>
                     <span className="text-[10px] text-gray-400">•</span>
                     <span className="text-[11px] font-medium text-gray-500">{new Date(kas.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric'})}</span>
                   </div>
@@ -153,7 +154,7 @@ const DetailKas = ({
                     <td className="px-5 py-4 whitespace-nowrap text-gray-600">
                       {new Date(kas.tanggal).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'})}
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-bold text-gray-800">{kas.pt}</td>
+                    <td className="px-5 py-4 whitespace-nowrap font-bold text-gray-800">{getPTName(kas.pt)}</td>
                     <td className="px-5 py-4 text-gray-700 leading-relaxed max-w-xs truncate group-hover:whitespace-normal group-hover:break-words">
                       {kas.keterangan}
                     </td>

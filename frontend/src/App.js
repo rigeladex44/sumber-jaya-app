@@ -30,6 +30,7 @@ import SearchResultsModal from './components/modals/SearchResultsModal';
 // Import constants
 import {
   getExpandedPTList,
+  getPTName,
   APP_VERSION
 } from './utils/constants';
 // Helper: Get today's date in YYYY-MM-DD format (timezone-aware untuk WIB)
@@ -607,10 +608,22 @@ const SumberJayaApp = () => {
     }
   }, [isLoggedIn, loadKasKecilData, loadArusKasData, loadPenjualanData, loadUsers]);
 
-  // Auto set selectedPT to all user's PT when currentUserData changes
+  // Auto set selectedPT and default forms to all user's PT when currentUserData changes
   useEffect(() => {
     if (currentUserData?.accessPT && currentUserData.accessPT.length > 0) {
       setSelectedPT(currentUserData.accessPT);
+      
+      // If user only has access to 1 PT, set it as default for all forms and filters
+      if (currentUserData.accessPT.length === 1) {
+        const defaultPT = currentUserData.accessPT[0];
+        
+        setFormKasKecil(prev => ({ ...prev, pt: defaultPT }));
+        setFormArusKas(prev => ({ ...prev, pt: defaultPT }));
+        setFormPenjualan(prev => ({ ...prev, pt: defaultPT }));
+        
+        setFilterKasKecil(prev => ({ ...prev, pt: [defaultPT] }));
+        setFilterArusKas(prev => ({ ...prev, pt: [defaultPT] }));
+      }
     }
   }, [currentUserData]);
 
@@ -904,7 +917,7 @@ const SumberJayaApp = () => {
         kasKecilData: kasKecilData,
         filterKasKecil: filterKasKecil
       });
-      alert('Tidak ada data untuk dicetak. Total data: ' + kasKecilData.length + ', Filter PT: ' + filterKasKecil.pt.join(', '));
+      alert('Tidak ada data untuk dicetak. Total data: ' + kasKecilData.length + ', Filter PT: ' + filterKasKecil.pt.map(c => getPTName(c)).join(', '));
       return;
     }
 
@@ -3000,19 +3013,21 @@ const SumberJayaApp = () => {
                 className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">PT *</label>
-              <select
-                value={formKasKecil.pt}
-                onChange={(e) => setFormKasKecil({ ...formKasKecil, pt: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="">Pilih PT</option>
-                {getExpandedPTList(currentUserData?.accessPT || []).map(code => (
-                  <option key={code} value={code}>{code}</option>
-                ))}
-              </select>
-            </div>
+            {currentUserData?.accessPT?.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium mb-2">PT</label>
+                <select
+                  value={formKasKecil.pt}
+                  onChange={(e) => setFormKasKecil({ ...formKasKecil, pt: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg"
+                >
+                  <option value="">Pilih PT</option>
+                  {getExpandedPTList(currentUserData?.accessPT || []).map(code => (
+                    <option key={code} value={code}>{getPTName(code)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-2">Jenis *</label>
               <select
@@ -3088,33 +3103,35 @@ const SumberJayaApp = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {/* PT Filter - Multi Select */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
-              <div className="flex flex-wrap gap-2">
-                {getExpandedPTList(currentUserData?.accessPT || []).map(ptCode => (
-                  <button
-                    key={ptCode}
-                    onClick={() => {
-                      setFilterKasKecil(prev => ({
-                        ...prev,
-                        pt: prev.pt.includes(ptCode)
-                          ? prev.pt.filter(p => p !== ptCode)
-                          : [...prev.pt, ptCode]
-                      }));
-                    }}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterKasKecil.pt.includes(ptCode)
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                  >
-                    {ptCode}
-                  </button>
-                ))}
+            {currentUserData?.accessPT?.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
+                <div className="flex flex-wrap gap-2">
+                  {getExpandedPTList(currentUserData?.accessPT || []).map(ptCode => (
+                    <button
+                      key={ptCode}
+                      onClick={() => {
+                        setFilterKasKecil(prev => ({
+                          ...prev,
+                          pt: prev.pt.includes(ptCode)
+                            ? prev.pt.filter(p => p !== ptCode)
+                            : [...prev.pt, ptCode]
+                        }));
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterKasKecil.pt.includes(ptCode)
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                      {getPTName(ptCode)}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {filterKasKecil.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterKasKecil.pt.length} PT dipilih`}
+                </p>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {filterKasKecil.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterKasKecil.pt.length} PT dipilih`}
-              </p>
-            </div>
+            )}
 
             {/* Date Filter - Range Picker */}
             <div>
@@ -3231,7 +3248,7 @@ const SumberJayaApp = () => {
                   <div className="flex justify-between items-start mb-2">
                     <div className="mr-2">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className="font-bold text-sm text-gray-900">{item.pt}</span>
+                        <span className="font-bold text-sm text-gray-900">{getPTName(item.pt)}</span>
                         <span className="text-[10px] text-gray-400">•</span>
                         <span className="text-[11px] font-medium text-gray-500">
                           {new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -3356,7 +3373,7 @@ const SumberJayaApp = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-2.5 py-2 font-semibold text-gray-900">{item.pt}</td>
+                    <td className="px-2.5 py-2 font-semibold text-gray-900">{getPTName(item.pt)}</td>
                     <td className="px-2.5 py-2 whitespace-nowrap">
                       {item.kategori ? (
                         <span className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[9px] font-bold uppercase tracking-wider">
@@ -3523,19 +3540,21 @@ const SumberJayaApp = () => {
                 className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">PT *</label>
-              <select
-                value={formArusKas.pt}
-                onChange={(e) => setFormArusKas({ ...formArusKas, pt: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="">Pilih PT</option>
-                {currentUserData?.accessPT?.map(code => (
-                  <option key={code} value={code}>{code}</option>
-                ))}
-              </select>
-            </div>
+            {currentUserData?.accessPT?.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium mb-2">PT *</label>
+                <select
+                  value={formArusKas.pt}
+                  onChange={(e) => setFormArusKas({ ...formArusKas, pt: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg"
+                >
+                  <option value="">Pilih PT</option>
+                  {currentUserData?.accessPT?.map(code => (
+                    <option key={code} value={code}>{getPTName(code)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-2">Jenis *</label>
               <select
@@ -3675,26 +3694,28 @@ const SumberJayaApp = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               {/* PT Filter - Multi Select */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
-                <div className="flex flex-wrap gap-2">
-                  {currentUserData?.accessPT?.map(ptCode => (
-                    <button
-                      key={ptCode}
-                      onClick={() => handlePTChange(ptCode)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterArusKas.pt && filterArusKas.pt.includes(ptCode)
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
-                    >
-                      {ptCode}
-                    </button>
-                  ))}
+              {currentUserData?.accessPT?.length > 1 && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Filter PT (bisa lebih dari 1)</label>
+                  <div className="flex flex-wrap gap-2">
+                    {currentUserData?.accessPT?.map(ptCode => (
+                      <button
+                        key={ptCode}
+                        onClick={() => handlePTChange(ptCode)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterArusKas.pt && filterArusKas.pt.includes(ptCode)
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                      >
+                        {getPTName(ptCode)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {!filterArusKas.pt || filterArusKas.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterArusKas.pt.length} PT dipilih`}
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {!filterArusKas.pt || filterArusKas.pt.length === 0 ? 'Semua PT ditampilkan' : `${filterArusKas.pt.length} PT dipilih`}
-                </p>
-              </div>
+              )}
 
               {/* Info Text */}
               <div className="flex items-center">
@@ -3764,7 +3785,7 @@ const SumberJayaApp = () => {
                   <div className="flex justify-between items-start mb-2">
                     <div className="mr-2">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className="font-bold text-sm text-gray-900">{item.pt}</span>
+                        <span className="font-bold text-sm text-gray-900">{getPTName(item.pt)}</span>
                         <span className="text-[10px] text-gray-400">•</span>
                         <span className="text-[11px] font-medium text-gray-500">{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       </div>
@@ -3863,7 +3884,7 @@ const SumberJayaApp = () => {
                 {displayData.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-5 py-4 text-gray-900">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                    <td className="px-5 py-4 font-medium text-gray-900">{item.pt}</td>
+                    <td className="px-5 py-4 font-medium text-gray-900">{getPTName(item.pt)}</td>
                     <td className="px-5 py-4 text-gray-600">
                       {item.kategori ? (
                         <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-semibold uppercase tracking-wider">
@@ -3988,19 +4009,21 @@ const SumberJayaApp = () => {
                       className="w-full px-4 py-2 border rounded-lg"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">PT *</label>
-                    <select
-                      value={formArusKas.pt}
-                      onChange={(e) => setFormArusKas({ ...formArusKas, pt: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option value="">Pilih PT</option>
-                      {currentUserData?.accessPT?.map(code => (
-                        <option key={code} value={code}>{code}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {currentUserData?.accessPT?.length > 1 && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">PT *</label>
+                      <select
+                        value={formArusKas.pt}
+                        onChange={(e) => setFormArusKas({ ...formArusKas, pt: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                      >
+                        <option value="">Pilih PT</option>
+                        {currentUserData?.accessPT?.map(code => (
+                          <option key={code} value={code}>{getPTName(code)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium mb-2">Jenis *</label>
                     <select
@@ -4548,19 +4571,21 @@ const SumberJayaApp = () => {
                       className="w-full px-4 py-2 border rounded-lg"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">PT *</label>
-                    <select
-                      value={formKasKecil.pt}
-                      onChange={(e) => setFormKasKecil({ ...formKasKecil, pt: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option value="">Pilih PT</option>
-                      {currentUserData?.accessPT?.map(code => (
-                        <option key={code} value={code}>{code}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {currentUserData?.accessPT?.length > 1 && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">PT *</label>
+                      <select
+                        value={formKasKecil.pt}
+                        onChange={(e) => setFormKasKecil({ ...formKasKecil, pt: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                      >
+                        <option value="">Pilih PT</option>
+                        {currentUserData?.accessPT?.map(code => (
+                          <option key={code} value={code}>{getPTName(code)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium mb-2">Jenis Transaksi *</label>
                     <select

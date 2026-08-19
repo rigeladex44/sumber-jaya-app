@@ -20,6 +20,15 @@ export const PT_LIST = [
 ];
 
 /**
+ * Mendapatkan nama lengkap PT dari kodenya
+ */
+export const getPTName = (code) => {
+  if (!code) return '';
+  const pt = PT_LIST.find(p => p.code === code);
+  return pt ? pt.name : code;
+};
+
+/**
  * Konfigurasi Grup Kasir (Penggabungan Kas Khusus Kas Kecil)
  * PT dalam satu grup akan berbagi saldo fisik (Running Balance).
  */

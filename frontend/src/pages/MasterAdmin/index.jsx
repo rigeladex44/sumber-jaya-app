@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { Plus, X } from 'lucide-react';
-import { PT_LIST } from '../../utils/constants';
+import { PT_LIST, getPTName } from '../../utils/constants';
 
 const MasterAdmin = ({
   userList,
@@ -71,7 +71,7 @@ const MasterAdmin = ({
                   <td className="px-4 py-3">{user.role}</td>
                   <td className="px-4 py-3">
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                      {user.accessPT && user.accessPT.length === PT_LIST.length ? 'Semua PT' : user.accessPT?.join(', ') || '-'}
+                      {user.accessPT && user.accessPT.length === PT_LIST.length ? 'Semua PT' : user.accessPT?.map(code => getPTName(code)).join(', ') || '-'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -186,8 +186,7 @@ const MasterAdmin = ({
                         className="mr-3"
                       />
                       <div>
-                        <span className="text-sm font-bold block">{pt.code}</span>
-                        <span className="text-xs text-gray-500">{pt.name}</span>
+                        <span className="text-sm font-bold block">{pt.name}</span>
                       </div>
                     </label>
                   ))}
@@ -299,8 +298,7 @@ const MasterAdmin = ({
                         className="mr-3"
                       />
                       <div>
-                        <span className="text-sm font-bold block">{pt.code}</span>
-                        <span className="text-xs text-gray-500">{pt.name}</span>
+                        <span className="text-sm font-bold block">{pt.name}</span>
                       </div>
                     </label>
                   ))}

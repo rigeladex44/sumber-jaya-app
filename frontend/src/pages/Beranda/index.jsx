@@ -34,12 +34,12 @@ const Beranda = ({
   // Sort accessPT based on transaction count in Arus Kas (descending)
   const sortedAccessPT = useMemo(() => {
     if (accessPT.length <= 1 || !Array.isArray(arusKasData)) return accessPT;
-    
+
     const counts = {};
     accessPT.forEach(pt => {
       counts[pt] = arusKasData.filter(item => item && item.pt === pt).length;
     });
-    
+
     return [...accessPT].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
   }, [accessPT, arusKasData]);
 
@@ -57,10 +57,10 @@ const Beranda = ({
 
   const getChartDataForPT = (ptCode) => {
     if (!Array.isArray(arusKasData)) return [];
-    
+
     // Filter Arus Kas for this PT
     const ptData = arusKasData.filter(item => item && item.pt === ptCode);
-    
+
     // Group by date
     const grouped = {};
     ptData.forEach(item => {
@@ -75,12 +75,12 @@ const Beranda = ({
         grouped[dateStr].keluar += parseFloat(item.jumlah) || 0;
       }
     });
-    
+
     // Sort by date ascending
     const sortedData = Object.values(grouped)
       .sort((a, b) => a.rawDate - b.rawDate)
       .slice(-7); // Take last 7 days of transactions
-      
+
     return sortedData;
   };
 
@@ -92,24 +92,24 @@ const Beranda = ({
         </div>
       );
     }
-    
+
     const maxVal = Math.max(
       ...chartData.map(d => Math.max(d.masuk, d.keluar)),
       100000 // default minimum scale
     );
-    
+
     const height = 160;
     const width = 500;
     const paddingLeft = 60;
     const paddingRight = 20;
     const paddingTop = 20;
     const paddingBottom = 30;
-    
+
     const chartWidth = width - paddingLeft - paddingRight;
     const chartHeight = height - paddingTop - paddingBottom;
-    
+
     const barWidth = Math.max(6, Math.min(16, chartWidth / (chartData.length * 3.5)));
-    
+
     return (
       <div className="w-full overflow-x-auto select-none">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[450px] h-auto">
@@ -126,7 +126,7 @@ const Beranda = ({
               </g>
             );
           })}
-          
+
           {/* Bars */}
           {chartData.map((d, i) => {
             const xGroup = paddingLeft + (i * chartWidth) / chartData.length + chartWidth / (chartData.length * 4.5);
@@ -134,7 +134,7 @@ const Beranda = ({
             const hMasuk = chartHeight * (d.masuk / maxVal);
             const yKeluar = paddingTop + chartHeight * (1 - d.keluar / maxVal);
             const hKeluar = chartHeight * (d.keluar / maxVal);
-            
+
             return (
               <g key={i} className="group">
                 {/* Pemasukan (Green Bar) */}
@@ -163,7 +163,7 @@ const Beranda = ({
                     <title>{`Pengeluaran: Rp ${d.keluar.toLocaleString('id-ID')}`}</title>
                   </rect>
                 )}
-                
+
                 {/* X Axis Label */}
                 <text
                   x={xGroup + barWidth + 1.5}
@@ -176,7 +176,7 @@ const Beranda = ({
               </g>
             );
           })}
-          
+
           {/* X Axis Line */}
           <line x1={paddingLeft} y1={height - paddingBottom} x2={width - paddingRight} y2={height - paddingBottom} stroke="#E2E8F0" />
         </svg>
@@ -230,18 +230,18 @@ const Beranda = ({
       <div className="relative bg-slate-900 rounded-2xl p-6 lg:p-8 text-white shadow-lg overflow-hidden border border-slate-800">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500 opacity-[0.15] blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-indigo-500 opacity-[0.15] blur-3xl pointer-events-none"></div>
-        
+
         {/* Transparent Logo Watermark */}
         <div className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 w-36 h-36 sm:w-44 sm:h-44 md:w-56 md:h-56 opacity-30 pointer-events-none z-0 flex items-center justify-center">
-          <img 
-            src={accessPT.length === 1 ? `/images/logo_${accessPT[0].toLowerCase()}.png` : '/images/logo_grup.png'} 
-            alt="Watermark Logo" 
+          <img
+            src={accessPT.length === 1 ? `/images/logo_${accessPT[0].toLowerCase()}.png` : '/images/logo_grup.png'}
+            alt="Watermark Logo"
             className="w-full h-full object-contain"
             onError={(e) => {
               const filePrefix = accessPT.length === 1 ? accessPT[0].toLowerCase() : 'grup';
               const currentSrc = e.target.src;
               const base = `${window.location.origin}/images/logo_${filePrefix}`;
-              
+
               if (currentSrc.endsWith('.png')) {
                 e.target.src = `${base}.jpeg`;
               } else if (currentSrc.endsWith('.jpeg')) {
@@ -273,7 +273,7 @@ const Beranda = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {hasDetailKasAccess && (
           <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col cursor-pointer hover:border-amber-200 transition-colors"
-               onClick={() => onSetActiveMenu('detail-kas')}>
+            onClick={() => onSetActiveMenu('detail-kas')}>
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 md:p-2.5 bg-amber-50 text-amber-600 rounded-xl">
                 <Clock size={20} strokeWidth={2.5} />
@@ -292,7 +292,7 @@ const Beranda = ({
 
         {hasPenjualanAccess && (
           <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100 flex flex-col cursor-pointer hover:border-indigo-200 transition-colors"
-               onClick={() => onSetActiveMenu('penjualan')}>
+            onClick={() => onSetActiveMenu('penjualan')}>
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 md:p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
                 <Package size={20} strokeWidth={2.5} />
@@ -330,7 +330,7 @@ const Beranda = ({
               </div>
               <p className="text-xs text-slate-500">Perbandingan pemasukan dan pengeluaran harian arus kas</p>
             </div>
-            
+
             <div className="flex items-center justify-between sm:justify-end gap-4">
               {/* Legend */}
               <div className="flex items-center gap-3">
@@ -347,7 +347,7 @@ const Beranda = ({
               {/* Navigasi Slide */}
               {sortedAccessPT.length > 1 && (
                 <div className="flex items-center gap-2 border-l border-slate-100 pl-3">
-                  <button 
+                  <button
                     onClick={handlePrevChart}
                     className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all text-slate-600"
                     title="PT Sebelumnya"
@@ -357,7 +357,7 @@ const Beranda = ({
                   <span className="text-xs font-bold text-slate-600 min-w-[36px] text-center">
                     {activeChartIndex + 1} / {sortedAccessPT.length}
                   </span>
-                  <button 
+                  <button
                     onClick={handleNextChart}
                     className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all text-slate-600"
                     title="PT Selanjutnya"
@@ -368,10 +368,10 @@ const Beranda = ({
               )}
             </div>
           </div>
-          
+
           {/* Chart SVG */}
           {renderChart(getChartDataForPT(activePTCode))}
-          
+
           {/* Slide Dots / Indicators */}
           {sortedAccessPT.length > 1 && (
             <div className="flex justify-center gap-1.5 mt-3">
@@ -413,7 +413,7 @@ const Beranda = ({
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="font-bold text-sm text-gray-900">{kas.pt}</span>
                         <span className="text-[10px] text-gray-400">•</span>
-                        <span className="text-[11px] font-medium text-gray-500">{new Date(kas.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</span>
+                        <span className="text-[11px] font-medium text-gray-500">{new Date(kas.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
                       </div>
                       <p className="text-xs text-gray-700 line-clamp-1">{kas.keterangan}</p>
                     </div>
@@ -452,15 +452,14 @@ const Beranda = ({
             <div className="flex flex-col">
               {getRecentKasKecil().length > 0 ? (
                 getRecentKasKecil().map((kas, idx) => (
-                  <div key={kas.id} className={`flex justify-between items-center py-3 ${idx !== getRecentKasKecil().length -1 ? 'border-b border-gray-50' : ''}`}>
+                  <div key={kas.id} className={`flex justify-between items-center py-3 ${idx !== getRecentKasKecil().length - 1 ? 'border-b border-gray-50' : ''}`}>
                     <div className="flex-1 pr-3">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="font-bold text-sm text-gray-900">{kas.pt}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                          kas.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
-                          kas.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
-                          'bg-amber-50 text-amber-600'
-                        }`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${kas.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
+                            kas.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
+                              'bg-amber-50 text-amber-600'
+                          }`}>
                           {kas.status}
                         </span>
                       </div>
@@ -470,7 +469,7 @@ const Beranda = ({
                       <p className={`text-sm font-bold whitespace-nowrap ${kas.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {kas.jenis === 'keluar' ? '-' : '+'} Rp {(kas.jumlah || 0).toLocaleString('id-ID')}
                       </p>
-                      <p className="text-[10px] text-gray-400 font-medium">{new Date(kas.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</p>
+                      <p className="text-[10px] text-gray-400 font-medium">{new Date(kas.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
                     </div>
                   </div>
                 ))
@@ -498,7 +497,7 @@ const Beranda = ({
             <div className="flex flex-col">
               {getRecentPenjualan().length > 0 ? (
                 getRecentPenjualan().map((item, idx) => (
-                  <div key={item.id} className={`flex justify-between items-center py-3 ${idx !== getRecentPenjualan().length -1 ? 'border-b border-gray-50' : ''}`}>
+                  <div key={item.id} className={`flex justify-between items-center py-3 ${idx !== getRecentPenjualan().length - 1 ? 'border-b border-gray-50' : ''}`}>
                     <div className="flex-1 pr-3">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="font-bold text-sm text-gray-900">{item.pt}</span>
@@ -541,7 +540,7 @@ const Beranda = ({
             <div className="flex flex-col">
               {getRecentArusKas().length > 0 ? (
                 getRecentArusKas().map((item, idx) => (
-                  <div key={item.id} className={`flex justify-between items-center py-3 ${idx !== getRecentArusKas().length -1 ? 'border-b border-gray-50' : ''}`}>
+                  <div key={item.id} className={`flex justify-between items-center py-3 ${idx !== getRecentArusKas().length - 1 ? 'border-b border-gray-50' : ''}`}>
                     <div className="flex-1 pr-3">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="font-bold text-sm text-gray-900">{item.pt}</span>
@@ -555,7 +554,7 @@ const Beranda = ({
                       <p className={`text-sm font-bold whitespace-nowrap ${item.jenis === 'masuk' ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {item.jenis === 'keluar' ? '-' : '+'} Rp {(item.jumlah || 0).toLocaleString('id-ID')}
                       </p>
-                      <p className="text-[10px] text-gray-400 font-medium">{new Date(item.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</p>
+                      <p className="text-[10px] text-gray-400 font-medium">{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
                     </div>
                   </div>
                 ))

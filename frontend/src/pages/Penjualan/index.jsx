@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { ShoppingCart, Plus } from 'lucide-react';
+import { getPTName } from '../../utils/constants';
 
 const Penjualan = ({
   formPenjualan,
@@ -45,19 +46,21 @@ const Penjualan = ({
               className="w-full px-4 py-2 border rounded-lg" 
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">PT</label>
-            <select 
-              value={formPenjualan.pt}
-              onChange={(e) => onFormChange({...formPenjualan, pt: e.target.value})}
-              className="w-full px-4 py-2 border rounded-lg"
-            >
-              <option value="">Pilih PT</option>
-              {currentUserData?.accessPT?.map(code => (
-                <option key={code} value={code}>{code}</option>
-              ))}
-            </select>
-          </div>
+          {currentUserData?.accessPT?.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium mb-2">PT</label>
+              <select 
+                value={formPenjualan.pt}
+                onChange={(e) => onFormChange({...formPenjualan, pt: e.target.value})}
+                className="w-full px-4 py-2 border rounded-lg"
+              >
+                <option value="">Pilih PT</option>
+                {currentUserData?.accessPT?.map(code => (
+                  <option key={code} value={code}>{getPTName(code)}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium mb-2">Pangkalan</label>
             <select 
@@ -197,7 +200,7 @@ const Penjualan = ({
               {penjualanData.map(penjualan => (
                 <tr key={penjualan.id}>
                   <td className="px-4 py-3">{penjualan.tanggal}</td>
-                  <td className="px-4 py-3 font-semibold">{penjualan.pt}</td>
+                  <td className="px-4 py-3 font-semibold">{getPTName(penjualan.pt)}</td>
                   <td className="px-4 py-3">{penjualan.pangkalan}</td>
                   <td className="px-4 py-3 text-right">{penjualan.qty} tabung</td>
                   <td className="px-4 py-3 text-right">Rp {penjualan.harga.toLocaleString('id-ID')}</td>

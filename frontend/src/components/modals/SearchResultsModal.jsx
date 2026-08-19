@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { X } from 'lucide-react';
+import { getPTName } from '../../utils/constants';
 
 const SearchResultsModal = ({
   showSearchResults,
@@ -62,7 +63,7 @@ const SearchResultsModal = ({
                 {searchResults.map(kas => (
                   <tr key={kas.id}>
                     <td className="px-4 py-3">{kas.tanggal}</td>
-                    <td className="px-4 py-3 font-semibold">{kas.pt}</td>
+                    <td className="px-4 py-3 font-semibold">{getPTName(kas.pt)}</td>
                     <td className="px-4 py-3">{kas.keterangan}</td>
                     <td className="px-4 py-3 text-right">
                       {kas.jenis === 'masuk' ? (
