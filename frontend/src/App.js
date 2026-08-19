@@ -3338,7 +3338,7 @@ const SumberJayaApp = () => {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block overflow-hidden">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead className="bg-gray-50/80 border-b border-gray-100 text-[10px] uppercase tracking-wider text-gray-500 font-bold">
                 <tr>
@@ -4168,7 +4168,7 @@ const SumberJayaApp = () => {
       <SpeedInsights />
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-white shadow-xl h-screen sticky top-0 z-40 overflow-y-auto">
+      <aside className="hidden md:flex flex-col md:w-60 lg:w-72 bg-white shadow-xl h-screen sticky top-0 z-40 overflow-y-auto shrink-0">
         <div className="p-4 border-b flex justify-center items-center">
           <img
             src="/images/logo.png"
