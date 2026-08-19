@@ -1,0 +1,20 @@
+{
+  "short_name": "SJE Grup",
+  "name": "Sumber Jaya Grup",
+  "icons": [
+    {
+      "src": "images/logo_grup.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "images/logo_grup.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#2563eb",
+  "background_color": "#f8fafc"
+}
