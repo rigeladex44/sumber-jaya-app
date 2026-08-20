@@ -1264,8 +1264,14 @@ const SumberJayaApp = () => {
 
 
   const handleSavePenjualan = async () => {
-    if (!formPenjualan.pt || !formPenjualan.pangkalan || !formPenjualan.qty) {
-      alert('Mohon lengkapi semua field!');
+    const pt = formPenjualan.pt || getDefaultPT();
+
+    if (!pt || !formPenjualan.pangkalan || !formPenjualan.qty) {
+      const missing = [];
+      if (!pt) missing.push('PT');
+      if (!formPenjualan.pangkalan) missing.push('Pangkalan');
+      if (!formPenjualan.qty) missing.push('Jumlah Tabung');
+      alert('Mohon lengkapi semua field! (Kurang: ' + missing.join(', ') + ')');
       return;
     }
 
@@ -1274,7 +1280,7 @@ const SumberJayaApp = () => {
     try {
       const penjualanData = {
         tanggal: formPenjualan.tanggal,
-        pt: formPenjualan.pt,
+        pt: pt,
         pangkalan: formPenjualan.pangkalan,
         qty: parseFloat(formPenjualan.qty),
         harga: parseFloat(formPenjualan.harga),
@@ -1310,8 +1316,15 @@ const SumberJayaApp = () => {
 
   // Handler Save Kas Kecil (untuk pembukuan kasir tunai)
   const handleSaveKasKecil = async () => {
-    if (!formKasKecil.pt || !formKasKecil.jumlah || !formKasKecil.keterangan || !formKasKecil.kategori) {
-      alert('Mohon lengkapi semua field!');
+    const pt = formKasKecil.pt || getDefaultPT();
+
+    if (!pt || !formKasKecil.jumlah || !formKasKecil.keterangan || !formKasKecil.kategori) {
+      const missing = [];
+      if (!pt) missing.push('PT');
+      if (!formKasKecil.jumlah) missing.push('Jumlah');
+      if (!formKasKecil.keterangan) missing.push('Keterangan');
+      if (!formKasKecil.kategori) missing.push('Kategori');
+      alert('Mohon lengkapi semua field! (Kurang: ' + missing.join(', ') + ')');
       return;
     }
 
@@ -1320,7 +1333,7 @@ const SumberJayaApp = () => {
     try {
       const kasKecilData = {
         tanggal: formKasKecil.tanggal,
-        pt: formKasKecil.pt,
+        pt: pt,
         jenis: formKasKecil.jenis,
         jumlah: parseFloat(formKasKecil.jumlah),
         keterangan: formKasKecil.keterangan,
@@ -1385,8 +1398,14 @@ const SumberJayaApp = () => {
   const handleUpdateKasKecil = async () => {
     if (!editingKasKecil) return;
 
-    if (!formKasKecil.pt || !formKasKecil.jumlah || !formKasKecil.keterangan) {
-      alert('Mohon lengkapi semua field!');
+    const pt = formKasKecil.pt || getDefaultPT();
+
+    if (!pt || !formKasKecil.jumlah || !formKasKecil.keterangan) {
+      const missing = [];
+      if (!pt) missing.push('PT');
+      if (!formKasKecil.jumlah) missing.push('Jumlah');
+      if (!formKasKecil.keterangan) missing.push('Keterangan');
+      alert('Mohon lengkapi semua field! (Kurang: ' + missing.join(', ') + ')');
       return;
     }
 
@@ -1395,7 +1414,7 @@ const SumberJayaApp = () => {
     try {
       const kasKecilData = {
         tanggal: formKasKecil.tanggal,
-        pt: formKasKecil.pt,
+        pt: pt,
         jenis: formKasKecil.jenis,
         jumlah: parseFloat(formKasKecil.jumlah),
         keterangan: formKasKecil.keterangan,
@@ -1436,8 +1455,15 @@ const SumberJayaApp = () => {
 
   // Handler Save Arus Kas (No Approval)
   const handleSaveArusKas = async () => {
-    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.subKategoriId) {
-      alert('Mohon lengkapi semua field!');
+    const pt = formArusKas.pt || getDefaultPT();
+
+    if (!pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.subKategoriId) {
+      const missing = [];
+      if (!pt) missing.push('PT');
+      if (!formArusKas.jumlah) missing.push('Jumlah');
+      if (!formArusKas.keterangan) missing.push('Keterangan');
+      if (!formArusKas.subKategoriId) missing.push('Sub Kategori');
+      alert('Mohon lengkapi semua field! (Kurang: ' + missing.join(', ') + ')');
       return;
     }
 
@@ -1446,7 +1472,7 @@ const SumberJayaApp = () => {
     try {
       const arusKasData = {
         tanggal: formArusKas.tanggal,
-        pt: formArusKas.pt,
+        pt: pt,
         jenis: formArusKas.jenis,
         jumlah: parseFloat(formArusKas.jumlah),
         keterangan: formArusKas.keterangan,
@@ -1503,8 +1529,15 @@ const SumberJayaApp = () => {
   const handleUpdateArusKas = async () => {
     if (!editingArusKas) return;
 
-    if (!formArusKas.pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.subKategoriId) {
-      alert('Mohon lengkapi semua field!');
+    const pt = formArusKas.pt || getDefaultPT();
+
+    if (!pt || !formArusKas.jumlah || !formArusKas.keterangan || !formArusKas.subKategoriId) {
+      const missing = [];
+      if (!pt) missing.push('PT');
+      if (!formArusKas.jumlah) missing.push('Jumlah');
+      if (!formArusKas.keterangan) missing.push('Keterangan');
+      if (!formArusKas.subKategoriId) missing.push('Sub Kategori');
+      alert('Mohon lengkapi semua field! (Kurang: ' + missing.join(', ') + ')');
       return;
     }
 
@@ -1513,7 +1546,7 @@ const SumberJayaApp = () => {
     try {
       const arusKasData = {
         tanggal: formArusKas.tanggal,
-        pt: formArusKas.pt,
+        pt: pt,
         jenis: formArusKas.jenis,
         jumlah: parseFloat(formArusKas.jumlah),
         keterangan: formArusKas.keterangan,
