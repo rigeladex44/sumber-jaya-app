@@ -140,6 +140,10 @@ const SumberJayaApp = () => {
     }
   });
 
+  const getDefaultPT = () => {
+    return (currentUserData?.accessPT && currentUserData.accessPT.length === 1) ? currentUserData.accessPT[0] : '';
+  };
+
   // --- Modals State ---
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -195,7 +199,7 @@ const SumberJayaApp = () => {
   // --- Form State ---
   const [formKasKecil, setFormKasKecil] = useState({
     tanggal: getLocalDateString(),
-    pt: '',
+    pt: getDefaultPT(),
     jenis: 'keluar',
     jumlah: '',
     keterangan: '',
@@ -203,7 +207,7 @@ const SumberJayaApp = () => {
   });
   const [formArusKas, setFormArusKas] = useState({
     tanggal: getLocalDateString(),
-    pt: '',
+    pt: getDefaultPT(),
     jenis: 'keluar',
     jumlah: '',
     keterangan: '',
@@ -237,7 +241,7 @@ const SumberJayaApp = () => {
   });
   const [formPenjualan, setFormPenjualan] = useState({
     tanggal: getLocalDateString(),
-    pt: '',
+    pt: getDefaultPT(),
     pangkalan: '',
     qty: '',
     harga: 16000,
@@ -1290,7 +1294,7 @@ const SumberJayaApp = () => {
       }
 
       // Reset form
-      setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', harga: 16000, ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' });
+      setFormPenjualan({ tanggal: getTodayDate(), pt: getDefaultPT(), pangkalan: '', qty: '', harga: 16000, ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' });
       alert('Data penjualan berhasil disimpan!');
     } catch (error) {
       console.error('Error saving penjualan:', error);
@@ -1341,7 +1345,7 @@ const SumberJayaApp = () => {
       // Reset form
       setFormKasKecil({
         tanggal: getLocalDateString(),
-        pt: '',
+        pt: getDefaultPT(),
         jenis: 'keluar',
         jumlah: '',
         keterangan: '',
@@ -1412,7 +1416,7 @@ const SumberJayaApp = () => {
       setEditingKasKecil(null);
       setFormKasKecil({
         tanggal: getLocalDateString(),
-        pt: '',
+        pt: getDefaultPT(),
         jenis: 'keluar',
         jumlah: '',
         keterangan: '',
@@ -1460,7 +1464,7 @@ const SumberJayaApp = () => {
       // Reset form
       setFormArusKas({
         tanggal: getLocalDateString(),
-        pt: '',
+        pt: getDefaultPT(),
         jenis: 'keluar',
         jumlah: '',
         keterangan: '',
@@ -1527,7 +1531,7 @@ const SumberJayaApp = () => {
       setEditingArusKas(null);
       setFormArusKas({
         tanggal: getLocalDateString(),
-        pt: '',
+        pt: getDefaultPT(),
         jenis: 'keluar',
         jumlah: '',
         keterangan: '',
@@ -2021,10 +2025,11 @@ const SumberJayaApp = () => {
       setActiveMenu('beranda');
       setPassword(''); // Clear password for security
 
+      const defaultPT = data.user.accessPT?.length === 1 ? data.user.accessPT[0] : '';
       // Initialize forms
       setFormKasKecil({
         tanggal: getLocalDateString(),
-        pt: '',
+        pt: defaultPT,
         jenis: 'keluar',
         jumlah: '',
         keterangan: '',
@@ -2825,7 +2830,7 @@ const SumberJayaApp = () => {
         isLoadingPenjualan={isLoadingPenjualan}
         onFormChange={setFormPenjualan}
         onSavePenjualan={handleSavePenjualan}
-        onResetForm={() => setFormPenjualan({ tanggal: getTodayDate(), pt: '', pangkalan: '', qty: '', harga: 16000, ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' })}
+        onResetForm={() => setFormPenjualan({ tanggal: getTodayDate(), pt: getDefaultPT(), pangkalan: '', qty: '', harga: 16000, ppnPercent: 11, ppnType: 'include', metodeBayar: 'cash' })}
         calculateTotal={hitungTotalPenjualan}
       />
     );
@@ -3985,7 +3990,7 @@ const SumberJayaApp = () => {
                       setEditingArusKas(null);
                       setFormArusKas({
                         tanggal: getLocalDateString(),
-                        pt: '',
+                        pt: getDefaultPT(),
                         jenis: 'keluar',
                         jumlah: '',
                         keterangan: '',
@@ -4118,7 +4123,7 @@ const SumberJayaApp = () => {
                       setEditingArusKas(null);
                       setFormArusKas({
                         tanggal: getLocalDateString(),
-                        pt: '',
+                        pt: getDefaultPT(),
                         jenis: 'keluar',
                         jumlah: '',
                         keterangan: '',
@@ -4540,7 +4545,7 @@ const SumberJayaApp = () => {
                     setEditingKasKecil(null);
                     setFormKasKecil({
                       tanggal: getTodayDate(),
-                      pt: '',
+                      pt: getDefaultPT(),
                       jenis: 'keluar',
                       jumlah: '',
                       keterangan: '',
@@ -4648,7 +4653,7 @@ const SumberJayaApp = () => {
                     setEditingKasKecil(null);
                     setFormKasKecil({
                       tanggal: getTodayDate(),
-                      pt: '',
+                      pt: getDefaultPT(),
                       jenis: 'keluar',
                       jumlah: '',
                       keterangan: '',
